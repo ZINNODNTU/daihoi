@@ -1,0 +1,119 @@
+# ĐẠI HỘI SỐ
+
+Nền tảng điều hành **nhiều Đại hội Đoàn TNCS Hồ Chí Minh và Hội Sinh viên Việt Nam**.
+
+## Trạng thái triển khai (MVP 01)
+
+Đã viết mã và kiểm tra build cho các chức năng:
+- Đăng nhập bằng Supabase Auth; kiểm soát quyền theo từng Đại hội.
+- Super Admin tạo đơn vị và Đại hội; xem Dashboard đa Đại hội.
+- BTC quản lý đại biểu, thêm thủ công, nhập Excel `.xlsx` / `.csv`.
+- **QR cá nhân cố định (dh2)** 74 ký tự + **QR theo từng phiên (dh3)** 95 ký tự, ký HMAC và hỗ trợ đọc QR dh1 đã in. BTC cấu hình từng phiên nhận QR cố định, QR phiên hoặc cả hai.
+- BTC tạo giờ **mở/đóng quét điểm danh** bằng giờ Việt Nam GMT+7, được kiểm tra tại API và database trigger, có thể đóng sớm.
+- Mỗi đại biểu có **mã định danh** và **barcode Code 128** riêng; BTC dùng camera hoặc máy quét/nhập barcode để tìm hồ sơ khi QR lỗi, bắt buộc xác nhận danh tính và lý do trước khi điểm danh. Camera hỗ trợ quét QR liên tục.
+- Điểm danh độc lập theo phiên; ràng buộc UNIQUE tại Postgres chống trùng khi nhiều máy gửi đồng thời.
+- Nhật ký thời gian, người thực hiện và phương thức; thống kê theo phiên (client làm mới mỗi 12 giây, không dùng kết nối Realtime cho mọi đại biểu).
+- **Trang Báo cáo theo phiên**: chính thức/dự khuyết/khách mời riêng, bảng theo đơn vị, lọc có/chưa check-in, xuất CSV, in báo cáo (trình duyệt có thể lưu PDF). Không tự xác nhận tư cách hoặc quyền biểu quyết.
+- Tài liệu khảo sát nghiệp vụ và ưu tiên triển khai tại `docs/NGHIEP-VU-DAI-HOI.md`.
+- Lưu và tải ảnh/tài liệu lên Google Drive qua OAuth của **một tài khoản quản lý** (chỉ hoạt động khi đã cấu hình OAuth).
+- Các bảng dự phòng cho biểu quyết công khai, **chưa triển khai giao diện và nghiệp vụ biểu quyết**. Chưa hỗ trợ bầu cử bằng phiếu kín.
+
+**Supabase:** CSDL 13 bảng cơ bản đã được tạo tại project `pnxdxdagpeyqarucdphk`, RLS bật 13/13 bảng. **Bản nâng cấp QR phiên/barcode chưa được áp dụng lên project trực tuyến** vì hồ sơ Chrome không thể xác minh và Supabase connector không có project này. SQL nâng cấp tại `supabase/upgrade-attendance-v2.sql`. `.env.local` vẫn cần **Publishable Key**, **SUPABASE_SECRET_KEY** (server-only) và tài khoản Super Admin. Chưa kiểm thử đăng nhập/RLS đa tài khoản thực, Google OAuth, deploy Vercel, tải 200 người hay camera/barcode trên điện thoại thật. Xem `docs/DIEM-DANH-QR-PHIEN-VA-BARCODE.md`.
+
+## Yêu cầu
+
+- Node.js >= 20 (đã xây dựng bằng Node 24)
+- Supabase project, Auth email/password
+- Google Cloud Project bật Google Drive API, OAuth client và refresh token
+- Vercel nếu muốn triển khai internet
+
+## Cài đặt chạy máy
+
+```bash
+npm ci
+cp .env.example .env.local
+npm run dev
+```
+
+Trên Windows: `Copy-Item .env.example .env.local`.
+
+1. Điền `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, và khóa **`SUPABASE_SECRET_KEY`** chỉ ở server từ trang Project Settings → API Keys. Tuyệt đối không gắn tiền tố `NEXT_PUBLIC_` cho Secret Key hoặc đẩy lên git. Không gửi các khóa vào chat.
+2. Tạo `QR_HMAC_SECRET` với tối thiểu 32 ký tự ngẫu nhiên (giữ bí mật trên Vercel). Đổi secret sẽ khiến QR cũ không hợp lệ.
+3. Nếu tạo **project mới**, chạy `supabase/schema.sql`. Nếu dùng **project pnxdxdagpeyqarucdphk đã có**, sao lưu trước và chạy `supabase/upgrade-attendance-v2.sql` trong SQL Editor, KHÔNG chạy lại file schema.sql trên project đang có. Kiểm thử RLS và ngăn INSERT trực tiếp vào checkins trước khi vận hành.
+4. Tạo tài khoản quản trị trong Authentication → Users. Nếu đã tạo tài khoản **trước khi chạy SQL**, backfill profile:
+   ```sql
+   insert into public.profiles (id,full_name)
+   select id,coalesce(raw_user_meta_data->>'full_name','')
+   from auth.users on conflict (id) do nothing;
+   ```
+5. Tự cấp vai trò quản trị tổng **bằng SQL Editor (không qua client)**:
+   ```sql
+   update public.profiles
+   set platform_role='super_admin'
+   where id='<USER_UUID>';
+   ```
+6. Đăng nhập `/login` → `/dashboard` → tạo Đại hội → thêm đại biểu → tạo phiên → quét hoặc điểm danh thủ công.
+
+Không mở đăng ký công khai. Khi tạo nhân sự BTC thứ hai, tạo user qua Supabase Auth và gắn vào đại hội:
+```sql
+insert into public.congress_members(congress_id,user_id,role)
+values ('<CONGRESS_UUID>','<USER_UUID>','checkin');
+```
+Vai trò: `admin` (quản trị Đại hội), `checkin` (QR/thủ công), `secretary` (xem, chưa điều hành).
+
+## Google Drive: thiết lập
+
+Phiên bản đầu sử dụng **một Drive chung** do Ban Quản trị sở hữu; mỗi đại hội có thư mục con riêng.
+- Bật Google Drive API; cấu hình OAuth consent, ứng dụng và OAuth client phù hợp. Dùng OAuth 2.0 **offline** để cấp refresh token cho tài khoản quản lý. Tài khoản phải có quyền ghi thư mục Drive gốc.
+- Điền `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_DRIVE_ROOT_FOLDER_ID` trong biến môi trường server; tuyệt đối không sử dụng `NEXT_PUBLIC_` cho các khóa này.
+- Thư mục gốc cần được cấp quyền ghi cho tài khoản OAuth. Khi tải tệp đầu tiên, backend tạo thư mục `DAI_HOI_<id>`, tải tệp lên và lưu `drive_file_id` ở Supabase.
+- Ảnh và tài liệu được đọc qua API đã kiểm tra quyền (không công khai link Drive). Không xem Drive như CDN; nếu cần hình ảnh công khai lưu lượng lớn, bổ sung CDN/bộ nhớ đệm phù hợp.\n- Giới hạn upload **4 MB/tệp** để không vượt giới hạn 4.5 MB request/response của Vercel Functions. Tệp lớn hơn cần quy trình upload trực tiếp/chia khối qua API chuyên dụng, chưa hỗ trợ.
+
+**Lưu ý về service account:** Google Drive service account không sở hữu dung lượng lưu trữ cá nhân, do đó cần Shared Drive hoặc OAuth của người dùng nếu sử dụng My Drive. Ở đây sử dụng OAuth người dùng. Mở rộng **mỗi đơn vị kết nối Drive riêng** cần thêm bảng kết nối OAuth và mã hóa refresh token; chưa triển khai.
+
+## Triển khai Vercel
+
+1. Đẩy Git repository lên GitHub (không commit `.env.local`).
+2. Tạo dự án Vercel từ repository, framework Next.js. Thiết lập các biến môi trường bên trên (không public hóa secret).
+3. Kiểm tra callback/URL cho Supabase Auth trong Auth → URL Configuration theo domain Vercel.
+4. Mở HTTPS, cấp quyền camera, kiểm tra QR trên iPhone Safari và Android Chrome.
+5. Trước Đại hội thật, kiểm thử 200 yêu cầu đồng thời; kiểm tra RLS, mạng yếu, nhập Excel, xử lý gửi phiếu trùng và lỗi Google Drive.
+
+Lưu ý: camera chạy trên thiết bị; backend chỉ nhận **mã QR**. `getUserMedia` cần HTTPS hoặc localhost và quyền camera.
+
+## Cấu trúc
+
+- `src/app/`: trang và HTTP API Next.js
+- `src/components/`: giao diện Dashboard, danh sách đại biểu, QR, check-in và Drive
+- `src/lib/qr.ts`: ký / xác thực QR bằng HMAC
+- `src/lib/auth.ts`: xác minh quyền trên server
+- `supabase/schema.sql`: schema, constraint và chính sách RLS
+- `tests/qr.test.mjs`: kiểm thử QR thu hồi, sửa mã, sai secret
+
+## Độ tin cậy và các bước hoàn thiện
+
+1. Đối chiếu số lượng có mặt và số đại biểu **có quyền biểu quyết**; không dùng check-in đơn thuần làm căn cứ phiếu bầu.
+2. Chạy RLS integration tests với ít nhất hai Đại hội độc lập, role admin/checkin/secretary.
+3. Kiểm thử concurrency thực: quét QR và điểm danh thủ công cùng một đại biểu ở 2–3 máy phải chỉ tạo **1** record.
+4. Thêm rate limiting theo IP/user cho endpoint QR, đợi mạng/ retry an toàn, theo dõi lỗi Vercel/Supabase.
+5. Bổ sung phê duyệt/hủy điểm danh có lý do và lịch sử thao tác bất biến, kết xuất Excel/PDF.
+6. Biểu quyết công khai cần cơ chế quyền biểu quyết, khóa phiên, snapshot mẫu số và bất biến phiếu. **Bầu cử kín** là bài toán bảo mật và nghiệp vụ riêng.
+7. Các báo cáo và công cụ phục hồi cần kiểm thử trước khi sử dụng trong đại hội thực tế.
+
+## Nguồn tham khảo kỹ thuật
+
+- Supabase RLS: https://supabase.com/docs/guides/database/postgres/row-level-security
+- Supabase Auth SSR Next.js: https://supabase.com/docs/guides/auth/server-side
+- Supabase Realtime limits: https://supabase.com/docs/guides/realtime/limits
+- Google Drive uploads: https://developers.google.com/workspace/drive/api/guides/manage-uploads
+- Google Drive service accounts: https://developers.google.com/workspace/drive/api/guides/handle-errors
+- Browser camera API: https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
+- Vercel function scaling: https://vercel.com/docs/functions/concurrency-scaling
+
+## Bổ sung vận hành BTC (05/11/2026)
+
+- Quản lý nhân sự BTC tại /congresses/[id]/team: mời tài khoản bằng email qua Supabase Auth, phân vai trò admin/checkin/secretary, điều chỉnh hoặc gỡ quyền. Mọi thao tác quản lý quyền ghi qua Next.js server dùng SUPABASE_SECRET_KEY, không cho ghi trực tiếp bằng client. Tương tự, cập nhật phiên điểm danh, thay đổi thông tin Đại hội và ghi metadata tài liệu đều được kiểm tra tại API server.
+- Cấu hình Đại hội tại /congresses/[id]/settings: tên, nhiệm kỳ, địa điểm, trạng thái; chỉ Admin của Đại hội được chỉnh sửa.
+- Bản SQL mới: **supabase/upgrade-management-v3.sql**, bắt buộc chạy **sau** upgrade-attendance-v2.sql và sao lưu đúng project. Cần triển khai API mới **trước khi chạy v3** để không gián đoạn việc gán thành viên BTC.
+- Kiểm tra điều kiện chạy production bằng `npm run readiness`; hướng dẫn từng bước ở docs/QUY-TRINH-TRIEN-KHAI.md.
+- Vào thời điểm cập nhật này, Supabase Publishable/Secret Keys, Google Drive OAuth và Vercel chưa được cấu hình hoàn chỉnh; không được tuyên bố đã triển khai hệ thống production.
