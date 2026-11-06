@@ -59,11 +59,11 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
     </div>
 
     {notice&&<p role={notice.type==="error"?"alert":"status"}
-      className={`rounded-2xl border p-4 text-sm font-semibold ${notice.type==="success"?"border-[#b8e8d4] bg-[#eafaf1] text-[#0b7758]":"border-red-200 bg-red-50 text-red-700"}`}>{notice.message}</p>}
+      className={`rounded-xl border p-4 text-sm font-semibold ${notice.type==="success"?"border-[#b8e8d4] bg-[#eafaf1] text-[#0b7758]":"border-red-200 bg-red-50 text-red-700"}`}>{notice.message}</p>}
 
-    {canManage&&<label className={`group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[20px] border-2 border-dashed border-[#c4e5df] bg-gradient-to-br from-[#f1fbf8] to-[#f8fbfc] px-5 py-8 text-center transition-colors hover:border-[#66bdb4] hover:bg-[#e9f8f2] sm:py-10 ${busy?"pointer-events-none opacity-60":""}`}>
-      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#108e8c] shadow-sm"><CloudUpload size={27}/></span>
-      <span className="text-base font-extrabold text-[#193e4d]">{busy?"Đang tải tài liệu...":"Chạm để chọn và tải tài liệu"}</span>
+    {canManage&&<label className={`group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[12px] border-2 border-dashed border-[#c4e5df] bg-gradient-to-br from-[#f1fbf8] to-[#f8fbfc] px-5 py-8 text-center transition-colors hover:border-[#66bdb4] hover:bg-[#e9f8f2] sm:py-10 ${busy?"pointer-events-none opacity-60":""}`}>
+      <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-white text-[#108e8c] shadow-sm"><CloudUpload size={27}/></span>
+      <span className="text-base font-semibold text-[#193e4d]">{busy?"Đang tải tài liệu...":"Chạm để chọn và tải tài liệu"}</span>
       <span className="max-w-lg text-xs leading-relaxed text-[#738a98]">Hỗ trợ JPG, PNG, WebP, PDF, Word và Excel. Tối đa 4 MB mỗi tệp. Tài liệu được lưu qua kết nối Google Drive của hệ thống.</span>
       <input aria-label="Chọn tài liệu để tải lên" type="file" disabled={busy} className="sr-only" accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,.xlsx" onChange={e=>void upload(e)}/>
     </label>}
@@ -81,7 +81,7 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
           <tbody>{filtered.map(doc=>{
             const Icon=iconFor(doc.mime_type);
             return <tr key={doc.id}>
-              <td><div className="flex max-w-[420px] items-center gap-3"><span className="shrink-0 rounded-xl bg-[#ebf7f5] p-2 text-[#078583]"><Icon size={19}/></span><span className="min-w-0 break-words font-bold">{doc.file_name}</span></div></td>
+              <td><div className="flex max-w-[420px] items-center gap-3"><span className="shrink-0 rounded-xl bg-[#edf3ff] p-2 text-[#2456c9]"><Icon size={19}/></span><span className="min-w-0 break-words font-bold">{doc.file_name}</span></div></td>
               <td>{kind(doc.mime_type)}</td><td>{fileSize(doc.byte_size)}</td>
               <td>{new Date(doc.created_at).toLocaleDateString("vi-VN")}</td>
               <td><a className="btn btn-secondary" href={`/api/documents/${doc.id}`}><Download size={17}/> Tải về</a></td>
@@ -92,7 +92,7 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
           {filtered.map(doc=>{
             const Icon=iconFor(doc.mime_type);
             return <article key={doc.id} className="mobile-record">
-              <div className="flex items-start gap-3"><span className="rounded-xl bg-[#ebf7f5] p-2.5 text-[#078583]"><Icon size={21}/></span><div className="min-w-0 flex-1"><h3 className="mobile-record-title">{doc.file_name}</h3><p className="mobile-record-meta mt-1">{kind(doc.mime_type)} · {fileSize(doc.byte_size)} · {new Date(doc.created_at).toLocaleDateString("vi-VN")}</p></div></div>
+              <div className="flex items-start gap-3"><span className="rounded-xl bg-[#edf3ff] p-2.5 text-[#2456c9]"><Icon size={21}/></span><div className="min-w-0 flex-1"><h3 className="mobile-record-title">{doc.file_name}</h3><p className="mobile-record-meta mt-1">{kind(doc.mime_type)} · {fileSize(doc.byte_size)} · {new Date(doc.created_at).toLocaleDateString("vi-VN")}</p></div></div>
               <div className="mobile-record-actions"><a className="btn btn-secondary" href={`/api/documents/${doc.id}`}><Download size={17}/> Tải tài liệu</a></div>
             </article>;
           })}
@@ -100,7 +100,7 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
       </>:
       <div className="empty-state">
         <FolderOpen size={34} className="mx-auto text-[#91b6ba]"/>
-        <p className="mt-4 font-extrabold">{docs.length?"Không tìm thấy tài liệu":"Chưa có tài liệu nào"}</p>
+        <p className="mt-4 font-semibold">{docs.length?"Không tìm thấy tài liệu":"Chưa có tài liệu nào"}</p>
         <p className="helper mx-auto mt-2 max-w-md">{docs.length?"Thử tìm bằng tên khác.":"Tài liệu sẽ hiển thị khi Ban Tổ chức tải lên và cấu hình kết nối lưu trữ."}</p>
       </div>}
     </section>

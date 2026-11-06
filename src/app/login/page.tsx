@@ -3,7 +3,7 @@
 import {FormEvent,useState} from "react";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
-import {ArrowLeft,ArrowRight,Eye,EyeOff,Layers3,LockKeyhole,Mail,ShieldCheck,Sparkles} from "lucide-react";
+import {ArrowLeft,ArrowRight,Eye,EyeOff,LockKeyhole,Mail,ShieldCheck} from "lucide-react";
 import {createClient} from "@/lib/supabase/browser";
 
 export default function Login(){
@@ -28,62 +28,80 @@ export default function Login(){
     }
   }
 
-  return <main className="flex min-h-dvh bg-[#f2f7f9]">
-    <aside className="relative hidden min-h-dvh w-[46%] flex-col justify-between overflow-hidden bg-[#10364d] px-10 py-12 text-white lg:flex xl:px-16">
-      <div aria-hidden="true" className="pointer-events-none absolute -left-40 top-[25%] h-[600px] w-[600px] rounded-full bg-[#149aa0]/20 blur-[80px]"/>
-      <div aria-hidden="true" className="pointer-events-none absolute -bottom-40 -right-48 h-[520px] w-[520px] rounded-full bg-[#13b59b]/15 blur-[80px]"/>
-      <Link href="/" className="relative flex w-fit items-center gap-3 font-black tracking-[.08em]">
-        <span className="brand-icon"><Layers3 size={23}/></span>
-        <span className="text-lg">ĐẠI HỘI <span className="text-[#78eadb]">SỐ</span></span>
+  return <main className="auth-shell flex min-h-dvh">
+    <aside className="auth-aside hidden min-h-dvh w-[45%] flex-col justify-between px-10 py-11 lg:flex xl:px-16">
+      <Link href="/" className="flex w-fit items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-white/25 bg-white/10 text-[12px] font-bold tracking-tight">ĐH</span>
+        <span className="text-[17px] font-bold tracking-[-.03em]">Đại hội số</span>
       </Link>
-      <div className="relative max-w-xl">
-        <span className="inline-flex items-center gap-2 rounded-full border border-[#6be6d6]/20 bg-white/5 px-4 py-2 text-xs font-bold tracking-[.13em] text-[#9beadd]"><Sparkles size={15}/> ĐIỀU HÀNH TẬP TRUNG</span>
-        <h1 className="mt-8 text-4xl font-black leading-[1.25] tracking-[-.04em] xl:text-5xl">Đón tiếp nhanh.<br/>Điều hành gọn.<br/><span className="text-[#6ce2d2]">Thông tin rõ ràng.</span></h1>
-        <p className="mt-6 max-w-md text-base leading-8 text-[#bed4df]">Từ quản lý đại biểu đến điểm danh QR và báo cáo theo phiên — tất cả trong một không gian dành cho Ban Tổ chức.</p>
-        <div className="mt-10 flex max-w-sm items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-          <ShieldCheck size={24} className="shrink-0 text-[#7ae5d9]"/>
-          <p className="text-sm leading-relaxed text-[#bcd7e1]">Tài khoản và quyền truy cập được cấp riêng theo từng Đại hội.</p>
+      <div className="max-w-[530px]">
+        <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[.15em] text-[#b0c3e5]">
+          <span className="h-px w-7 bg-[#a7c1ed]"/> KHÔNG GIAN DÀNH CHO BTC
+        </p>
+        <h1 className="mt-7 text-[39px] font-bold leading-[1.22] tracking-[-.055em] text-white xl:text-[48px]">
+          Tổ chức bài bản.<br/>Điều hành chính xác.
+        </h1>
+        <p className="mt-6 max-w-[410px] text-[15px] leading-[1.85] text-[#c3cfdf]">
+          Quản lý đại biểu, phiên làm việc, chỗ ngồi và báo cáo trên một hệ thống thống nhất.
+        </p>
+        <div className="mt-12 max-w-[420px] border-t border-white/20">
+          {["Quản lý dữ liệu theo từng Đại hội","Phân quyền công việc cho Ban Tổ chức","Theo dõi hoạt động theo phiên"].map((item,index)=>
+            <div key={item} className="flex items-center gap-4 border-b border-white/15 py-4">
+              <span className="text-[11px] font-bold text-[#8facd9]">0{index+1}</span>
+              <span className="text-[13px] font-medium text-[#e6ebf5]">{item}</span>
+            </div>
+          )}
         </div>
       </div>
-      <p className="relative text-xs tracking-wide text-[#8caebf]">Đoàn TNCS Hồ Chí Minh · Hội Sinh viên Việt Nam</p>
+      <p className="text-[11px] text-[#a5b5c9]">Đại hội số · Nền tảng quản lý Đại hội Đoàn – Hội</p>
     </aside>
 
-    <div className="flex min-w-0 flex-1 flex-col px-4 pb-10 pt-5 sm:px-8 sm:py-10 lg:justify-center lg:px-12">
-      <div className="mx-auto w-full max-w-[450px]">
-        <div className="mb-8 flex items-center justify-between lg:mb-12">
-          <Link href="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[#577788] hover:text-[#0c7c80]"><ArrowLeft size={17}/> Trang chủ</Link>
-          <span className="flex items-center gap-2 text-xs font-black tracking-wider text-[#0e7f7f] lg:hidden"><Layers3 size={19}/> ĐẠI HỘI SỐ</span>
-        </div>
-        <div className="mb-7">
-          <div className="mb-4 flex h-13 w-13 items-center justify-center rounded-2xl bg-[#e0f4ef] text-[#087c7b]"><LockKeyhole size={23}/></div>
-          <p className="eyebrow">Cổng dành cho Ban Tổ chức</p>
-          <h2 className="page-title mt-2">Đăng nhập hệ thống</h2>
-          <p className="page-description">Sử dụng tài khoản đã được quản trị viên cấp.</p>
+    <div className="flex min-w-0 flex-1 flex-col px-5 pb-12 pt-6 sm:px-10 sm:py-11 lg:justify-center lg:px-14">
+      <div className="mx-auto w-full max-w-[420px]">
+        <div className="mb-16 flex items-center justify-between lg:mb-14">
+          <Link href="/" className="inline-flex min-h-10 items-center gap-2 text-[12px] font-semibold text-[#68768b] hover:text-[#2456c9]">
+            <ArrowLeft size={16}/> Trang chủ
+          </Link>
+          <span className="flex items-center gap-2 text-[12px] font-bold text-[#263650] lg:hidden"><span className="brand-icon">ĐH</span> Đại hội số</span>
         </div>
 
-        <form onSubmit={submit} className="card space-y-5 p-5 shadow-[0_18px_55px_rgba(20,63,78,.07)] sm:p-8">
+        <div className="mb-8">
+          <p className="page-kicker">CỔNG QUẢN TRỊ NỘI BỘ</p>
+          <h2 className="mt-4 text-[33px] font-bold leading-[1.18] tracking-[-.055em] text-[#1d2a3e] sm:text-[38px]">Chào mừng trở lại.</h2>
+          <p className="mt-3 text-[14px] leading-7 text-[#788598]">Đăng nhập bằng tài khoản Ban Tổ chức đã được cấp quyền.</p>
+        </div>
+
+        <form onSubmit={submit} className="space-y-5 rounded-[12px] border border-[#e2e7ef] bg-white p-5 shadow-[0_7px_20px_rgba(32,45,68,.025)] sm:p-7">
           <label className="block">
             <span className="label">Địa chỉ email</span>
-            <span className="relative block"><Mail size={19} className="pointer-events-none absolute left-3.5 top-3.5 text-[#8aa1ad]"/>
-              <input className="field pl-11!" type="email" inputMode="email" required autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@donvi.edu.vn"/>
+            <span className="relative block">
+              <Mail size={17} className="pointer-events-none absolute left-3.5 top-[14px] text-[#9aa5b4]"/>
+              <input className="field pl-11!" type="email" inputMode="email" required autoComplete="username"
+                value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@donvi.edu.vn"/>
             </span>
           </label>
           <label className="block">
             <span className="label">Mật khẩu</span>
-            <span className="relative block"><LockKeyhole size={19} className="pointer-events-none absolute left-3.5 top-3.5 text-[#8aa1ad]"/>
-              <input className="field pl-11! pr-12!" type={showPassword?"text":"password"} required autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Nhập mật khẩu"/>
-              <button type="button" className="absolute right-1 top-0 flex h-[46px] w-11 items-center justify-center rounded-lg text-[#688394] hover:text-[#0d7e84]"
-                aria-label={showPassword?"Ẩn mật khẩu":"Hiện mật khẩu"} aria-pressed={showPassword} onClick={()=>setShowPassword(v=>!v)}>
-                {showPassword?<EyeOff size={19}/>:<Eye size={19}/>}
+            <span className="relative block">
+              <LockKeyhole size={17} className="pointer-events-none absolute left-3.5 top-[14px] text-[#9aa5b4]"/>
+              <input className="field pl-11! pr-12!" type={showPassword?"text":"password"} required autoComplete="current-password"
+                value={password} onChange={e=>setPassword(e.target.value)} placeholder="Nhập mật khẩu"/>
+              <button type="button" aria-label={showPassword?"Ẩn mật khẩu":"Hiện mật khẩu"} aria-pressed={showPassword}
+                onClick={()=>setShowPassword(value=>!value)}
+                className="absolute right-1 top-0 flex h-[44px] w-10 items-center justify-center rounded-md text-[#8b97a6] hover:text-[#2456c9]">
+                {showPassword?<EyeOff size={18}/>:<Eye size={18}/>}
               </button>
             </span>
           </label>
-          {error&&<p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm font-semibold text-red-700">{error}</p>}
-          <button disabled={busy} type="submit" className="btn btn-primary min-h-[48px] w-full text-sm">
-            {busy?"Đang xác thực...":"Đăng nhập"} <ArrowRight size={19}/>
+          {error&&<p role="alert" className="rounded-[8px] border border-red-200 bg-red-50 p-3 text-[12px] font-medium leading-6 text-red-700">{error}</p>}
+          <button disabled={busy} type="submit" className="btn btn-primary mt-1 min-h-[46px] w-full justify-center">
+            {busy?"Đang xác thực...":"Đăng nhập"} <ArrowRight size={17}/>
           </button>
         </form>
-        <p className="helper mt-6 text-center">Chỉ tài khoản được cấp quyền mới có thể đăng nhập. Hệ thống không mở đăng ký công khai.</p>
+        <div className="mt-7 flex items-start gap-2.5 text-[12px] leading-6 text-[#8793a1]">
+          <ShieldCheck size={17} className="mt-0.5 shrink-0 text-[#7b8ba4]"/>
+          <p>Chỉ tài khoản được phân quyền mới có thể truy cập. Hệ thống không mở đăng ký công khai.</p>
+        </div>
       </div>
     </div>
   </main>;

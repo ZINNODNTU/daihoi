@@ -74,7 +74,7 @@ export function AttendanceReportClient({congressId,congressName,congressKind,ter
  ];
  return <div className="space-y-7">
   <div className="flex flex-wrap justify-between items-start gap-4 print:hidden">
-   <div><div className="text-xs tracking-widest text-[#149c9c] font-extrabold">BÁO CÁO PHỤC VỤ BAN THƯ KÝ</div><h1 className="page-title mt-2">Thống kê điểm danh</h1><p className="helper mt-2">Phân loại đại biểu và tổng hợp lượt tham dự theo phiên.</p></div>
+   <div><div className="text-xs tracking-widest text-[#149c9c] font-semibold">BÁO CÁO PHỤC VỤ BAN THƯ KÝ</div><h1 className="page-title mt-2">Thống kê điểm danh</h1><p className="helper mt-2">Phân loại đại biểu và tổng hợp lượt tham dự theo phiên.</p></div>
    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
     <button onClick={()=>void refresh()} disabled={loading||!sessionId} className="btn btn-secondary"><RefreshCw size={17}/>{loading?"Đang cập nhật":"Cập nhật"}</button>
     <button onClick={()=>window.print()} disabled={!ready} className="btn btn-secondary"><Printer size={17}/>In báo cáo</button>
@@ -95,24 +95,24 @@ export function AttendanceReportClient({congressId,congressName,congressKind,ter
    {!session&&<div className="mt-4 rounded-xl p-4 bg-[#f1f6fa] text-sm">Hãy tạo phiên điểm danh trong mục <strong>Điểm danh</strong> để xem báo cáo.</div>}
   </div>
   <div className="space-y-2">
-   <h2 className="font-extrabold text-lg">{congressName}</h2>
+   <h2 className="font-semibold text-lg">{congressName}</h2>
    <p className="helper">{congressKind} {term?(" • Nhiệm kỳ "+term):""} • {session?.name||"Chưa có phiên"}</p>
   </div>
   <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
-   {statCards.map(({label,value,icon:Icon})=><div key={label} className="card stat-card min-w-0 p-3.5 sm:p-5"><div className="flex items-start justify-between gap-2"><span className="helper font-semibold">{label}</span><Icon size={19} className="text-[#159aa0]"/></div><p className="text-3xl font-extrabold mt-4">{value}</p></div>)}
+   {statCards.map(({label,value,icon:Icon})=><div key={label} className="card stat-card min-w-0 p-3.5 sm:p-5"><div className="flex items-start justify-between gap-2"><span className="helper font-semibold">{label}</span><Icon size={19} className="text-[#159aa0]"/></div><p className="text-3xl font-semibold mt-4">{value}</p></div>)}
   </div>
   <div className="grid gap-5 lg:grid-cols-3">
    {(["official","alternate","guest"] as const).map(type=>{
     const p=report.byType[type];
     return <div key={type} className="card p-5">
-     <div className="font-extrabold">{delegateLabels[type]}</div>
-     <p className="text-3xl font-extrabold mt-3">{ready?p.present:"—"}<span className="text-[#8fa3b3] font-semibold text-xl">/{ready?p.total:"—"}</span></p>
+     <div className="font-semibold">{delegateLabels[type]}</div>
+     <p className="text-3xl font-semibold mt-3">{ready?p.present:"—"}<span className="text-[#8fa3b3] font-semibold text-xl">/{ready?p.total:"—"}</span></p>
      <div className="mt-3 h-2 bg-[#e9f2f4] rounded-full overflow-hidden"><div className="h-full bg-[#21aba4]" style={{width:ready&&p.total?100*p.present/p.total+"%":"0%"}}/></div>
      <div className="helper mt-3">Đã điểm danh: {ready?percentage(p.present,p.total):"—"}</div>
     </div>;
    })}
   </div>
-  <div className="rounded-2xl bg-[#fff8e7] text-[#815e20] p-5 text-sm leading-relaxed border border-[#f5dfaa]">
+  <div className="rounded-xl bg-[#fff8e7] text-[#815e20] p-5 text-sm leading-relaxed border border-[#f5dfaa]">
    <strong>Phân biệt dữ liệu:</strong> Đây là số liệu điểm danh từ hệ thống, không xác nhận đại biểu còn hiện diện trong hội trường, không tự công nhận tư cách đại biểu và không quyết định danh sách đủ quyền biểu quyết. Mẫu số biểu quyết phải được Ban Thư ký/BTC xác nhận theo thể lệ áp dụng.
   </div>
   {ready&&report.unmatchedCheckins>0&&<p className="text-red-700 text-sm">Có {report.unmatchedCheckins} lượt điểm danh không đối chiếu được với hồ sơ đại biểu đang hoạt động; cần Ban Thư ký kiểm tra.</p>}

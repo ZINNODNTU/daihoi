@@ -21,7 +21,7 @@ export function CongressSettingsClient({initial}:{initial:Values}){
   finally{setBusy(false);}
  }
  return <div className="max-w-3xl space-y-6">
-  <div><p className="text-sm font-bold text-[#159ba6] tracking-wider">THIẾT LẬP</p><h1 className="page-title mt-2">Cấu hình Đại hội</h1><p className="helper mt-2">Chỉnh sửa thông tin điều hành. Mã định danh và loại Đại hội không thay đổi.</p></div>
+  <div><p className="text-sm font-bold text-[#2456c9] tracking-wider">THIẾT LẬP</p><h1 className="page-title mt-2">Cấu hình Đại hội</h1><p className="helper mt-2">Chỉnh sửa thông tin điều hành. Mã định danh và loại Đại hội không thay đổi.</p></div>
   {error&&<p role="alert" className="card p-4 text-red-700">{error}</p>}
   {message&&<p role="status" className="card p-4 text-teal-700">{message}</p>}
   <form className="card p-4 sm:p-6 space-y-5" onSubmit={save}>
@@ -35,7 +35,7 @@ export function CongressSettingsClient({initial}:{initial:Values}){
     <option value="preparing">Đang chuẩn bị</option><option value="live">Đang diễn ra</option><option value="completed">Đã hoàn thành</option>
    </select></label>
    <p className="helper">Trạng thái Đại hội dùng để hiển thị và theo dõi tiến độ. Việc đóng/mở quét QR được kiểm soát riêng trong từng phiên điểm danh.</p>
-   <div className="grid gap-3 sm:grid-cols-2 text-sm"><div className="rounded-xl bg-[#eff6f8] p-4"><b>Mã định danh</b><div className="break-all mt-2">{value.id}</div></div><div className="rounded-xl bg-[#eff6f8] p-4"><b>Đường dẫn</b><div className="break-all mt-2">{value.slug}</div></div></div>
+   <div className="grid gap-3 sm:grid-cols-2 text-sm"><div className="rounded-xl bg-[#f6f8fc] p-4"><b>Mã định danh</b><div className="break-all mt-2">{value.id}</div></div><div className="rounded-xl bg-[#f6f8fc] p-4"><b>Đường dẫn</b><div className="break-all mt-2">{value.slug}</div></div></div>
    <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={busy}><Save size={17}/> {busy?"Đang lưu...":"Lưu thay đổi"}</button>
   </form>
  </div>;

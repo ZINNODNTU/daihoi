@@ -232,7 +232,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
   .join(" ").toLocaleLowerCase("vi").includes(query.toLocaleLowerCase("vi"))).slice(0,100);
  return <div>
   <div className="flex flex-wrap justify-between gap-4 items-start">
-   <div><p className="text-xs text-[#0ca0a0] font-extrabold tracking-widest">ĐIỀU HÀNH ĐẠI HỘI</p>
+   <div><p className="text-xs text-[#0ca0a0] font-semibold tracking-widest">ĐIỀU HÀNH ĐẠI HỘI</p>
     <h1 className="page-title mt-2">Điểm danh đại biểu</h1>
     <p className="helper mt-2">Quét QR cố định, QR theo phiên, barcode dự phòng hoặc điểm danh thủ công.</p>
    </div>
@@ -265,7 +265,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
     <span>{getQrPolicyLabel(session.qr_policy)}</span>
    </div>}
    {editor&&canManage&&<div className="rounded-xl bg-[#f4f9fc] p-5 mt-5 border border-[#deebf2]">
-    <h2 className="font-extrabold mb-4">{editor==="create"?"Tạo phiên điểm danh":"Cập nhật thời gian và QR"}</h2>
+    <h2 className="font-semibold mb-4">{editor==="create"?"Tạo phiên điểm danh":"Cập nhật thời gian và QR"}</h2>
     <div className="grid md:grid-cols-2 gap-4">
      {editor==="create"&&<label className="md:col-span-2"><span className="label">Tên phiên *</span>
       <input className="field" value={sessionName} onChange={e=>setSessionName(e.target.value)} placeholder="Phiên trù bị, Phiên chính thức..."/></label>}
@@ -294,7 +294,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
      const I=Icon as typeof Users;
      return <div className="card stat-card min-w-0 p-3.5 sm:p-5" key={String(label)}>
       <div className="flex items-start justify-between gap-2 text-xs font-bold leading-relaxed text-[#637f91]"><span className="min-w-0">{String(label)}</span><I size={18} className="text-[#21959f]"/></div>
-      <div className="stat-value mt-4 text-3xl font-black tracking-tight">{String(count)}</div>
+      <div className="stat-value mt-4 text-3xl font-bold tracking-tight">{String(count)}</div>
      </div>;
    })}
   </div>
@@ -322,13 +322,13 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
    </div>
    {tab==="qr"&&canScan&&<div className="p-4 text-center sm:p-6">
     <div className="max-w-xl mx-auto">
-     {camera?<div className="relative rounded-2xl overflow-hidden bg-[#0b243a]">
+     {camera?<div className="relative rounded-xl overflow-hidden bg-[#0b243a]">
        <video ref={videoRef} autoPlay playsInline muted className="aspect-[4/3] w-full bg-[#0b243a] object-cover sm:aspect-video"/>
        <div className="absolute inset-[15%] border-2 border-[#42e1c9] rounded-xl pointer-events-none"/>
       </div>:
-      <div className="rounded-2xl bg-gradient-to-br from-[#edf8f6] to-[#f1f8fc] px-4 py-10 sm:py-12">
+      <div className="rounded-xl bg-gradient-to-br from-[#edf8f6] to-[#f1f8fc] px-4 py-10 sm:py-12">
        <Camera size={58} className="mx-auto text-[#31aab0]"/>
-       <h3 className="text-xl font-extrabold mt-4">Sẵn sàng quét đại biểu</h3>
+       <h3 className="text-xl font-semibold mt-4">Sẵn sàng quét đại biểu</h3>
        <p className="helper mt-2">QR nhận ngay. Barcode sẽ hiện thông tin để BTC xác nhận trước khi điểm danh.</p>
       </div>}
      <button disabled={busy||!allowed} onClick={()=>camera?stopCamera():void startCamera()} className="btn btn-primary mt-6 w-full">
@@ -365,7 +365,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
     <p className="mb-3 px-1 text-xs font-bold text-[#678294]">Kết quả tra cứu ({results.length})</p>
     {results.map(d=><article key={d.id} className="mobile-record">
       <div className="flex items-start justify-between gap-2">
-       <div className="min-w-0 flex-1"><p className="text-[11px] font-extrabold tracking-wider text-[#0d8788]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
+       <div className="min-w-0 flex-1"><p className="text-[11px] font-semibold tracking-wider text-[#2456c9]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
        <span className={`badge shrink-0 ${checkedIds.has(d.id)?"badge-green":"badge-yellow"}`}>{checkedIds.has(d.id)?"Đã đến":"Chưa đến"}</span>
       </div>
       <p className="mobile-record-meta mt-1">{d.unit||"Chưa cập nhật đơn vị"}</p>
@@ -389,10 +389,10 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
   {review&&<div role="presentation" className="modal-overlay fixed inset-0 z-50 bg-[#0d2945]/60 flex items-center justify-center p-4"
    ><button type="button" tabIndex={-1} aria-label="Đóng hộp thoại xác nhận" className="absolute inset-0" onClick={()=>setReview(null)}/><div role="dialog" aria-modal="true" aria-label="Xác nhận điểm danh dự phòng" className="card mobile-sheet relative z-10 max-w-lg w-full p-5 sm:p-7">
     <div className="flex gap-3 items-center text-[#126a89]"><ShieldAlert size={23}/>
-     <h3 className="text-xl font-extrabold">Xác nhận điểm danh dự phòng</h3></div>
+     <h3 className="text-xl font-semibold">Xác nhận điểm danh dự phòng</h3></div>
     <p className="helper my-5">Barcode và mã nhập chỉ là phương tiện tra cứu. BTC bắt buộc đối chiếu đúng người trước khi xác nhận.</p>
     <div className="bg-[#f1f8fb] rounded-xl p-4 space-y-1">
-     <div className="font-extrabold text-lg">{review.delegate.full_name}</div>
+     <div className="font-semibold text-lg">{review.delegate.full_name}</div>
      <div className="text-sm">Mã: {review.delegate.code} · Đơn vị: {review.delegate.unit}</div>
      <div className="helper">Phương thức: {review.method==="barcode"?"Barcode dự phòng":"Thủ công"}</div>
     </div>

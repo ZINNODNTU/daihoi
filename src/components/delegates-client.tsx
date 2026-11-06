@@ -129,7 +129,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
  }
  return <div>
   <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
-   <div><p className="text-xs tracking-widest text-[#169ca1] font-extrabold">QUẢN LÝ ĐẠI HỘI</p>
+   <div><p className="text-xs tracking-widest text-[#169ca1] font-semibold">QUẢN LÝ ĐẠI HỘI</p>
     <h1 className="page-title mt-2">Danh sách đại biểu</h1>
     <p className="helper mt-2">{delegates.length} đại biểu • QR cố định hoặc QR từng phiên • Barcode dự phòng.</p>
     <p className="helper mt-1">Mã định danh Đại hội: <strong>{congressCode.toUpperCase()}</strong></p>
@@ -161,7 +161,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   </div>}
   <div className="card overflow-hidden">
    <div className="p-4 sm:p-5 flex items-center justify-between flex-wrap gap-3">
-    <h2 className="font-extrabold flex gap-2 items-center"><Users size={20} className="text-[#1d98a4]"/>Danh sách</h2>
+    <h2 className="font-semibold flex gap-2 items-center"><Users size={20} className="text-[#1d98a4]"/>Danh sách</h2>
     <div className="relative w-full sm:w-[300px]"><Search size={18} className="absolute left-3 top-3 text-[#90a5b8]"/>
      <input value={search} onChange={e=>setSearch(e.target.value)} className="field pl-10!"
       placeholder="Mã, họ tên, đơn vị, barcode..."/></div>
@@ -181,23 +181,23 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   <div className="mobile-cards px-3 pb-4">
     {filtered.map(d=><article key={d.id} className="mobile-record">
      <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1"><p className="text-[11px] font-extrabold tracking-wider text-[#0d8788]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
+      <div className="min-w-0 flex-1"><p className="text-[11px] font-semibold tracking-wider text-[#2456c9]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
       <span className="badge badge-gray shrink-0">{kindLabel(d.delegate_type)}</span>
      </div>
      <p className="mobile-record-meta mt-2">{d.unit||"Chưa cập nhật đơn vị"}</p>
      <div className="mobile-record-actions"><button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>void openCard(d)}>
       <ScanBarcode size={17}/> Xem QR / Barcode</button></div>
     </article>)}
-    {!filtered.length&&<div className="rounded-2xl bg-[#f6fafb] p-7 text-center text-sm text-[#718795]">Không tìm thấy đại biểu phù hợp.</div>}
+    {!filtered.length&&<div className="rounded-xl bg-[#f6fafb] p-7 text-center text-sm text-[#718795]">Không tìm thấy đại biểu phù hợp.</div>}
    </div>
    {showCard&&<div role="presentation" className="modal-overlay fixed inset-0 z-50 bg-[#0c2b43]/65 p-4 flex items-start justify-center overflow-y-auto"
     onClick={()=>setShowCard(null)}>
    <div role="dialog" aria-modal="true" aria-label="Thẻ đại biểu điện tử" className="card mobile-sheet max-w-lg w-full p-5 sm:p-7 md:p-8 my-4 relative delegate-card-print"
     onClick={e=>e.stopPropagation()}>
     <button className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-xl bg-[#eef5f6] text-[#2a6177] hover:bg-[#e0f0f0] print:hidden" aria-label="Đóng thẻ đại biểu" onClick={()=>setShowCard(null)}><X/></button>
-    <p className="text-xs tracking-widest font-extrabold text-[#139aa0]">THẺ ĐẠI BIỂU ĐIỆN TỬ</p>
+    <p className="text-xs tracking-widest font-semibold text-[#139aa0]">THẺ ĐẠI BIỂU ĐIỆN TỬ</p>
     <p className="helper mt-2">Đại hội: <strong>{congressCode.toUpperCase()}</strong></p>
-    <h3 className="text-xl font-extrabold mt-3">{showCard.name}</h3>
+    <h3 className="text-xl font-semibold mt-3">{showCard.name}</h3>
     <p className="text-[#4d6880] text-sm mt-1">Mã định danh đại biểu: <strong>{showCard.code}</strong></p>
     <label className="block mt-6 print:hidden"><span className="label">Chọn loại mã QR</span>
      <select className="field" value={cardSession} onChange={e=>{
@@ -207,7 +207,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       {sessionQrChoices.map(s=><option key={s.id} value={s.id}>QR riêng: {s.name}</option>)}
      </select></label>
     <div className="text-center rounded-xl bg-[#f5fafc] p-5 mt-5">
-     <div className="font-extrabold text-sm">{showCard.scope==="fixed"?"QR cố định":
+     <div className="font-semibold text-sm">{showCard.scope==="fixed"?"QR cố định":
       "QR dành riêng: "+showCard.sessionName}</div>
      <div className="bg-white rounded-xl p-3 sm:p-5 mt-3 w-fit max-w-full mx-auto border border-[#e7f1f4]">
       <QRCodeSVG id="delegate-qr" className="max-w-full h-auto" value={showCard.token} size={210} level="M" marginSize={1}/>

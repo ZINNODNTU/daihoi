@@ -287,7 +287,7 @@ export function SeatingClient({congressId,canManage}:Props){
         {label:"Đã điểm danh",value:occupiedPresent,icon:CheckCircle2}
       ].map(({label,value,icon:Icon})=><div className="card min-w-0 p-4" key={label}>
         <div className="flex items-center justify-between gap-2 text-xs font-semibold text-[#62798a]">{label}<Icon size={17} className="text-[#0e8988]"/></div>
-        <p className="mt-3 text-3xl font-black text-[#173047]">{value}</p>
+        <p className="mt-3 text-3xl font-bold text-[#173047]">{value}</p>
       </div>)}
     </div>}
 
@@ -343,18 +343,18 @@ export function SeatingClient({congressId,canManage}:Props){
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_345px]">
         <section className="card min-w-0 overflow-hidden" aria-label="Sơ đồ chỗ ngồi">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e5eef1] p-4">
-            <div><h2 className="text-base font-extrabold">Vị trí trong hội trường</h2>
+            <div><h2 className="text-base font-semibold">Vị trí trong hội trường</h2>
               <p className="helper">{mode==="edit"&&canManage?"Kéo ghế để thay đổi vị trí; nhấn ghế để chỉnh sửa thông tin.":"Chọn ghế để xem hoặc phân công đại biểu."}</p>
             </div>
             <div className="flex gap-1">
               <button type="button" className="btn btn-secondary !px-3" onClick={()=>setZoom(z=>Math.max(.6,+(z-.1).toFixed(2)))} aria-label="Thu nhỏ" disabled={zoom<=.6}><ZoomOut size={17}/></button>
-              <span className="flex min-w-12 items-center justify-center text-sm font-extrabold">{Math.round(zoom*100)}%</span>
+              <span className="flex min-w-12 items-center justify-center text-sm font-semibold">{Math.round(zoom*100)}%</span>
               <button type="button" className="btn btn-secondary !px-3" onClick={()=>setZoom(z=>Math.min(1.5,+(z+.1).toFixed(2)))} aria-label="Phóng to" disabled={zoom>=1.5}><ZoomIn size={17}/></button>
             </div>
           </div>
           <div className="overflow-x-auto overflow-y-auto bg-[#f4f8fb] p-3 sm:p-4" style={{maxHeight:"690px"}} tabIndex={0} aria-label="Cuộn để xem các khu vực ghế">
-            <div className="relative overflow-hidden rounded-2xl border border-[#d9e5ec] bg-white shadow-sm" style={{width:boardWidth*zoom,height:boardHeight*zoom}}>
-              <div className="absolute left-[18%] top-[22px] w-[64%] rounded-b-[24px] border border-[#adc5d8] bg-gradient-to-r from-[#143b54] to-[#21687a] px-3 py-4 text-center font-extrabold tracking-[.16em] text-white shadow-md"
+            <div className="relative overflow-hidden rounded-xl border border-[#d9e5ec] bg-white shadow-sm" style={{width:boardWidth*zoom,height:boardHeight*zoom}}>
+              <div className="absolute left-[18%] top-[22px] w-[64%] rounded-b-[24px] border border-[#adc5d8] bg-gradient-to-r from-[#143b54] to-[#21687a] px-3 py-4 text-center font-semibold tracking-[.16em] text-white shadow-md"
                    style={{fontSize:Math.max(11,15*zoom),top:22*zoom}}>
                 {stageLabel||"SÂN KHẤU"}
               </div>
@@ -369,7 +369,7 @@ export function SeatingClient({congressId,canManage}:Props){
                   aria-pressed={isSelected} onClick={()=>chooseSeat(s.id)}
                   onPointerDown={e=>pointerDown(e,s)} onPointerMove={e=>pointerMove(e,s.id)}
                   onPointerUp={e=>pointerUp(e,s.id)} onPointerCancel={e=>pointerUp(e,s.id)}
-                  className={"absolute flex items-center justify-center rounded-[11px] border-2 font-extrabold shadow-[0_2px_3px_rgba(17,58,81,.09)] transition-colors "+
+                  className={"absolute flex items-center justify-center rounded-[11px] border-2 font-semibold shadow-[0_2px_3px_rgba(17,58,81,.09)] transition-colors "+
                     (isSelected?"z-10 !border-[#d9911c] !bg-[#fff0c4] !text-[#784913] ring-[3px] ring-[#f3c76a] ":
                     s.blocked?"border-[#ced7df] bg-[#e9eef2] text-[#8b9dad] ":
                     isPresent?"border-[#66cfa7] bg-[#dff8ec] text-[#126543] ":
@@ -399,7 +399,7 @@ export function SeatingClient({congressId,canManage}:Props){
 
         <aside className="min-w-0 space-y-4">
           {canManage&&mode==="edit"&&<section className="card space-y-3 p-4 sm:p-5">
-            <div className="flex items-center gap-2"><Grid3X3 size={20} className="text-[#0d8f87]"/><h2 className="text-base font-extrabold">Tạo khu vực ghế</h2></div>
+            <div className="flex items-center gap-2"><Grid3X3 size={20} className="text-[#2456c9]"/><h2 className="text-base font-semibold">Tạo khu vực ghế</h2></div>
             <p className="helper">Nhập số hàng và ghế; hệ thống tự sinh mã. Có thể thêm nhiều khu vực cho một sơ đồ.</p>
             <div className="grid grid-cols-2 gap-3">
               <label><span className="label">Mã khu</span><input className="field" value={section.zone} maxLength={12} onChange={e=>setSection(v=>({...v,zone:e.target.value}))}/></label>
@@ -414,10 +414,10 @@ export function SeatingClient({congressId,canManage}:Props){
           </section>}
 
           <section className="card p-4 sm:p-5">
-            <div className="flex items-center gap-2"><Armchair size={20} className="text-[#0d8f87]"/><h2 className="text-base font-extrabold">Thông tin ghế</h2></div>
+            <div className="flex items-center gap-2"><Armchair size={20} className="text-[#2456c9]"/><h2 className="text-base font-semibold">Thông tin ghế</h2></div>
             {!selectedSeat?<p className="helper mt-3">Chọn một ghế trên sơ đồ để xem thông tin và chỉnh sửa phân công.</p>:<>
               <div className="mt-4 rounded-xl border border-[#dcebf1] bg-[#f4f9fb] p-3">
-                <div className="flex items-center justify-between gap-2"><p className="text-xl font-black">{selectedSeat.code}</p><span className={"badge "+(selectedSeat.blocked?"badge-gray":selectedDelegate?"badge-green":"badge-yellow")}>
+                <div className="flex items-center justify-between gap-2"><p className="text-xl font-bold">{selectedSeat.code}</p><span className={"badge "+(selectedSeat.blocked?"badge-gray":selectedDelegate?"badge-green":"badge-yellow")}>
                   {selectedSeat.blocked?"Khóa":selectedDelegate?"Đã phân":"Ghế trống"}
                 </span></div>
                 <p className="helper mt-1">{selectedSeat.zone} · Hàng {selectedSeat.rowLabel} · Vị trí {selectedSeat.seatNumber}</p>
@@ -537,7 +537,7 @@ export function SeatingClient({congressId,canManage}:Props){
         <div className="table-wrap mt-4"><table className="data"><thead><tr><th>Ghế</th><th>Đại biểu</th><th>Đơn vị</th><th>Điểm danh</th></tr></thead>
           <tbody>{activeAssignments.map(a=>{
             const s=seats.find(s=>s.id===a.seat_id);const d=delegatesById.get(a.delegate_id);
-            return <tr key={a.seat_id}><td className="font-extrabold">{s?.code||"—"}</td>
+            return <tr key={a.seat_id}><td className="font-semibold">{s?.code||"—"}</td>
               <td>{d?.full_name||"—"} <span className="text-[#7a91a0]">({d?.code})</span></td>
               <td>{d?.unit||"—"}</td>
               <td><span className={"badge "+(checkedIn.has(a.delegate_id)?"badge-green":"badge-gray")}>
