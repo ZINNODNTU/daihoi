@@ -252,7 +252,7 @@ export function SeatingClient({congressId,canManage}:Props){
     await applyAssignments(items,importMode);
   }
   const heading=data?.layout?.id===layoutId?data.layout.title:("Sơ đồ mới (chưa lưu)");
-  return <div className="space-y-5 pb-6">
+  return <div className="seating-studio space-y-6 pb-6">
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div>
         <p className="eyebrow">Quản lý chỗ ngồi đại biểu</p>
@@ -285,7 +285,7 @@ export function SeatingClient({congressId,canManage}:Props){
         {label:"Đã phân công",value:assignedCount,icon:Users},
         {label:"Ghế trống",value:Math.max(0,seats.length-blockedCount-assignedCount),icon:Grid3X3},
         {label:"Đã điểm danh",value:occupiedPresent,icon:CheckCircle2}
-      ].map(({label,value,icon:Icon})=><div className="card min-w-0 p-4" key={label}>
+      ].map(({label,value,icon:Icon})=><div className="metric-card" key={label}>
         <div className="flex items-center justify-between gap-2 text-xs font-semibold text-[#62798a]">{label}<Icon size={17} className="text-[#0e8988]"/></div>
         <p className="mt-3 text-3xl font-bold text-[#173047]">{value}</p>
       </div>)}
@@ -353,8 +353,8 @@ export function SeatingClient({congressId,canManage}:Props){
             </div>
           </div>
           <div className="overflow-x-auto overflow-y-auto bg-[#f4f8fb] p-3 sm:p-4" style={{maxHeight:"690px"}} tabIndex={0} aria-label="Cuộn để xem các khu vực ghế">
-            <div className="relative overflow-hidden rounded-xl border border-[#d9e5ec] bg-white shadow-sm" style={{width:boardWidth*zoom,height:boardHeight*zoom}}>
-              <div className="absolute left-[18%] top-[22px] w-[64%] rounded-b-[24px] border border-[#adc5d8] bg-gradient-to-r from-[#143b54] to-[#21687a] px-3 py-4 text-center font-semibold tracking-[.16em] text-white shadow-md"
+            <div className="seat-map-board relative overflow-hidden rounded-xl border border-[#d9e5ec] bg-white shadow-sm" style={{width:boardWidth*zoom,height:boardHeight*zoom}}>
+              <div className="seat-map-stage absolute left-[18%] top-[22px] w-[64%] rounded-b-[8px] border border-[#3b5576] bg-[#263b58] px-3 py-4 text-center font-semibold tracking-[.14em] text-white"
                    style={{fontSize:Math.max(11,15*zoom),top:22*zoom}}>
                 {stageLabel||"SÂN KHẤU"}
               </div>
@@ -369,7 +369,7 @@ export function SeatingClient({congressId,canManage}:Props){
                   aria-pressed={isSelected} onClick={()=>chooseSeat(s.id)}
                   onPointerDown={e=>pointerDown(e,s)} onPointerMove={e=>pointerMove(e,s.id)}
                   onPointerUp={e=>pointerUp(e,s.id)} onPointerCancel={e=>pointerUp(e,s.id)}
-                  className={"absolute flex items-center justify-center rounded-[11px] border-2 font-semibold shadow-[0_2px_3px_rgba(17,58,81,.09)] transition-colors "+
+                  className={"seat-map-button absolute flex items-center justify-center rounded-[6px] border-2 font-semibold transition-colors "+
                     (isSelected?"z-10 !border-[#d9911c] !bg-[#fff0c4] !text-[#784913] ring-[3px] ring-[#f3c76a] ":
                     s.blocked?"border-[#ced7df] bg-[#e9eef2] text-[#8b9dad] ":
                     isPresent?"border-[#66cfa7] bg-[#dff8ec] text-[#126543] ":

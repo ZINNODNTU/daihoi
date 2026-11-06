@@ -1,169 +1,159 @@
 import Link from "next/link";
 import {
-  ArrowRight,ArrowUpRight,Armchair,BarChart3,CheckCircle2,
-  FileText,LayoutGrid,QrCode,ShieldCheck,Users
+  ArrowRight,ArrowUpRight,Armchair,BarChart3,ChevronRight,
+  FileSpreadsheet,Layers3,QrCode,ShieldCheck,Users
 } from "lucide-react";
+import {BrandMark} from "@/components/brand-mark";
+import {ExperiencePreview} from "@/components/experience-preview";
 
-const features=[
-  {number:"01",icon:Users,title:"Quản lý đại biểu",detail:"Hồ sơ tập trung, nhập danh sách bằng Excel, mã định danh QR và barcode cho từng đại biểu."},
-  {number:"02",icon:QrCode,title:"Điểm danh theo phiên",detail:"Quét mã bằng camera, kiểm tra trạng thái từng phiên và xử lý điểm danh thủ công khi cần."},
-  {number:"03",icon:Armchair,title:"Sơ đồ chỗ ngồi",detail:"Thiết kế khu vực, bố trí hàng ghế và phân công vị trí trực tiếp hoặc bằng Excel."},
-  {number:"04",icon:BarChart3,title:"Báo cáo điều hành",detail:"Tổng hợp lượt tham dự theo phiên, theo đơn vị và xuất dữ liệu phục vụ công tác tổ chức."},
-  {number:"05",icon:FileText,title:"Tài liệu Đại hội",detail:"Quản lý tài liệu theo từng Đại hội với cơ chế quyền truy cập nội bộ."},
-  {number:"06",icon:ShieldCheck,title:"Phân quyền rõ ràng",detail:"Tách biệt dữ liệu từng Đại hội và giới hạn thao tác theo vai trò thành viên BTC."}
+const capabilities=[
+  {number:"01",icon:Users,title:"Danh sách đại biểu",description:"Hồ sơ, đơn vị, quyền tham dự và thẻ định danh — tổ chức trong một quy trình rõ ràng."},
+  {number:"02",icon:QrCode,title:"Điểm danh theo phiên",description:"Quét QR, kiểm tra barcode hoặc xác nhận thủ công khi cần. Tách biệt từng phiên làm việc."},
+  {number:"03",icon:Armchair,title:"Sơ đồ hội trường",description:"Tự bố trí các dãy ghế, gán đại biểu theo vị trí và nhập danh sách phân ghế bằng Excel."},
+  {number:"04",icon:BarChart3,title:"Báo cáo điều hành",description:"Theo dõi số lượng tham dự, trạng thái đại biểu và xuất số liệu phục vụ tổng kết."}
 ];
-const steps=[
-  {number:"01",title:"Chuẩn bị",text:"Tạo Đại hội, phân quyền BTC và nhập danh sách đại biểu."},
-  {number:"02",title:"Điều hành",text:"Mở phiên điểm danh, quản lý vị trí ngồi và theo dõi hiện diện."},
-  {number:"03",title:"Tổng hợp",text:"Đối chiếu số liệu, xuất báo cáo và lưu tài liệu Đại hội."}
+const workflow=[
+  {number:"01",title:"Chuẩn bị",description:"Khởi tạo Đại hội, phân quyền BTC, nhập đại biểu và thiết kế sơ đồ."},
+  {number:"02",title:"Vận hành",description:"Mở phiên, tiếp nhận điểm danh và xử lý các tình huống phát sinh."},
+  {number:"03",title:"Tổng hợp",description:"Đối chiếu dữ liệu, xuất báo cáo và lưu hồ sơ sau Đại hội."}
 ];
 
 export default function Home(){
-  return <main className="public-page min-h-dvh overflow-x-hidden">
-    <nav aria-label="Điều hướng trang chủ" className="public-nav">
-      <div className="public-container flex h-full items-center justify-between gap-4">
-        <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Trang chủ Đại hội số">
-          <span className="brand-icon">ĐH</span>
-          <span className="text-[17px] font-bold tracking-[-.035em] text-[#1a283c]">Đại hội số</span>
-          <span className="ml-2 hidden border-l border-[#dce2e9] pl-4 text-[11px] font-medium text-[#7b8696] md:block">Nền tảng điều hành Đại hội</span>
-        </Link>
-        <Link href="/login" className="btn btn-secondary group">Đăng nhập
-          <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5"/>
-        </Link>
-      </div>
-    </nav>
-
-    <section className="public-container grid min-h-[665px] items-center gap-12 pb-16 pt-16 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,.98fr)] lg:gap-16 lg:pb-20 lg:pt-20">
-      <div className="min-w-0">
-        <div className="page-kicker">PHẦN MỀM DÀNH CHO BAN TỔ CHỨC</div>
-        <h1 className="public-display mt-6">Mọi công việc<br/>Đại hội.<br/><em>Một nơi điều hành.</em></h1>
-        <p className="mt-7 max-w-[540px] text-[15px] leading-[1.85] text-[#637083] sm:text-[16px]">
-          Từ chuẩn bị danh sách đại biểu, sắp xếp chỗ ngồi đến điểm danh theo phiên và tổng hợp báo cáo — được tổ chức trong một hệ thống rõ ràng, dễ sử dụng.
-        </p>
-        <div className="mt-9 flex flex-wrap gap-3">
-          <Link href="/login" className="btn btn-primary min-h-[46px] px-5">Vào hệ thống <ArrowRight size={17}/></Link>
-          <a href="#tinh-nang" className="btn btn-secondary min-h-[46px] px-5">Xem chức năng <ArrowUpRight size={16}/></a>
-        </div>
-        <div className="mt-12 grid max-w-[490px] gap-3 border-t border-[#e0e5ec] pt-5 text-[12px] font-medium text-[#637184] sm:grid-cols-2">
-          <span className="flex items-center gap-2"><ShieldCheck size={16} className="text-[#46699e]"/> Phân quyền từng Đại hội</span>
-          <span className="flex items-center gap-2"><LayoutGrid size={16} className="text-[#46699e]"/> Phù hợp desktop & mobile</span>
-        </div>
-      </div>
-      <div className="min-w-0 lg:py-8">
-        <div className="product-preview">
-          <div className="product-preview-top">
-            <div className="flex items-center gap-1.5" aria-hidden="true">
-              <span className="product-preview-dot"/><span className="product-preview-dot"/><span className="product-preview-dot"/>
-            </div>
-            <span className="text-[10px] font-semibold tracking-[.04em] text-[#8a95a5]">MINH HỌA GIAO DIỆN</span>
-            <span className="text-[#b3bdc9]">•••</span>
+  return <main className="min-h-dvh overflow-x-hidden bg-[#f5f7fa]">
+    <div className="premium-hero">
+      <nav className="premium-nav">
+        <div className="premium-container flex h-full items-center justify-between gap-4">
+          <Link href="/" aria-label="Trang chủ Đại hội số" className="flex shrink-0 items-center gap-3">
+            <BrandMark/>
+            <span className="text-[17px] font-bold tracking-[-.04em] text-white sm:text-[18px]">Đại hội số<span className="ml-1 text-[#dbb875]">.</span></span>
+          </Link>
+          <div className="hidden items-center gap-8 text-[12px] font-medium text-[#adbed8] md:flex">
+            <a href="#giai-phap" className="hover:text-white">Giải pháp</a>
+            <a href="#quy-trinh" className="hover:text-white">Quy trình</a>
+            <Link href="/preview" className="hover:text-white">Giao diện mẫu</Link>
           </div>
-          <div className="p-5 sm:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[.10em] text-[#8390a4]">Bảng điều hành / Phiên làm việc</p>
-                <h2 className="mt-2 text-[19px] font-bold tracking-[-.035em] text-[#253248]">Tổng quan điểm danh</h2>
-              </div>
-              <span className="badge badge-green"><span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-[#21855a]"/> Đang mở</span>
+          <Link href="/login" className="btn premium-secondary !min-h-10 !px-4 !text-[12px] sm:!px-5">
+            Đăng nhập <ArrowUpRight size={15}/>
+          </Link>
+        </div>
+      </nav>
+
+      <section className="premium-container relative grid gap-14 pb-16 pt-17 md:pb-22 lg:min-h-[680px] lg:grid-cols-[minmax(0,.87fr)_minmax(0,1.13fr)] lg:items-center lg:gap-10 lg:py-23 2xl:min-h-[750px]">
+        <div className="relative z-10">
+          <div className="premium-eyebrow">HỆ THỐNG ĐIỀU HÀNH ĐẠI HỘI</div>
+          <h1 className="premium-title mt-7">
+            Tổ chức<br/>
+            bài bản.<br/>
+            Điều hành<br/>
+            <span className="serif-accent">vượt kỳ vọng.</span>
+          </h1>
+          <p className="premium-description mt-7">
+            Tất cả thông tin, con người và công việc trong một không gian điều hành. Đủ rõ ràng cho công tác chuẩn bị, đủ linh hoạt cho từng phiên Đại hội.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link href="/preview" className="btn premium-primary px-5">Khám phá giao diện <ArrowRight size={17}/></Link>
+            <Link href="/login" className="btn premium-secondary px-5">Vào hệ thống <ChevronRight size={16}/></Link>
+          </div>
+          <div className="premium-proof mt-11 grid max-w-[500px] gap-4 sm:grid-cols-2">
+            <div className="premium-proof-item"><ShieldCheck size={17}/> Quyền truy cập theo từng Đại hội</div>
+            <div className="premium-proof-item"><FileSpreadsheet size={17}/> Phân bổ dữ liệu nhanh bằng Excel</div>
+            <div className="premium-proof-item"><QrCode size={17}/> QR, barcode & điểm danh thủ công</div>
+            <div className="premium-proof-item"><Armchair size={17}/> Sơ đồ chỗ ngồi trực quan</div>
+          </div>
+        </div>
+
+        <div className="relative z-10 min-w-0 lg:-mr-6 2xl:-mr-12">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.13em] text-[#bdcce2]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#e2ba79]"/> Không gian làm việc
             </div>
-            <div className="mt-6 grid grid-cols-3 border-y border-[#e8ecf2]">
-              {[["200","Đại biểu"],["184","Đã có mặt"],["92%","Tỷ lệ"]].map(([value,label])=>
-                <div className="product-preview-cell" key={label}>
-                  <p className="product-preview-value">{value}</p>
-                  <p className="product-preview-caption">{label}</p>
-                </div>
-              )}
-            </div>
-            <div className="mt-6">
-              <div className="flex justify-between text-[12px]">
-                <span className="font-semibold text-[#40516a]">Tiến độ điểm danh</span>
-                <span className="font-bold text-[#2456c9]">92%</span>
-              </div>
-              <div className="progress-track mt-3"><div className="progress-fill w-[92%]"/></div>
-            </div>
-            <div className="mt-7">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-[12px] font-bold text-[#354158]">Ghi nhận gần đây</p>
-                <span className="text-[10px] text-[#8d97a7]">Phiên chính thức</span>
-              </div>
-              <div className="overflow-hidden rounded-[9px] border border-[#e9ecf1]">
-                {[
-                  ["NA","Nguyễn Văn A","Khoa CNTT","QR"],
-                  ["TB","Trần Thị B","Khoa Kinh tế","Thủ công"],
-                  ["LC","Lê Văn C","Khoa Ngoại ngữ","QR"]
-                ].map(([initial,name,unit,method])=>
-                  <div key={initial} className="flex items-center gap-3 border-b border-[#edf0f4] px-3 py-3 last:border-0">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#eef2f8] text-[10px] font-bold text-[#506684]">{initial}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[12px] font-semibold text-[#344155]">{name}</p>
-                      <p className="mt-0.5 truncate text-[10px] text-[#9aa4b1]">{unit}</p>
-                    </div>
-                    <span className="text-[10px] font-medium text-[#758296]">{method}</span>
-                    <CheckCircle2 size={16} className="text-[#2a956d]"/>
-                  </div>
-                )}
-              </div>
-            </div>
-            <p className="mt-4 text-[10px] text-[#9ba4b2]">* Dữ liệu giả lập để giới thiệu bố cục.</p>
+            <span className="text-[10px] text-[#7f94b5]">TƯƠNG TÁC ĐỂ XEM THỬ →</span>
+          </div>
+          <ExperiencePreview compact/>
+          <p className="premium-side-note mt-5">
+            Bản minh họa tương tác · Chỉ dùng dữ liệu mẫu. Đăng nhập để sử dụng Đại hội thực tế.
+          </p>
+        </div>
+      </section>
+
+      <div className="relative border-t border-white/10">
+        <div className="premium-container flex flex-wrap items-center justify-between gap-4 py-5">
+          <span className="text-[10px] font-semibold uppercase tracking-[.17em] text-[#849bb9]">Tập trung vào nghiệp vụ thực tế</span>
+          <div className="flex flex-wrap gap-x-7 gap-y-2 text-[11px] text-[#a2b4cb]">
+            <span>01 / Chuẩn bị</span><span>02 / Điều hành</span><span>03 / Tổng hợp</span>
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <section id="tinh-nang" className="border-y border-[#e5e9ef] bg-white">
-      <div className="public-container public-section">
-        <div className="flex flex-wrap items-end justify-between gap-5">
+    <section id="giai-phap" className="editorial-section bg-white">
+      <div className="premium-container">
+        <div className="grid gap-6 lg:grid-cols-[.68fr_1fr] lg:items-end">
           <div>
-            <p className="page-kicker">CÁC MODULE NGHIỆP VỤ</p>
-            <h2 className="mt-4 max-w-2xl text-[30px] font-bold leading-tight tracking-[-.05em] text-[#1e2b3f] sm:text-[38px]">
-              Một luồng làm việc nhất quán,<br/>từ chuẩn bị đến tổng kết.
-            </h2>
+            <p className="editorial-kicker">XÂY DỰNG CHO BAN TỔ CHỨC</p>
+            <h2 className="editorial-heading mt-5">Không chỉ là<br/>một trang <em>quản lý.</em></h2>
           </div>
-          <p className="max-w-[300px] text-[13px] leading-7 text-[#748093]">Thiết kế tập trung vào thao tác của BTC, giảm thời gian tìm kiếm thông tin khi Đại hội đang diễn ra.</p>
+          <div className="max-w-xl lg:ml-auto">
+            <p className="text-[15px] leading-[1.85] text-[#64748b]">Một Đại hội có nhiều công việc cần phối hợp. Giao diện được thiết kế để mỗi thành viên BTC thấy đúng thông tin cần xử lý, từ lúc chuẩn bị cho đến khi hoàn tất.</p>
+          </div>
         </div>
-        <div className="mt-10 grid border-t border-[#e6eaf0] md:grid-cols-2">
-          {features.map(({number,icon:Icon,title,detail},index)=>
-            <div key={number} className={"flex gap-4 border-b border-[#e6eaf0] py-6 sm:gap-5 sm:py-7 "+(index%2===0?"md:pr-9":"md:border-l md:pl-9")}>
-              <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-[#f0f4fa] text-[#415d88]"><Icon size={19}/></span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2"><h3 className="text-[15px] font-bold text-[#27364b]">{title}</h3><span className="text-[11px] font-semibold text-[#c3cad4]">{number}</span></div>
-                <p className="mt-2 text-[13px] leading-7 text-[#728092]">{detail}</p>
-              </div>
+        <div className="mt-12 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {capabilities.map(item=><article className="editorial-feature" key={item.number}>
+            <div className="flex items-start justify-between">
+              <span className="feature-icon"><item.icon size={19}/></span>
+              <span className="feature-count">{item.number} / 04</span>
             </div>
-          )}
+            <h3 className="mt-9">{item.title}</h3>
+            <p className="mt-3">{item.description}</p>
+          </article>)}
+        </div>
+        <div className="mt-3 grid gap-3 lg:grid-cols-[1.15fr_.85fr]">
+          <div className="editorial-feature wide min-h-[230px] sm:min-h-[254px]">
+            <div className="flex items-start justify-between gap-3"><span className="editorial-kicker">HỆ THỐNG NHIỀU ĐẠI HỘI</span><Layers3 size={23} className="text-[#4866a2]"/></div>
+            <h3 className="mt-auto max-w-md !text-[24px] !leading-snug !tracking-[-.04em]">Tách dữ liệu từng Đại hội.<br/>Thống nhất cách vận hành.</h3>
+            <p className="mt-3 max-w-[485px]">Quản lý nhiều nhiệm kỳ và đơn vị, mỗi không gian có quyền truy cập và dữ liệu riêng.</p>
+          </div>
+          <div className="editorial-feature dark min-h-[230px] sm:min-h-[254px]">
+            <div className="flex items-start justify-between gap-3"><span className="feature-count">SẴN SÀNG CHO VẬN HÀNH</span><QrCode size={24} className="text-[#e1bd7c]"/></div>
+            <h3 className="mt-auto max-w-sm !text-[24px] !leading-snug !tracking-[-.04em]">Mọi phiên làm việc.<br/>Một cách điều hành.</h3>
+            <p className="mt-3 max-w-[440px]">Cấu hình phiên điểm danh theo khung giờ, kết hợp quét QR và phương án thủ công dự phòng.</p>
+          </div>
         </div>
       </div>
     </section>
 
-    <section className="public-container public-section">
-      <div className="section-header">
-        <div><p className="page-kicker">QUY TRÌNH VẬN HÀNH</p><h2 className="mt-4 text-[28px] font-bold tracking-[-.045em] text-[#1f2d40] sm:text-[36px]">Đơn giản trong từng giai đoạn.</h2></div>
-      </div>
-      <div className="mt-9 grid gap-4 md:grid-cols-3">
-        {steps.map(step=>
-          <article key={step.number} className="rounded-[11px] border border-[#e3e8ef] bg-white p-6 sm:p-7">
-            <span className="text-[13px] font-bold text-[#3361b7]">{step.number} / 03</span>
-            <h3 className="mt-7 text-[19px] font-bold tracking-[-.035em] text-[#29384b]">{step.title}</h3>
-            <p className="mt-3 text-[13px] leading-7 text-[#728094]">{step.text}</p>
-          </article>
-        )}
-      </div>
-    </section>
-
-    <section className="public-container pb-16 sm:pb-20">
-      <div className="flex flex-col items-start justify-between gap-5 rounded-[12px] bg-[#1e2d46] px-6 py-9 text-white sm:px-10 lg:flex-row lg:items-center lg:py-11">
-        <div><p className="text-[10px] font-bold tracking-[.12em] text-[#9fb6e6]">DÀNH CHO BAN TỔ CHỨC</p>
-          <h2 className="mt-3 text-[23px] font-bold tracking-[-.04em] sm:text-[29px]">Sẵn sàng cho kỳ Đại hội tiếp theo.</h2>
-          <p className="mt-2 max-w-lg text-[13px] leading-7 text-[#c0cad9]">Truy cập bằng tài khoản được phân quyền để bắt đầu công việc điều hành.</p>
+    <section id="quy-trinh" className="editorial-section border-t border-[#e5e9f0] bg-[#f5f7fa]">
+      <div className="premium-container">
+        <div className="flex flex-wrap items-end justify-between gap-5">
+          <div><p className="editorial-kicker">CÁCH VẬN HÀNH</p><h2 className="editorial-heading mt-4">Chuẩn hóa quy trình.<br/><em>Giảm thao tác thừa.</em></h2></div>
+          <Link href="/preview" className="btn btn-secondary">Xem giao diện thử <ArrowUpRight size={16}/></Link>
         </div>
-        <Link href="/login" className="btn shrink-0 border border-white bg-white px-5 text-[#1d2d46] hover:bg-[#edf1f8]">Đăng nhập hệ thống <ArrowRight size={17}/></Link>
+        <div className="mt-12 grid gap-4 md:grid-cols-3">
+          {workflow.map(step=><article className="border-t-[2px] border-[#294c85] bg-white p-6 shadow-[0_3px_12px_rgba(23,36,60,.025)] sm:p-7" key={step.number}>
+            <p className="text-[11px] font-bold tracking-[.13em] text-[#59749e]">{step.number} / 03</p>
+            <h3 className="mt-9 text-[20px] font-bold tracking-[-.035em] text-[#23344c]">{step.title}</h3>
+            <p className="mt-3 text-[13px] leading-[1.8] text-[#7b899a]">{step.description}</p>
+          </article>)}
+        </div>
       </div>
     </section>
 
-    <footer className="border-t border-[#e7eaf0] bg-white">
-      <div className="public-container flex flex-col items-start justify-between gap-2 py-7 text-[11px] text-[#8792a1] sm:flex-row sm:items-center">
-        <span className="font-semibold text-[#4f5e72]">Đại hội số</span>
-        <span>Không gian quản lý và điều hành Đại hội Đoàn – Hội</span>
+    <section className="bg-[#17263e] text-white">
+      <div className="premium-container flex flex-col items-start justify-between gap-6 py-12 sm:py-16 lg:flex-row lg:items-center">
+        <div>
+          <p className="premium-eyebrow">DÀNH CHO BAN TỔ CHỨC ĐẠI HỘI</p>
+          <h2 className="mt-4 text-[28px] font-bold tracking-[-.045em] sm:text-[37px]">Sẵn sàng cho kỳ Đại hội tiếp theo?</h2>
+          <p className="mt-3 max-w-xl text-[13px] leading-7 text-[#b2c3d9]">Đăng nhập bằng tài khoản BTC được cấp để truy cập không gian điều hành của đơn vị.</p>
+        </div>
+        <Link href="/login" className="btn premium-primary min-h-[47px] shrink-0 px-6">Truy cập hệ thống <ArrowRight size={17}/></Link>
+      </div>
+    </section>
+
+    <footer className="bg-[#101a2d] text-white">
+      <div className="premium-container flex flex-col items-start justify-between gap-4 py-8 text-[11px] text-[#8193af] sm:flex-row sm:items-center">
+        <Link href="/" className="flex items-center gap-2.5 text-[13px] font-bold text-white"><BrandMark className="!h-8 !w-8 !flex-[0_0_32px] !rounded-[8px] [&_svg]:!h-6 [&_svg]:!w-6"/>Đại hội số.</Link>
+        <span>Nền tảng quản lý và điều hành Đại hội Đoàn – Hội</span>
+        <Link href="/preview" className="hover:text-white">Giao diện mẫu <ArrowUpRight size={13} className="inline"/></Link>
       </div>
     </footer>
   </main>;

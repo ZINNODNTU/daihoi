@@ -2,6 +2,13 @@
 
 Nền tảng điều hành **nhiều Đại hội Đoàn TNCS Hồ Chí Minh và Hội Sinh viên Việt Nam**.
 
+## Trải nghiệm giao diện V3
+
+- **Trang chủ mới:** http://localhost:3000/ — nhận diện midnight navy/gold, bố cục editorial và trình diễn sản phẩm.
+- **Xem thử tương tác:** http://localhost:3000/preview — chuyển giữa bảng điều hành, sơ đồ ghế và điểm danh **không cần đăng nhập hoặc Supabase**; toàn bộ dữ liệu trên trang này là giả lập.
+- Dashboard nội bộ, sidebar, đăng nhập và sơ đồ ghế đã được đồng bộ với hệ thiết kế mới.
+- Xem chi tiết trong `docs/UI-V3-BRANDING.md`. Các trang dữ liệu thật vẫn yêu cầu kết nối Supabase.
+
 ## Trạng thái triển khai (MVP 01)
 
 Đã viết mã và kiểm tra build cho các chức năng:

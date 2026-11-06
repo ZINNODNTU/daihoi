@@ -2,38 +2,62 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 const source=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
-test("Hệ thống giao diện dùng màu trung tính và hành động chính đồng nhất",()=>{
+
+test("V3 dùng bản sắc institutional navy, gold, cobalt và các token thống nhất",()=>{
  const css=source("src/app/globals.css");
- assert.match(css,/--paper:#f7f8fa/);
- assert.match(css,/--brand:#2456c9/);
- assert.match(css,/\.btn-primary\{background:#2456c9/);
- assert.match(css,/\.card\{background:#fff;border:1px solid var\(--line\);border-radius:12px/);
- assert.doesNotMatch(css,/\.app-sidebar\{[^}]*linear-gradient/);
+ assert.match(css,/--navy:#141f33/);
+ assert.match(css,/--brand:#315bcc/);
+ assert.match(css,/--gold:#dfb86b/);
+ assert.match(css,/\.premium-hero\{/);
+ assert.match(css,/\.command-hero\{/);
+ assert.match(css,/\.app-sidebar\{\s*background:#151f32/);
+ assert.match(css,/\.field:focus/);
  assert.match(css,/prefers-reduced-motion/);
 });
-test("Trang chủ và đăng nhập không dùng hiệu ứng glow hoặc icon Sparkles",()=>{
- for(const path of ["src/app/page.tsx","src/app/login/page.tsx"]){
-   const s=source(path);
-   assert.doesNotMatch(s,/Sparkles|blur-\[|bg-gradient-to/);
- }
+test("Trang chủ trình bày giao diện tương tác và đánh dấu dữ liệu minh họa",()=>{
+ const home=source("src/app/page.tsx");
+ assert.match(home,/ExperiencePreview compact/);
+ assert.match(home,/premium-title/);
+ assert.match(home,/BrandMark/);
+ assert.match(home,/href="\/preview"/);
+ assert.match(home,/Chỉ dùng dữ liệu mẫu/);
+ assert.doesNotMatch(home,/Sparkles|blur-\[|bg-gradient-to/);
 });
-test("Dashboard và Đại hội sử dụng bố cục nghiệp vụ thay vì hero card gradient",()=>{
+test("Trang demo hoạt động độc lập không yêu cầu dữ liệu thật",()=>{
+ const previewPage=source("src/app/preview/page.tsx");
+ const demo=source("src/components/experience-preview.tsx");
+ assert.match(previewPage,/ExperiencePreview/);
+ assert.match(previewPage,/Dữ liệu minh họa, không kết nối Supabase/);
+ for(const part of ['id:"overview"','id:"seating"','id:"attendance"']){
+   assert.ok(demo.includes(part),part);
+ }
+ assert.match(demo,/aria-pressed/);
+ assert.match(demo,/setSelectedSeat/);
+ assert.match(demo,/DỮ LIỆU MẪU/);
+});
+test("Dashboard và Đại hội dùng command center, metrics thực tế và tránh glow",()=>{
  for(const path of ["src/app/dashboard/page.tsx","src/app/congresses/[id]/page.tsx"]){
    const s=source(path);
-   assert.match(s,/page-heading/);
+   assert.match(s,/command-hero/);
    assert.match(s,/metric-card/);
-   assert.doesNotMatch(s,/bg-gradient|blur-\[|rounded-\[24px\]/);
+   assert.doesNotMatch(s,/blur-\[|bg-gradient-to|rounded-\[24px\]/);
  }
- const directory=source("src/components/congress-directory.tsx");
- assert.match(directory,/workspace-panel/);
- assert.match(directory,/aria-pressed/);
+ const congress=source("src/app/congresses/[id]/page.tsx");
+ assert.match(congress,/congress\.name/);
+ assert.match(congress,/arrived/);
+ assert.match(congress,/percent/);
 });
-test("Sidebar và thanh mobile vẫn giữ các lối điều hướng nghiệp vụ",()=>{
+test("Sidebar, mobile và đăng nhập vẫn giữ nghiệp vụ, keyboard navigation và mật khẩu an toàn",()=>{
  const shell=source("src/components/app-shell.tsx");
+ const login=source("src/app/login/page.tsx");
+ const brand=source("src/components/brand-mark.tsx");
  for(const route of ["/delegates","/seating","/attendance","/reports","/documents"]){
    assert.ok(shell.includes(route),route);
  }
  assert.match(shell,/aria-expanded=\{mobile\}/);
  assert.match(shell,/mobile-bottom-nav/);
  assert.match(shell,/Escape/);
+ assert.match(login,/signInWithPassword/);
+ assert.match(login,/aria-label=\{showPassword/);
+ assert.match(brand,/viewBox="0 0 40 40"/);
 });
