@@ -5,7 +5,7 @@ import Link from "next/link";
 import {usePathname,useRouter} from "next/navigation";
 import {
   ArrowUpRight,BarChart3,ChevronDown,ClipboardList,FileText,Home,
-  Layers3,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X
+  Armchair,Layers3,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X
 } from "lucide-react";
 import {createClient} from "@/lib/supabase/browser";
 
@@ -26,6 +26,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
   const congressItems:NavItem[]=congressId?[
     {name:"Bảng điều hành",href:`/congresses/${congressId}`,icon:BarChart3},
     {name:"Đại biểu",href:`/congresses/${congressId}/delegates`,icon:Users},
+    {name:"Sơ đồ ghế",href:`/congresses/${congressId}/seating`,icon:Armchair},
     {name:"Điểm danh",href:`/congresses/${congressId}/attendance`,icon:QrCode},
     {name:"Báo cáo",href:`/congresses/${congressId}/reports`,icon:ClipboardList},
     {name:"Tài liệu",href:`/congresses/${congressId}/documents`,icon:FileText},
@@ -146,8 +147,8 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
       </main>
     </div>
 
-    {congressId&&<nav aria-label="Điều hướng nhanh trên điện thoại" className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-[#e1eaeb] bg-white/95 px-2 pt-2 pb-[max(.5rem,env(safe-area-inset-bottom))] shadow-[0_-10px_35px_rgba(13,42,64,.08)] backdrop-blur-xl lg:hidden">
-      {[congressItems[0],congressItems[1],congressItems[2],congressItems[3]].filter(Boolean).map(({name,href,icon:Icon})=>{
+    {congressId&&<nav aria-label="Điều hướng nhanh trên điện thoại" className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[#e1eaeb] bg-white/95 px-2 pt-2 pb-[max(.5rem,env(safe-area-inset-bottom))] shadow-[0_-10px_35px_rgba(13,42,64,.08)] backdrop-blur-xl lg:hidden">
+      {[congressItems[0],congressItems[1],congressItems[2],congressItems[3],congressItems[4]].filter(Boolean).map(({name,href,icon:Icon})=>{
         const isActive=path===href;
         return <Link key={href} href={href} aria-current={isActive?"page":undefined}
           className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-extrabold ${isActive?"bg-[#e7f8f4] text-[#087e7c]":"text-[#6c8392]"}`}>

@@ -20,6 +20,14 @@ Nền tảng điều hành **nhiều Đại hội Đoàn TNCS Hồ Chí Minh và
 
 **Supabase:** CSDL 13 bảng cơ bản đã được tạo tại project `pnxdxdagpeyqarucdphk`, RLS bật 13/13 bảng. **Bản nâng cấp QR phiên/barcode chưa được áp dụng lên project trực tuyến** vì hồ sơ Chrome không thể xác minh và Supabase connector không có project này. SQL nâng cấp tại `supabase/upgrade-attendance-v2.sql`. `.env.local` vẫn cần **Publishable Key**, **SUPABASE_SECRET_KEY** (server-only) và tài khoản Super Admin. Chưa kiểm thử đăng nhập/RLS đa tài khoản thực, Google OAuth, deploy Vercel, tải 200 người hay camera/barcode trên điện thoại thật. Xem `docs/DIEM-DANH-QR-PHIEN-VA-BARCODE.md`.
 
+## Module Sơ đồ chỗ ngồi (v4 — 06/11/2026)
+
+- Truy cập `/congresses/[id]/seating`: tự tạo khu vực, hàng ghế và lối đi, kéo-thả/tinh chỉnh vị trí; lưu nhiều sơ đồ riêng theo Đại hội.
+- Nhấp ghế để phân công, chuyển hoặc bỏ gán đại biểu; đối chiếu trạng thái điểm danh theo phiên đã chọn.
+- Tải mẫu Excel `.xlsx` có mã ghế, mã đại biểu và phiên bản; nhập để gộp hoặc thay thế phân công sau khi kiểm tra lỗi.
+- Cơ sở dữ liệu mới `supabase/upgrade-seating-v4.sql`: `seating_layouts`, `seats`, `seat_assignments`, RLS, API server-only và RPC giao dịch có kiểm tra phiên bản chống ghi đè đồng thời.
+- **Chưa áp dụng migration v4 lên Supabase thực tế**, vì tài khoản kết nối hiện không được cấp quyền dự án `pnxdxdagpeyqarucdphk`; xem `docs/SO-DO-CHO-NGOI.md` trước khi đưa vào vận hành.
+
 ## Yêu cầu
 
 - Node.js >= 20 (đã xây dựng bằng Node 24)

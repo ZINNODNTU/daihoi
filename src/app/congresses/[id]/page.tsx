@@ -2,13 +2,14 @@ import Link from "next/link";
 import {notFound} from "next/navigation";
 import {
   ArrowRight,ArrowUpRight,BarChart3,CalendarDays,CheckCircle2,
-  ChevronRight,ClipboardList,FileText,Layers3,MapPin,QrCode,Users,UserRoundCheck
+  Armchair,ChevronRight,ClipboardList,FileText,Layers3,MapPin,QrCode,Users,UserRoundCheck
 } from "lucide-react";
 import {createClient} from "@/lib/supabase/server";
 
 const areas=[
   {href:"delegates",icon:Users,number:"01",title:"Quản lý đại biểu",description:"Danh sách, phân loại, nhập Excel và cấp thẻ định danh QR/Barcode.",color:"text-[#0d827f]",background:"bg-[#e5f7f3]"},
   {href:"attendance",icon:QrCode,number:"02",title:"Điểm danh đại hội",description:"Quét mã bằng camera, điểm danh thủ công và điều hành từng phiên.",color:"text-[#246faf]",background:"bg-[#eaf3fb]"},
+  {href:"seating",icon:Armchair,number:"03",title:"Sơ đồ chỗ ngồi",description:"Tạo hàng ghế, chọn đại biểu cho từng vị trí và phân ghế hàng loạt qua Excel.",color:"text-[#0a857e]",background:"bg-[#e5f7f3]"},
   {href:"reports",icon:ClipboardList,number:"03",title:"Báo cáo & thống kê",description:"Theo dõi tỷ lệ tham dự, lọc đại biểu và xuất báo cáo chi tiết.",color:"text-[#a56e20]",background:"bg-[#fff4e2]"},
   {href:"documents",icon:FileText,number:"04",title:"Thư viện tài liệu",description:"Truy cập văn kiện, hình ảnh và các tài liệu đã được phân quyền.",color:"text-[#7960b0]",background:"bg-[#f2edfc]"}
 ];
