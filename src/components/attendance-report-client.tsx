@@ -74,16 +74,16 @@ export function AttendanceReportClient({congressId,congressName,congressKind,ter
  ];
  return <div className="space-y-7">
   <div className="flex flex-wrap justify-between items-start gap-4 print:hidden">
-   <div><div className="text-xs tracking-widest text-[#149c9c] font-extrabold">BÁO CÁO PHỤC VỤ BAN THƯ KÝ</div><h1 className="text-3xl font-extrabold mt-2">Thống kê điểm danh</h1><p className="helper mt-2">Phân loại đại biểu và tổng hợp lượt tham dự theo phiên.</p></div>
-   <div className="flex gap-2 flex-wrap">
+   <div><div className="text-xs tracking-widest text-[#149c9c] font-extrabold">BÁO CÁO PHỤC VỤ BAN THƯ KÝ</div><h1 className="page-title mt-2">Thống kê điểm danh</h1><p className="helper mt-2">Phân loại đại biểu và tổng hợp lượt tham dự theo phiên.</p></div>
+   <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
     <button onClick={()=>void refresh()} disabled={loading||!sessionId} className="btn btn-secondary"><RefreshCw size={17}/>{loading?"Đang cập nhật":"Cập nhật"}</button>
     <button onClick={()=>window.print()} disabled={!ready} className="btn btn-secondary"><Printer size={17}/>In báo cáo</button>
-    <button onClick={exportRows} disabled={!ready||loading} className="btn btn-primary"><Download size={17}/>Xuất CSV</button>
+    <button onClick={exportRows} disabled={!ready||loading} className="btn btn-primary col-span-2 sm:col-span-1"><Download size={17}/>Xuất CSV</button>
    </div>
   </div>
-  <div className="card p-6">
+  <div className="card p-4 sm:p-6">
    <div className="flex flex-wrap justify-between items-end gap-4">
-    <label className="flex-1 min-w-[250px]"><span className="label">Chọn phiên làm việc</span><select className="field" value={sessionId} onChange={e=>{setSessionId(e.target.value);setCheckins([]);setLoadedSessionId("");setSyncedAt("");}}>{sessions.length===0&&<option value="">Chưa có phiên điểm danh</option>}{sessions.map(s=><option key={s.id} value={s.id}>{s.name} · {s.status==="open"?"Đang mở":"Đã đóng"}</option>)}</select></label>
+    <label className="w-full min-w-0 flex-1 sm:min-w-[250px]"><span className="label">Chọn phiên làm việc</span><select className="field" value={sessionId} onChange={e=>{setSessionId(e.target.value);setCheckins([]);setLoadedSessionId("");setSyncedAt("");}}>{sessions.length===0&&<option value="">Chưa có phiên điểm danh</option>}{sessions.map(s=><option key={s.id} value={s.id}>{s.name} · {s.status==="open"?"Đang mở":"Đã đóng"}</option>)}</select></label>
     <div className="text-sm text-[#627d92] flex items-center gap-2"><CalendarClock size={17}/><span>{session?.starts_at?displayTime(session.starts_at):"Chưa đặt giờ bắt đầu"}</span></div>
    </div>
    <div className="mt-4 flex flex-wrap gap-2 items-center">
@@ -98,8 +98,8 @@ export function AttendanceReportClient({congressId,congressName,congressKind,ter
    <h2 className="font-extrabold text-lg">{congressName}</h2>
    <p className="helper">{congressKind} {term?(" • Nhiệm kỳ "+term):""} • {session?.name||"Chưa có phiên"}</p>
   </div>
-  <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-5">
-   {statCards.map(({label,value,icon:Icon})=><div key={label} className="card p-5"><div className="flex items-center justify-between"><span className="helper font-semibold">{label}</span><Icon size={19} className="text-[#159aa0]"/></div><p className="text-3xl font-extrabold mt-4">{value}</p></div>)}
+  <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
+   {statCards.map(({label,value,icon:Icon})=><div key={label} className="card stat-card min-w-0 p-3.5 sm:p-5"><div className="flex items-start justify-between gap-2"><span className="helper font-semibold">{label}</span><Icon size={19} className="text-[#159aa0]"/></div><p className="text-3xl font-extrabold mt-4">{value}</p></div>)}
   </div>
   <div className="grid gap-5 lg:grid-cols-3">
    {(["official","alternate","guest"] as const).map(type=>{
@@ -118,16 +118,16 @@ export function AttendanceReportClient({congressId,congressName,congressKind,ter
   {ready&&report.unmatchedCheckins>0&&<p className="text-red-700 text-sm">Có {report.unmatchedCheckins} lượt điểm danh không đối chiếu được với hồ sơ đại biểu đang hoạt động; cần Ban Thư ký kiểm tra.</p>}
   <section className="card overflow-hidden">
    <div className="p-5 flex flex-wrap justify-between gap-4 items-center"><div><h2 className="section-title">Thống kê theo đơn vị</h2><p className="helper mt-2">Hữu ích cho Ban Thư ký khi kiểm tra số đại biểu có mặt từ từng đơn vị.</p></div><button className="btn btn-secondary print:hidden" disabled={!ready||loading} onClick={exportUnitStats}><FileSpreadsheet size={17}/> Xuất đơn vị</button></div>
-   <div className="table-wrap"><table className="data"><thead><tr><th>Đơn vị</th><th>Hồ sơ</th><th>Có check-in</th><th>Chưa check-in</th><th>Chính thức có mặt</th></tr></thead><tbody>{(ready?report.units:[]).map(u=><tr key={u.unit}><td className="font-bold">{u.unit}</td><td>{u.total}</td><td className="text-[#178b78] font-bold">{u.present}</td><td>{u.total-u.present}</td><td>{u.officialPresent}/{u.officialTotal}</td></tr>)}{ready&&!report.units.length&&<tr><td colSpan={5} className="py-8! text-center helper">Chưa có hồ sơ đại biểu.</td></tr>}</tbody></table></div>
+   <div className="table-wrap"><table className="data mobile-list-table"><thead><tr><th>Đơn vị</th><th>Hồ sơ</th><th>Có check-in</th><th>Chưa check-in</th><th>Chính thức có mặt</th></tr></thead><tbody>{(ready?report.units:[]).map(u=><tr key={u.unit}><td data-label="Đơn vị" className="font-bold">{u.unit}</td><td data-label="Hồ sơ">{u.total}</td><td data-label="Đã điểm danh" className="text-[#178b78] font-bold">{u.present}</td><td data-label="Chưa điểm danh">{u.total-u.present}</td><td data-label="Chính thức có mặt">{u.officialPresent}/{u.officialTotal}</td></tr>)}{ready&&!report.units.length&&<tr><td colSpan={5} className="py-8! text-center helper">Chưa có hồ sơ đại biểu.</td></tr>}</tbody></table></div>
   </section>
   <section className="card overflow-hidden">
     <div className="p-5 flex flex-wrap justify-between items-center gap-4"><div><h2 className="section-title">Danh sách đối chiếu ({filtered.length})</h2><p className="helper mt-2">Có thể lọc người vắng mặt để BTC liên hệ trực tiếp.</p></div></div>
     <div className="px-5 pb-5 flex flex-wrap gap-3 print:hidden">
-      <label className="flex-1 min-w-[220px] relative"><Search size={17} className="absolute top-3 left-3 text-[#809bad]"/><input className="field pl-10!" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm đại biểu, mã, đơn vị..."/></label>
-      <select aria-label="Lọc trạng thái điểm danh" className="field w-auto!" value={status} onChange={e=>setStatus(e.target.value as Status)}><option value="all">Tất cả trạng thái</option><option value="present">Đã check-in</option><option value="absent">Chưa check-in</option></select>
-      <select aria-label="Lọc loại đại biểu" className="field w-auto!" value={kind} onChange={e=>setKind(e.target.value as Kind)}><option value="all">Mọi loại đại biểu</option><option value="official">Chính thức</option><option value="alternate">Dự khuyết</option><option value="guest">Khách mời</option></select>
+      <label className="relative w-full sm:min-w-[220px] sm:flex-1"><Search size={17} className="absolute top-3 left-3 text-[#809bad]"/><input className="field pl-10!" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm đại biểu, mã, đơn vị..."/></label>
+      <select aria-label="Lọc trạng thái điểm danh" className="field w-full sm:w-auto!" value={status} onChange={e=>setStatus(e.target.value as Status)}><option value="all">Tất cả trạng thái</option><option value="present">Đã check-in</option><option value="absent">Chưa check-in</option></select>
+      <select aria-label="Lọc loại đại biểu" className="field w-full sm:w-auto!" value={kind} onChange={e=>setKind(e.target.value as Kind)}><option value="all">Mọi loại đại biểu</option><option value="official">Chính thức</option><option value="alternate">Dự khuyết</option><option value="guest">Khách mời</option></select>
     </div>
-    <div className="table-wrap"><table className="data"><thead><tr><th>Mã</th><th>Họ tên</th><th>Đơn vị</th><th>Loại</th><th>Điểm danh</th><th>Thời gian</th></tr></thead><tbody>{filtered.map(d=><tr key={d.id}><td className="font-bold">{d.code}</td><td>{d.full_name}</td><td>{d.unit||"—"}</td><td>{delegateLabels[d.delegate_type]}</td><td><span className={`badge ${d.present?"badge-green":"badge-yellow"}`}>{d.present?"Có lượt check-in":"Chưa có"}</span></td><td>{displayTime(d.checkin?.checked_in_at)}</td></tr>)}{!filtered.length&&<tr><td colSpan={6} className="helper text-center py-8!">Không có dữ liệu phù hợp.</td></tr>}</tbody></table></div>
+    <div className="table-wrap"><table className="data mobile-list-table"><thead><tr><th>Mã</th><th>Họ tên</th><th>Đơn vị</th><th>Loại</th><th>Điểm danh</th><th>Thời gian</th></tr></thead><tbody>{filtered.map(d=><tr key={d.id}><td data-label="Mã" className="font-bold">{d.code}</td><td data-label="Họ tên">{d.full_name}</td><td data-label="Đơn vị">{d.unit||"—"}</td><td data-label="Loại">{delegateLabels[d.delegate_type]}</td><td data-label="Điểm danh"><span className={`badge ${d.present?"badge-green":"badge-yellow"}`}>{d.present?"Có lượt check-in":"Chưa có"}</span></td><td data-label="Thời gian">{displayTime(d.checkin?.checked_in_at)}</td></tr>)}{!filtered.length&&<tr><td colSpan={6} className="helper text-center py-8!">Không có dữ liệu phù hợp.</td></tr>}</tbody></table></div>
   </section>
   <div className="helper flex gap-2 items-center"><ShieldCheck size={17}/>Báo cáo hỗ trợ điều hành, phải được người có thẩm quyền rà soát và xác nhận trước khi công bố chính thức.</div>
  </div>;

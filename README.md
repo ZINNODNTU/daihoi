@@ -117,3 +117,11 @@ Lưu ý: camera chạy trên thiết bị; backend chỉ nhận **mã QR**. `get
 - Bản SQL mới: **supabase/upgrade-management-v3.sql**, bắt buộc chạy **sau** upgrade-attendance-v2.sql và sao lưu đúng project. Cần triển khai API mới **trước khi chạy v3** để không gián đoạn việc gán thành viên BTC.
 - Kiểm tra điều kiện chạy production bằng `npm run readiness`; hướng dẫn từng bước ở docs/QUY-TRINH-TRIEN-KHAI.md.
 - Vào thời điểm cập nhật này, Supabase Publishable/Secret Keys, Google Drive OAuth và Vercel chưa được cấu hình hoàn chỉnh; không được tuyên bố đã triển khai hệ thống production.
+
+## Nâng cấp giao diện Responsive (06/11/2026)
+
+- Giao diện trang chủ, đăng nhập, dashboard, điều hành Đại hội, quản lý đại biểu, điểm danh, báo cáo, tài liệu, nhân sự và cấu hình đã được thiết kế lại theo cùng một hệ thẻ/nút/trạng thái.
+- Máy tính: sidebar cố định, bảng chi tiết, bộ lọc và KPI nhiều cột. Điện thoại: menu trượt, thanh điều hướng 4 nghiệp vụ ở cuối màn hình, các danh sách dưới dạng thẻ, hộp thoại dạng bottom-sheet.
+- Camera trên điện thoại dùng bố cục quét 4:3; màn hình điểm danh có nút lớn và luồng dự phòng rõ ràng, giữ nguyên xác thực API và thời gian quét ở máy chủ.
+- Hỗ trợ nhập liệu chống zoom iOS, vùng safe-area, phím Escape, focus-visible, điều khiển bàn phím cơ bản và reduced-motion; cập nhật CSS in.
+- Tài liệu kỹ thuật và quy trình kiểm tra giao diện: `docs/RESPONSIVE-UI.md`. Kiểm thử cấu trúc mới: `tests/responsive-ui.test.mjs` (không thay thế kiểm thử giao diện thực tế).

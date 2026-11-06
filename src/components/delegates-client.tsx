@@ -1,5 +1,5 @@
 "use client";
-import {ChangeEvent,FormEvent,useMemo,useState} from "react";
+import {ChangeEvent,FormEvent,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
 import {QRCodeSVG} from "qrcode.react";
 import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode} from "lucide-react";
@@ -38,6 +38,14 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
  const [showCard,setShowCard]=useState<Card|null>(null);
  const [cardSession,setCardSession]=useState("");
  const [uploadRows,setUploadRows]=useState<Row[]|null>(null);
+  useEffect(()=>{
+    if(!showCard)return;
+    const priorOverflow=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    const onEscape=(event:KeyboardEvent)=>{if(event.key==="Escape")setShowCard(null);};
+    window.addEventListener("keydown",onEscape);
+    return()=>{window.removeEventListener("keydown",onEscape);document.body.style.overflow=priorOverflow;};
+  },[showCard]);
  const filtered=useMemo(()=>delegates.filter(d=>
   [d.full_name,d.code,d.unit,d.barcode_code].join(" ").toLocaleLowerCase("vi")
    .includes(search.toLocaleLowerCase("vi"))
@@ -120,16 +128,16 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   finally{setBusy(false);}
  }
  return <div>
-  <div className="flex flex-wrap justify-between items-start gap-4 mb-8">
+  <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
    <div><p className="text-xs tracking-widest text-[#169ca1] font-extrabold">QUẢN LÝ ĐẠI HỘI</p>
-    <h1 className="text-3xl font-extrabold mt-2">Danh sách đại biểu</h1>
+    <h1 className="page-title mt-2">Danh sách đại biểu</h1>
     <p className="helper mt-2">{delegates.length} đại biểu • QR cố định hoặc QR từng phiên • Barcode dự phòng.</p>
     <p className="helper mt-1">Mã định danh Đại hội: <strong>{congressCode.toUpperCase()}</strong></p>
    </div>
-   {canManage&&<div className="flex flex-wrap gap-2">
-    <label className="btn btn-secondary cursor-pointer"><FileSpreadsheet size={18}/> Nhập Excel/CSV
+   {canManage&&<div className="mobile-toolbar w-full sm:flex sm:w-auto sm:flex-wrap sm:gap-2">
+    <label className="btn btn-secondary w-full cursor-pointer sm:w-auto"><FileSpreadsheet size={18}/> Nhập Excel/CSV
      <input className="hidden" type="file" accept=".xlsx,.csv" onChange={e=>void handleFile(e)}/></label>
-    <button className="btn btn-primary" onClick={()=>setOpen(!open)}><Plus size={18}/> Thêm đại biểu</button>
+    <button type="button" className="btn btn-primary w-full sm:w-auto" aria-expanded={open} onClick={()=>setOpen(!open)}><Plus size={18}/> Thêm đại biểu</button>
    </div>}
   </div>
   {error&&<p role="alert" className="bg-red-50 text-red-700 p-3 rounded-xl mb-5">{error}</p>}
@@ -152,13 +160,13 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    </form>
   </div>}
   <div className="card overflow-hidden">
-   <div className="p-5 flex items-center justify-between flex-wrap gap-3">
+   <div className="p-4 sm:p-5 flex items-center justify-between flex-wrap gap-3">
     <h2 className="font-extrabold flex gap-2 items-center"><Users size={20} className="text-[#1d98a4]"/>Danh sách</h2>
-    <div className="relative min-w-[240px]"><Search size={18} className="absolute left-3 top-3 text-[#90a5b8]"/>
+    <div className="relative w-full sm:w-[300px]"><Search size={18} className="absolute left-3 top-3 text-[#90a5b8]"/>
      <input value={search} onChange={e=>setSearch(e.target.value)} className="field pl-10!"
       placeholder="Mã, họ tên, đơn vị, barcode..."/></div>
    </div>
-   <div className="table-wrap"><table className="data"><thead><tr>
+   <div className="table-wrap desktop-table"><table className="data"><thead><tr>
     <th>Mã đại biểu</th><th>Họ tên</th><th className="hide-mobile">Đơn vị</th><th>Loại</th><th>Thẻ</th>
    </tr></thead><tbody>
     {filtered.map(d=><tr key={d.id}>
@@ -170,11 +178,23 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     {!filtered.length&&<tr><td colSpan={5} className="helper text-center py-9!">Không tìm thấy đại biểu.</td></tr>}
    </tbody></table></div>
   </div>
-  {showCard&&<div className="fixed inset-0 z-50 bg-[#0c2b43]/65 p-4 flex items-start justify-center overflow-y-auto"
+  <div className="mobile-cards px-3 pb-4">
+    {filtered.map(d=><article key={d.id} className="mobile-record">
+     <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1"><p className="text-[11px] font-extrabold tracking-wider text-[#0d8788]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
+      <span className="badge badge-gray shrink-0">{kindLabel(d.delegate_type)}</span>
+     </div>
+     <p className="mobile-record-meta mt-2">{d.unit||"Chưa cập nhật đơn vị"}</p>
+     <div className="mobile-record-actions"><button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>void openCard(d)}>
+      <ScanBarcode size={17}/> Xem QR / Barcode</button></div>
+    </article>)}
+    {!filtered.length&&<div className="rounded-2xl bg-[#f6fafb] p-7 text-center text-sm text-[#718795]">Không tìm thấy đại biểu phù hợp.</div>}
+   </div>
+   {showCard&&<div role="presentation" className="modal-overlay fixed inset-0 z-50 bg-[#0c2b43]/65 p-4 flex items-start justify-center overflow-y-auto"
     onClick={()=>setShowCard(null)}>
-   <div className="card max-w-lg w-full p-6 md:p-8 my-4 relative delegate-card-print"
+   <div role="dialog" aria-modal="true" aria-label="Thẻ đại biểu điện tử" className="card mobile-sheet max-w-lg w-full p-5 sm:p-7 md:p-8 my-4 relative delegate-card-print"
     onClick={e=>e.stopPropagation()}>
-    <button className="absolute right-4 top-4 print:hidden" aria-label="Đóng" onClick={()=>setShowCard(null)}><X/></button>
+    <button className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-xl bg-[#eef5f6] text-[#2a6177] hover:bg-[#e0f0f0] print:hidden" aria-label="Đóng thẻ đại biểu" onClick={()=>setShowCard(null)}><X/></button>
     <p className="text-xs tracking-widest font-extrabold text-[#139aa0]">THẺ ĐẠI BIỂU ĐIỆN TỬ</p>
     <p className="helper mt-2">Đại hội: <strong>{congressCode.toUpperCase()}</strong></p>
     <h3 className="text-xl font-extrabold mt-3">{showCard.name}</h3>
@@ -189,8 +209,8 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     <div className="text-center rounded-xl bg-[#f5fafc] p-5 mt-5">
      <div className="font-extrabold text-sm">{showCard.scope==="fixed"?"QR cố định":
       "QR dành riêng: "+showCard.sessionName}</div>
-     <div className="bg-white rounded-xl p-5 mt-3 w-fit mx-auto border border-[#e7f1f4]">
-      <QRCodeSVG id="delegate-qr" value={showCard.token} size={210} level="M" marginSize={1}/>
+     <div className="bg-white rounded-xl p-3 sm:p-5 mt-3 w-fit max-w-full mx-auto border border-[#e7f1f4]">
+      <QRCodeSVG id="delegate-qr" className="max-w-full h-auto" value={showCard.token} size={210} level="M" marginSize={1}/>
      </div>
      {showCard.scope==="session"&&<p className="helper mt-3">Quét trong khoảng {displayTime(showCard.startsAt)} – {displayTime(showCard.endsAt)}</p>}
     </div>
@@ -199,7 +219,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
      <DelegateBarcode value={showCard.barcodeCode}/>
      <p className="helper text-center mt-2">Barcode chỉ dùng tra cứu. BTC cần xác minh danh tính trước khi điểm danh.</p>
     </div>
-    <div className="flex gap-2 flex-wrap mt-6 print:hidden">
+    <div className="flex flex-col gap-2 sm:flex-row mt-6 print:hidden">
      <button className="btn btn-secondary flex-1" onClick={()=>saveSvg("delegate-qr",`QR-${showCard.code}.svg`)}>
       <Download size={16}/> Tải QR</button>
      <button className="btn btn-primary flex-1" onClick={()=>window.print()}><Printer size={16}/> In thẻ</button>

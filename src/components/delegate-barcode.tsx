@@ -14,5 +14,5 @@ export function DelegateBarcode({value,width=1.7,height=52}:{value:string;width?
    width,height,margin:5,fontSize:12,textMargin:5,displayValue:true
   });
  },[value,width,height]);
- return <div className="max-w-full overflow-x-auto flex justify-center"><svg ref={ref} role="img" aria-label={"Mã vạch dự phòng "+value} /></div>;
+ return <div className="mx-auto flex w-full max-w-[470px] justify-center overflow-x-auto"><svg className="max-w-full h-auto" ref={ref} role="img" aria-label={"Mã vạch dự phòng "+value} /></div>;
 }

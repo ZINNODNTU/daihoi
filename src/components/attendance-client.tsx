@@ -85,6 +85,14 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
   return()=>clearInterval(t);
  },[reload]);
  useEffect(()=>()=>{controlsRef.current?.stop();},[]);
+  useEffect(()=>{
+    if(!review)return;
+    const priorOverflow=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    const onEscape=(event:KeyboardEvent)=>{if(event.key==="Escape")setReview(null);};
+    window.addEventListener("keydown",onEscape);
+    return()=>{window.removeEventListener("keydown",onEscape);document.body.style.overflow=priorOverflow;};
+  },[review]);
  function stopCamera(){
   controlsRef.current?.stop();controlsRef.current=null;setCamera(false);
  }
@@ -225,14 +233,14 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
  return <div>
   <div className="flex flex-wrap justify-between gap-4 items-start">
    <div><p className="text-xs text-[#0ca0a0] font-extrabold tracking-widest">ĐIỀU HÀNH ĐẠI HỘI</p>
-    <h1 className="text-3xl font-extrabold mt-2">Điểm danh đại biểu</h1>
+    <h1 className="page-title mt-2">Điểm danh đại biểu</h1>
     <p className="helper mt-2">Quét QR cố định, QR theo phiên, barcode dự phòng hoặc điểm danh thủ công.</p>
    </div>
-   <button onClick={()=>void reload()} className="btn btn-secondary"><RefreshCw size={17}/>Làm mới</button>
+   <button type="button" onClick={()=>void reload()} className="btn btn-secondary mobile-full-btn sm:w-auto"><RefreshCw size={17}/>Làm mới</button>
   </div>
-  <div className="card p-5 my-7">
+  <div className="card p-4 sm:p-6 my-5 sm:my-7">
    <div className="flex flex-wrap items-end gap-4">
-    <label className="flex-1 min-w-[235px]"><span className="label">Phiên Đại hội</span>
+    <label className="w-full min-w-0 flex-1 sm:min-w-[235px]"><span className="label">Phiên Đại hội</span>
      <select className="field" value={sessionId} onChange={e=>{
       stopCamera();setSessionId(e.target.value);setFlash(null);
      }}>
@@ -241,11 +249,11 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
      </select>
     </label>
     {session&&<span className={`badge ${windowStatus==="open"?"badge-green":windowStatus==="upcoming"?"badge-yellow":"badge-gray"}`}>{getWindowLabel(windowStatus)}</span>}
-    {canManage&&<div className="flex flex-wrap gap-2">
-     <button className="btn btn-secondary" onClick={()=>openEditor("create")}><Plus size={16}/>Thêm phiên</button>
+    {canManage&&<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+     <button className="btn btn-secondary whitespace-normal" onClick={()=>openEditor("create")}><Plus size={16}/>Thêm phiên</button>
      {session&&<>
-      <button className="btn btn-secondary" onClick={()=>openEditor("edit")}><Settings2 size={16}/>Cấu hình giờ/QR</button>
-      <button disabled={busy} className="btn btn-secondary" onClick={()=>void toggleSession()}>
+      <button className="btn btn-secondary whitespace-normal" onClick={()=>openEditor("edit")}><Settings2 size={16}/>Cấu hình giờ/QR</button>
+      <button disabled={busy} className="btn btn-secondary whitespace-normal" onClick={()=>void toggleSession()}>
        {session.status==="open"?"Đóng sớm":"Mở lại phiên"}
       </button>
      </>}
@@ -279,18 +287,18 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
     <p className="helper mt-3">Giờ nhập được hiểu là giờ Việt Nam (GMT+7), không phụ thuộc múi giờ thiết bị. Máy chủ kiểm tra chính xác thời điểm mở/đóng. Không thể sửa giờ hoặc loại QR sau khi phiên có lượt điểm danh.</p>
    </div>}
   </div>
-  <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 mb-7">
+  <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-5 mb-6">
    {[[stats.total,"Đại biểu/khách mời",Users],[stats.checked,"Đã điểm danh",CheckCheck],
      [stats.qr,"Bằng QR",Camera],[stats.barcode,"Barcode dự phòng",ScanBarcode],
      [stats.manual,"Thủ công",ClipboardCheck]].map(([count,label,Icon])=>{
      const I=Icon as typeof Users;
-     return <div className="card p-5" key={String(label)}>
-      <div className="flex justify-between text-xs font-bold text-[#7b91a1]">{String(label)}<I size={18} className="text-[#21959f]"/></div>
-      <div className="text-3xl font-extrabold mt-4">{String(count)}</div>
+     return <div className="card stat-card min-w-0 p-3.5 sm:p-5" key={String(label)}>
+      <div className="flex items-start justify-between gap-2 text-xs font-bold leading-relaxed text-[#637f91]"><span className="min-w-0">{String(label)}</span><I size={18} className="text-[#21959f]"/></div>
+      <div className="stat-value mt-4 text-3xl font-black tracking-tight">{String(count)}</div>
      </div>;
    })}
   </div>
-  <div className="card p-6 mb-7">
+  <div className="card p-4 sm:p-6 mb-6">
    <div className="flex justify-between gap-3 flex-wrap"><strong>Tiến độ điểm danh</strong>
     <strong className="text-[#168a96]">{stats.total?Math.round(stats.checked/stats.total*100):0}%</strong>
    </div>
@@ -300,25 +308,25 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
    </div>
    <p className="helper mt-3">Số liệu chỉ phản ánh check-in, không tự xác nhận tư cách hoặc quyền biểu quyết.</p>
   </div>
-  {flash&&<p role="status" className={`rounded-xl p-4 mb-6 font-semibold text-sm ${flash.type==="success"?"bg-[#ddf8ed] text-[#117d54]":"bg-red-50 text-red-700"}`}>{flash.text}</p>}
+  {flash&&<p role={flash.type==="error"?"alert":"status"} className={`rounded-xl p-4 mb-6 font-semibold text-sm ${flash.type==="success"?"bg-[#ddf8ed] text-[#117d54]":"bg-red-50 text-red-700"}`}>{flash.text}</p>}
   <div className="card overflow-hidden">
-   <div className="flex flex-wrap gap-2 p-4 border-b border-[#e8f0f5]">
+   <div className="grid grid-cols-2 gap-2 border-b border-[#e8f0f5] p-3 sm:flex sm:flex-wrap sm:p-4">
     {canScan&&<>
-     <button className={`btn ${tab==="qr"?"btn-primary":"btn-secondary"}`} onClick={()=>{stopCamera();setTab("qr");}}>
+     <button aria-pressed={tab==="qr"} className={`btn min-w-0 whitespace-normal ${tab==="qr"?"btn-primary":"btn-secondary"}`} onClick={()=>{stopCamera();setTab("qr");}}>
       <Camera size={17}/>Quét QR / Barcode</button>
-     <button className={`btn ${tab==="manual"?"btn-primary":"btn-secondary"}`} onClick={()=>{stopCamera();setTab("manual");}}>
+     <button aria-pressed={tab==="manual"} className={`btn min-w-0 whitespace-normal ${tab==="manual"?"btn-primary":"btn-secondary"}`} onClick={()=>{stopCamera();setTab("manual");}}>
       <ClipboardCheck size={17}/>Điểm danh dự phòng</button>
     </>}
-    <button className={`btn ${tab==="history"?"btn-primary":"btn-secondary"}`} onClick={()=>{stopCamera();setTab("history");}}>
+    <button aria-pressed={tab==="history"} className={`btn col-span-2 min-w-0 whitespace-normal sm:col-span-1 ${tab==="history"?"btn-primary":"btn-secondary"}`} onClick={()=>{stopCamera();setTab("history");}}>
      <History size={17}/>Lịch sử</button>
    </div>
-   {tab==="qr"&&canScan&&<div className="p-6 text-center">
+   {tab==="qr"&&canScan&&<div className="p-4 text-center sm:p-6">
     <div className="max-w-xl mx-auto">
      {camera?<div className="relative rounded-2xl overflow-hidden bg-[#0b243a]">
-       <video ref={videoRef} autoPlay playsInline muted className="w-full aspect-video object-cover"/>
+       <video ref={videoRef} autoPlay playsInline muted className="aspect-[4/3] w-full bg-[#0b243a] object-cover sm:aspect-video"/>
        <div className="absolute inset-[15%] border-2 border-[#42e1c9] rounded-xl pointer-events-none"/>
       </div>:
-      <div className="rounded-2xl bg-[#f2f9fc] py-12">
+      <div className="rounded-2xl bg-gradient-to-br from-[#edf8f6] to-[#f1f8fc] px-4 py-10 sm:py-12">
        <Camera size={58} className="mx-auto text-[#31aab0]"/>
        <h3 className="text-xl font-extrabold mt-4">Sẵn sàng quét đại biểu</h3>
        <p className="helper mt-2">QR nhận ngay. Barcode sẽ hiện thông tin để BTC xác nhận trước khi điểm danh.</p>
@@ -329,20 +337,20 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
      {!allowed&&<p className="text-sm text-[#ab6c18] mt-3">{getWindowLabel(windowStatus)}. Không thể ghi điểm danh ngoài giờ.</p>}
     </div>
    </div>}
-   {tab==="manual"&&canScan&&<div className="p-5">
+   {tab==="manual"&&canScan&&<div className="p-3 sm:p-5">
     <div className="rounded-xl bg-[#edf8fa] p-4 mb-5">
      <p className="font-bold flex gap-2 items-center"><ScanBarcode size={18}/>Tra cứu bằng barcode</p>
      <p className="helper mt-1">Dùng máy quét barcode cầm tay hoặc nhập mã trên thẻ. Sau đó đối chiếu danh tính.</p>
-     <form onSubmit={e=>{e.preventDefault();readBarcode(barcodeInput);}} className="flex gap-2 mt-4">
-      <input className="field" value={barcodeInput} onChange={e=>setBarcodeInput(e.target.value)}
+     <form onSubmit={e=>{e.preventDefault();readBarcode(barcodeInput);}} className="flex flex-col gap-2 mt-4 sm:flex-row">
+      <input aria-label="Nhập mã barcode đại biểu" className="field" value={barcodeInput} onChange={e=>setBarcodeInput(e.target.value)}
        placeholder="DB... (22 ký tự)"/>
-      <button className="btn btn-secondary" type="submit" disabled={!allowed}>Tra cứu</button>
+      <button className="btn btn-secondary w-full sm:w-auto" type="submit" disabled={!allowed}>Tra cứu</button>
      </form>
     </div>
     <div className="relative mb-5"><Search className="absolute top-3 left-3 text-[#94a9b8]" size={19}/>
      <input className="field pl-11!" value={query} onChange={e=>setQuery(e.target.value)}
       placeholder="Tìm mã, họ tên, đơn vị hoặc barcode..."/></div>
-    <div className="table-wrap"><table className="data">
+    <div className="table-wrap desktop-table"><table className="data">
      <thead><tr><th>Mã</th><th>Đại biểu</th><th className="hide-mobile">Đơn vị</th><th>Trạng thái</th><th></th></tr></thead>
      <tbody>{results.map(d=><tr key={d.id}>
       <td className="font-bold">{d.code}</td><td>{d.full_name}</td>
@@ -353,21 +361,33 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
      </tr>)}</tbody>
     </table></div>
    </div>}
-   {tab==="history"&&<div className="p-5 table-wrap"><table className="data">
+   {tab==="manual"&&canScan&&<div className="mobile-cards px-3 pb-4">
+    <p className="mb-3 px-1 text-xs font-bold text-[#678294]">Kết quả tra cứu ({results.length})</p>
+    {results.map(d=><article key={d.id} className="mobile-record">
+      <div className="flex items-start justify-between gap-2">
+       <div className="min-w-0 flex-1"><p className="text-[11px] font-extrabold tracking-wider text-[#0d8788]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
+       <span className={`badge shrink-0 ${checkedIds.has(d.id)?"badge-green":"badge-yellow"}`}>{checkedIds.has(d.id)?"Đã đến":"Chưa đến"}</span>
+      </div>
+      <p className="mobile-record-meta mt-1">{d.unit||"Chưa cập nhật đơn vị"}</p>
+      <div className="mobile-record-actions"><button className="btn btn-secondary" disabled={busy||!allowed||checkedIds.has(d.id)} onClick={()=>selectFallback(d,"manual")}><ClipboardCheck size={17}/> {checkedIds.has(d.id)?"Đã điểm danh":"Xác nhận thủ công"}</button></div>
+    </article>)}
+    {!results.length&&<div className="rounded-xl bg-[#f5f9fa] p-6 text-center text-sm text-[#667f90]">Không có đại biểu phù hợp.</div>}
+   </div>}
+   {tab==="history"&&<div className="p-3 sm:p-5 table-wrap"><table className="data mobile-list-table">
     <thead><tr><th>Thời gian GMT+7</th><th>Đại biểu</th><th>Phương thức</th><th className="hide-mobile">Ghi chú</th></tr></thead>
     <tbody>{filtered.map(c=><tr key={c.id}>
-     <td>{displayTime(c.checked_in_at)}</td>
-     <td><strong>{lookup.get(c.delegate_id)?.full_name||c.delegate_id}</strong>
+     <td data-label="Thời gian">{displayTime(c.checked_in_at)}</td>
+     <td data-label="Đại biểu"><strong>{lookup.get(c.delegate_id)?.full_name||c.delegate_id}</strong>
       <div className="helper">{lookup.get(c.delegate_id)?.code}</div></td>
-     <td><span className={`badge ${c.method==="qr"?"badge-green":"badge-yellow"}`}>
+     <td data-label="Phương thức"><span className={`badge ${c.method==="qr"?"badge-green":"badge-yellow"}`}>
       {c.method==="qr"?(c.qr_scope==="session"?"QR phiên":"QR cố định"):
        c.method==="barcode"?"Barcode":"Thủ công"}</span></td>
      <td className="hide-mobile">{c.note||"—"}</td></tr>)}
      {!filtered.length&&<tr><td colSpan={4} className="text-center helper py-8!">Chưa có lượt điểm danh.</td></tr>}
     </tbody></table></div>}
   </div>
-  {review&&<div className="fixed inset-0 z-50 bg-[#0d2945]/60 flex items-center justify-center p-4"
-   onClick={()=>setReview(null)}><div className="card p-7 w-full max-w-lg" onClick={e=>e.stopPropagation()}>
+  {review&&<div role="presentation" className="modal-overlay fixed inset-0 z-50 bg-[#0d2945]/60 flex items-center justify-center p-4"
+   ><button type="button" tabIndex={-1} aria-label="Đóng hộp thoại xác nhận" className="absolute inset-0" onClick={()=>setReview(null)}/><div role="dialog" aria-modal="true" aria-label="Xác nhận điểm danh dự phòng" className="card mobile-sheet relative z-10 max-w-lg w-full p-5 sm:p-7">
     <div className="flex gap-3 items-center text-[#126a89]"><ShieldAlert size={23}/>
      <h3 className="text-xl font-extrabold">Xác nhận điểm danh dự phòng</h3></div>
     <p className="helper my-5">Barcode và mã nhập chỉ là phương tiện tra cứu. BTC bắt buộc đối chiếu đúng người trước khi xác nhận.</p>
@@ -378,7 +398,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
     </div>
     <label className="block mt-5"><span className="label">Lý do (bắt buộc)</span>
      <textarea className="field min-h-22" value={note} onChange={e=>setNote(e.target.value)}/></label>
-    <div className="flex gap-3 justify-end mt-6">
+    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end mt-6">
      <button className="btn btn-secondary" onClick={()=>setReview(null)}>Hủy</button>
      <button disabled={busy||!allowed||note.trim().length<3} className="btn btn-primary"
       onClick={()=>void submit(review.method,review.delegate.id)}>Đã đối chiếu – ghi nhận</button>
