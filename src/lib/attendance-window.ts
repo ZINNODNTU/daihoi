@@ -51,13 +51,45 @@ export function utcToVietnamInput(value:string|null|undefined):string{
  return new Date(timestamp+7*60*60*1000).toISOString().slice(0,16);
 }
 
+/** Accept full RFC3339 timestamps including the milliseconds output by toISOString().
+ * Validate both the UTC date and the original calendar fields to reject normalized dates.
+ */
+const timestampPattern=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|[+-]\d{2}:\d{2})$/;
+function parseTimestamp(value:unknown):number|null{
+ if(typeof value!=="string")return null;
+ const parts=timestampPattern.exec(value);
+ if(!parts)return null;
+ const [,year,month,day,hour,minute,second="00",fraction="",zone]=parts;
+ const y=Number(year),m=Number(month),d=Number(day);
+ const h=Number(hour),min=Number(minute),sec=Number(second);
+ if(m<1||m>12||d<1||d>31||h>23||min>59||sec>59)return null;
+ if(new Date(Date.UTC(y,m-1,d)).getUTCFullYear()!==y||
+  new Date(Date.UTC(y,m-1,d)).getUTCMonth()+1!==m||
+  new Date(Date.UTC(y,m-1,d)).getUTCDate()!==d)return null;
+ if(zone!=="Z"){
+  const zh=Number(zone.slice(1,3)),zm=Number(zone.slice(4));
+  if(zh>23||zm>59)return null;
+ }
+ const time=Date.parse(value);
+ return Number.isFinite(time)&&fraction.length<=3?time:null;
+}
+export type WindowValidation={
+ window:{starts_at:string;ends_at:string}|null;
+ error:string|null;
+};
+/** Error-specific validation shared between client and API; at most seven days. */
+export function validateWindowDetailed(startValue:unknown,endValue:unknown):WindowValidation{
+ if(typeof startValue!=="string"||typeof endValue!=="string"||!startValue||!endValue)
+  return {window:null,error:"Vui lòng nhập đầy đủ giờ mở và giờ đóng điểm danh."};
+ const start=parseTimestamp(startValue),end=parseTimestamp(endValue);
+ if(start===null||end===null)
+  return {window:null,error:"Ngày giờ không đúng định dạng. Vui lòng chọn lại giờ mở/đóng."};
+ if(end<=start)
+  return {window:null,error:"Giờ đóng điểm danh phải sau giờ mở."};
+ if(end-start>7*24*60*60*1000)
+  return {window:null,error:"Một phiên điểm danh được mở tối đa 7 ngày. Vui lòng rút ngắn khoảng thời gian."};
+ return {window:{starts_at:new Date(start).toISOString(),ends_at:new Date(end).toISOString()},error:null};
+}
 export function validateWindow(startValue:unknown,endValue:unknown){
- if(typeof startValue!=="string"||typeof endValue!=="string"||
-  !/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?([+-]\d{2}:\d{2}|Z))$/.test(startValue)||
-  !/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?([+-]\d{2}:\d{2}|Z))$/.test(endValue))
-   return null;
- const start=Date.parse(startValue),end=Date.parse(endValue);
- if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start||end-start>7*24*60*60*1000)
-   return null;
- return {starts_at:new Date(start).toISOString(),ends_at:new Date(end).toISOString()};
+ return validateWindowDetailed(startValue,endValue).window;
 }

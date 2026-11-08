@@ -8,7 +8,7 @@ import {
 import {createClient} from "@/lib/supabase/browser";
 import {displayTime} from "@/lib/attendance-report";
 import {
- getWindowStatus,getWindowLabel,getQrPolicyLabel,vietnamTimeToUtc,utcToVietnamInput,type QrPolicy
+ getWindowStatus,getWindowLabel,getQrPolicyLabel,vietnamTimeToUtc,utcToVietnamInput,validateWindowDetailed,type QrPolicy
 } from "@/lib/attendance-window";
 import type {Delegate,AttendanceSession,Checkin} from "@/lib/types";
 import {currentSessionCheckins,type SeatPlacement} from "@/lib/attendance-seating";
@@ -28,8 +28,10 @@ function localInput(iso:string|null){
 function windowBody(start:string,end:string){
  if(!start||!end)throw new Error("Hãy chọn đầy đủ giờ mở và đóng điểm danh.");
  const startsAt=vietnamTimeToUtc(start),endsAt=vietnamTimeToUtc(end);
- if(!startsAt||!endsAt||Date.parse(endsAt)<=Date.parse(startsAt))
-  throw new Error("Giờ đóng phải sau giờ mở; sử dụng giờ Việt Nam (GMT+7).");
+ if(!startsAt||!endsAt)
+  throw new Error("Ngày giờ không hợp lệ. Vui lòng chọn giờ Việt Nam (GMT+7).");
+ const checked=validateWindowDetailed(startsAt,endsAt);
+ if(!checked.window)throw new Error(checked.error||"Khoảng thời gian không hợp lệ.");
  return {startsAt,endsAt};
 }
 export function AttendanceClient({congressId,delegates,sessions:initialSessions,initialCheckins,seatByDelegate,canScan,canManage}:Props){
@@ -45,6 +47,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
  const [note,setNote]=useState("");
  const [flash,setFlash]=useState<{type:"success"|"error";text:string}|null>(null);
  const [editor,setEditor]=useState<"create"|"edit"|null>(null);
+ const [sessionError,setSessionError]=useState("");
  const [sessionName,setSessionName]=useState("");
  const [startLocal,setStartLocal]=useState("");
  const [endLocal,setEndLocal]=useState("");
@@ -198,7 +201,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
   }
  }
  function openEditor(kind:"create"|"edit"){
-  stopCamera();setEditor(kind);setFlash(null);
+  stopCamera();setEditor(kind);setFlash(null);setSessionError("");
   const source=kind==="edit"?session:null;
   setSessionName(source?.name||"");
   setStartLocal(localInput(source?.starts_at||null));
@@ -206,13 +209,13 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
   setQrPolicy(source?.qr_policy||"both");
  }
  async function saveSession(){
-  setBusy(true);setFlash(null);
+  setBusy(true);setFlash(null);setSessionError("");
   try{
-   const window=windowBody(startLocal,endLocal);
+   const timeWindow=windowBody(startLocal,endLocal);
    const creating=editor==="create";
    if(creating&&sessionName.trim().length<3)throw new Error("Tên phiên phải có tối thiểu 3 ký tự.");
    const body={
-    congressId,...window,qrPolicy,
+    congressId,...timeWindow,qrPolicy,
     ...(creating?{name:sessionName.trim()}:{sessionId})
    };
    const response=await fetch("/api/attendance-sessions",{
@@ -225,7 +228,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
    else setSessions(prev=>prev.map(s=>s.id===saved.id?saved:s));
    setEditor(null);
    setFlash({type:"success",text:"Đã lưu giờ mở/đóng và chính sách QR của phiên."});
-  }catch(e){setFlash({type:"error",text:e instanceof Error?e.message:"Không lưu được phiên."});}
+  }catch(e){setSessionError(e instanceof Error?e.message:"Không lưu được phiên.");}
   finally{setBusy(false);}
  }
  async function toggleSession(){
@@ -285,23 +288,24 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
     <h2 className="font-semibold mb-4">{editor==="create"?"Tạo phiên điểm danh":"Cập nhật thời gian và QR"}</h2>
     <div className="grid md:grid-cols-2 gap-4">
      {editor==="create"&&<label className="md:col-span-2"><span className="label">Tên phiên *</span>
-      <input className="field" value={sessionName} onChange={e=>setSessionName(e.target.value)} placeholder="Phiên trù bị, Phiên chính thức..."/></label>}
+      <input className="field" value={sessionName} onChange={e=>{setSessionName(e.target.value);setSessionError("");}} placeholder="Phiên trù bị, Phiên chính thức..."/></label>}
      <label><span className="label">Thời gian mở điểm danh *</span>
-      <input className="field" type="datetime-local" value={startLocal} onChange={e=>setStartLocal(e.target.value)}/></label>
+      <input className="field" type="datetime-local" value={startLocal} onChange={e=>{setStartLocal(e.target.value);setSessionError("");}}/></label>
      <label><span className="label">Thời gian đóng điểm danh *</span>
-      <input className="field" type="datetime-local" value={endLocal} onChange={e=>setEndLocal(e.target.value)}/></label>
+      <input className="field" type="datetime-local" value={endLocal} onChange={e=>{setEndLocal(e.target.value);setSessionError("");}}/></label>
      <label className="md:col-span-2"><span className="label">Loại QR được chấp nhận</span>
-      <select className="field" value={qrPolicy} onChange={e=>setQrPolicy(e.target.value as QrPolicy)}>
+      <select className="field" value={qrPolicy} onChange={e=>{setQrPolicy(e.target.value as QrPolicy);setSessionError("");}}>
        <option value="both">Cả QR cố định và QR theo phiên</option>
        <option value="fixed">Chỉ QR cá nhân cố định</option>
        <option value="session">Chỉ QR riêng cho phiên này</option>
       </select></label>
-     <div className="md:col-span-2 flex flex-wrap gap-2">
+     {sessionError&&<p role="alert" className="md:col-span-2 rounded-lg border border-red-200 bg-red-50 p-3 text-[13px] font-semibold text-red-700">{sessionError}</p>}
+      <div className="md:col-span-2 flex flex-wrap gap-2">
       <button disabled={busy} className="btn btn-primary" onClick={()=>void saveSession()}>{busy?"Đang lưu...":"Lưu cấu hình"}</button>
       <button className="btn btn-secondary" onClick={()=>setEditor(null)}>Hủy</button>
      </div>
     </div>
-    <p className="helper mt-3">Giờ nhập được hiểu là giờ Việt Nam (GMT+7), không phụ thuộc múi giờ thiết bị. Máy chủ kiểm tra chính xác thời điểm mở/đóng. Không thể sửa giờ hoặc loại QR sau khi phiên có lượt điểm danh.</p>
+    <p className="helper mt-3">Giờ nhập được hiểu là giờ Việt Nam (GMT+7), không phụ thuộc múi giờ thiết bị. Giờ đóng phải sau giờ mở; mỗi phiên được mở tối đa 7 ngày. Không thể sửa giờ hoặc loại QR sau khi phiên có lượt điểm danh.</p>
    </div>}
   </div>
   <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-5 mb-6">
