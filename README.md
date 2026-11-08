@@ -152,3 +152,17 @@ Lưu ý: camera chạy trên thiết bị; backend chỉ nhận **mã QR**. `get
 - **Định danh không phụ thuộc hộp thư**: các địa chỉ `@dntu.edu.vn` trong danh sách được dùng làm **tên đăng nhập hiển thị**, không phải email đã được BTC xác minh. Các tài khoản cấp từ phần mềm thực sự đăng ký với Supabase Auth bằng miền dự trữ `@accounts.daihoi.invalid`, để chủ sở hữu hộp thư `@dntu.edu.vn` thật không thể đặt lại mật khẩu tài khoản nội bộ. Tài khoản cơ quan đã được mời từ trước vẫn có thể đăng nhập với email thật. Không gửi mật khẩu tới các email giả lập; nếu mất mật khẩu phải được BTC cấp lại qua kênh xác thực nội bộ.
 
 Các yêu cầu triển khai cần được xác minh bằng kiểm tra đăng nhập, RLS của các vai trò admin/checkin/delegate/guest, và dữ liệu import thực tế. Khi chưa cấu hình Supabase Publishable/Secret Key, giao diện xem mẫu vẫn hoạt động nhưng **không thể đăng nhập, cấp tài khoản hay lưu đại biểu**.
+
+## Khắc phục lỗi kết nối Supabase (08/11/2026)
+
+Nếu trang đăng nhập báo **Chưa kết nối cơ sở dữ liệu**, hệ thống đã xác nhận dịch vụ Supabase tại `pnxdxdagpeyqarucdphk.supabase.co` có phản hồi từ mạng local, nhưng `.env.local` chưa có `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` và `SUPABASE_SECRET_KEY`. Đây là lỗi **thiếu API key**, không phải lỗi giao diện hay lỗi mạng.
+
+1. Mở Supabase Dashboard của **project pnxdxdagpeyqarucdphk** (Project Settings → API Keys).
+2. Trên máy Windows, chạy `npm run setup:supabase`. Dán **Publishable Key** và **Secret Key** khi chương trình hỏi (Secret Key nhập ẩn). Script ghi vào `.env.local` đã được Git ignore; không in hoặc commit khóa.
+3. Dừng tiến trình `npm run dev` cũ rồi chạy lại, vì Next.js chỉ nạp biến môi trường khi bắt đầu quá trình.
+4. Chạy `npm run check:supabase`. Chương trình sẽ kiểm tra truy cập Auth, khóa public và quyền khóa server và xác nhận schema v5, không hiển thị giá trị khóa.
+5. Nếu triển khai Vercel, cấu hình cùng các biến môi trường trong Project Settings → Environment Variables, sau đó redeploy. Không tạo/sử dụng Supabase project khác.
+
+Tương thích: app chấp nhận `NEXT_PUBLIC_SUPABASE_ANON_KEY` và `SUPABASE_SERVICE_ROLE_KEY` (khóa legacy) khi chưa có khóa mới. Các khóa secret chỉ được dùng trong Node.js server/API; tuyệt đối không đặt tiền tố `NEXT_PUBLIC_` cho Secret Key.
+
+**Nếu thiếu quyền xem API Keys**, cần đăng nhập đúng tài khoản có quyền với project đó hoặc cấp quyền qua Supabase; công cụ không được tự tạo khóa cho project không thuộc quyền truy cập. Tài khoản admin và migration v5 chưa được tạo/áp dụng chỉ nhờ sửa mã nguồn.

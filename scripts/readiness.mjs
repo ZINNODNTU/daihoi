@@ -17,14 +17,15 @@ for(const file of [".env.local",".env.production.local"]){
 }
 const checks=[
  ["Supabase URL","NEXT_PUBLIC_SUPABASE_URL",v=>v==="https://pnxdxdagpeyqarucdphk.supabase.co"],
- ["Publishable Key","NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",v=>/^sb_publishable_[A-Za-z0-9_-]+$/.test(v)],
+ ["Publishable Key","NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",v=>/^sb_publishable_[A-Za-z0-9_-]+$/.test(v)||v.startsWith("eyJ")],
  ["Secret Key (server only)","SUPABASE_SECRET_KEY",v=>/^sb_secret_[A-Za-z0-9_-]+$/.test(v)||v.startsWith("eyJ")],
  ["QR HMAC Secret >=32 ký tự","QR_HMAC_SECRET",v=>v.length>=32]
 ];
 let failures=0;
 console.log("ĐẠI HỘI SỐ — kiểm tra cấu hình");
 for(const [label,key,verify] of checks){
- const valid=Boolean(env[key]&&verify(env[key]));
+ const value=key==="NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"?(env[key]||env.NEXT_PUBLIC_SUPABASE_ANON_KEY):key==="SUPABASE_SECRET_KEY"?(env[key]||env.SUPABASE_SERVICE_ROLE_KEY):env[key];
+ const valid=Boolean(value&&verify(value));
  console.log((valid?"[OK] ":"[THIẾU] ")+label);
  if(!valid)failures++;
 }

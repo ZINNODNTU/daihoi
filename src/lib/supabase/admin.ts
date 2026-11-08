@@ -6,7 +6,7 @@ import {createClient} from "@supabase/supabase-js";
  */
 export function createAdminClient(){
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
- const key=process.env.SUPABASE_SECRET_KEY;
+ const key=process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
  if(!url||!key||key.length<30)throw new Error("Thiếu SUPABASE_SECRET_KEY cho API điểm danh.");
  return createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{"X-Client-Info":"daihoi-checkin-server"}}});
 }

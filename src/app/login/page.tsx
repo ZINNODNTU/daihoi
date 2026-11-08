@@ -15,13 +15,14 @@ export default function Login(){
   const [showPassword,setShowPassword]=useState(false);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
+  const supabaseReady=Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY));
 
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();
     if(busy)return;
     setBusy(true);setError("");
     try{
-      if(!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)throw new Error("Hệ thống chưa cấu hình kết nối Supabase. Hãy liên hệ quản trị viên.");
+      if(!supabaseReady)throw new Error("Máy chủ chưa có Supabase Publishable Key. Hãy liên hệ quản trị viên.");
       const client=createClient();
       const normalized=email.trim().toLowerCase();
       const internal=toSupabaseAuthEmail(normalized);
@@ -106,8 +107,12 @@ export default function Login(){
               </button>
             </span>
           </label>
+          {!supabaseReady&&<div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] leading-6 text-amber-900">
+            <strong className="block text-[13px]">Chưa kết nối cơ sở dữ liệu</strong>
+            <span>Thiếu Supabase Publishable Key. Quản trị viên cần cập nhật <code className="font-semibold">.env.local</code> rồi khởi động lại web.</span>
+          </div>}
           {error&&<p role="alert" className="rounded-[8px] border border-red-200 bg-red-50 p-3 text-[12px] font-medium leading-6 text-red-700">{error}</p>}
-          <button disabled={busy} type="submit" className="btn btn-primary mt-1 min-h-[48px] w-full justify-center !text-[13px]">
+          <button disabled={busy||!supabaseReady} type="submit" className="btn btn-primary mt-1 min-h-[48px] w-full justify-center !text-[13px]">
             {busy?"Đang xác thực...":"Đăng nhập vào hệ thống"} <ArrowRight size={17}/>
           </button>
         </form>

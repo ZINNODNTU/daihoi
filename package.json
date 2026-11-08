@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "readiness": "node scripts/readiness.mjs",
-    "bootstrap:admin": "node scripts/bootstrap-admin.mjs"
+    "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
+    "check:supabase": "node scripts/check-supabase.mjs",
+    "setup:supabase": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/configure-supabase.ps1"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

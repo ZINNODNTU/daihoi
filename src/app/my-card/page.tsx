@@ -8,7 +8,7 @@ import {MyDelegateCards} from "@/components/my-delegate-cards";
 export const dynamic="force-dynamic";
 
 export default async function MyCardPage(){
- if(!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) return <main className="mx-auto flex min-h-dvh max-w-2xl flex-col items-center justify-center px-6 text-center"><IdCard className="text-[#007eb8]" size={42}/><h1 className="page-title mt-5">Chưa cấu hình đăng nhập đại biểu</h1><p className="page-description mt-4">Quản trị viên cần bổ sung Supabase Publishable Key trong .env.local để sử dụng thẻ đại biểu và đăng nhập.</p><Link className="btn btn-secondary mt-6" href="/login">Về trang đăng nhập <ArrowRight size={16}/></Link></main>;
+ if(!(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) return <main className="mx-auto flex min-h-dvh max-w-2xl flex-col items-center justify-center px-6 text-center"><IdCard className="text-[#007eb8]" size={42}/><h1 className="page-title mt-5">Chưa cấu hình đăng nhập đại biểu</h1><p className="page-description mt-4">Quản trị viên cần bổ sung Supabase Publishable Key trong .env.local để sử dụng thẻ đại biểu và đăng nhập.</p><Link className="btn btn-secondary mt-6" href="/login">Về trang đăng nhập <ArrowRight size={16}/></Link></main>;
  const {supabase,user}=await getAuth();
  if(!user)redirect("/login");
  const [{data:profile},{data:delegates,error}]=await Promise.all([

@@ -7,7 +7,7 @@ const loginAlias="admin@dntu.edu.vn";
 // Không xác minh hộp thư dntu.edu.vn mà BTC không sở hữu: dùng email Auth .invalid.
 const email="admin@accounts.daihoi.invalid";
 const password=process.env.DAIHOI_BOOTSTRAP_PASSWORD;
-const key=process.env.SUPABASE_SECRET_KEY;
+const key=process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
 if(!url||!key||!password){
  console.error("Thiếu NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SECRET_KEY / DAIHOI_BOOTSTRAP_PASSWORD.");
