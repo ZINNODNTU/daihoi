@@ -21,10 +21,17 @@ export async function proxy(request: NextRequest) {
     {
       cookies:{
         getAll:()=>request.cookies.getAll(),
-        setAll(items){
+        setAll(items,responseHeaders){
           items.forEach(({name,value})=>request.cookies.set(name,value));
           response=NextResponse.next({request});
-          items.forEach(({name,value,options})=>response.cookies.set(name,value,options));
+          items.forEach(({name,value,options})=>response.cookies.set(name,value,{
+            ...options,path:"/",sameSite:"lax",
+            secure:request.nextUrl.protocol==="https:",httpOnly:false
+          }));
+          if(responseHeaders)for(const [name,value] of Object.entries(responseHeaders)){
+            if(["cache-control","expires","pragma"].includes(name.toLowerCase()))
+              response.headers.set(name,value);
+          }
         }
       }
     }

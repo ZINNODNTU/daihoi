@@ -3,21 +3,24 @@ import {ChangeEvent,FormEvent,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
 import Image from "next/image";
 import {QRCodeSVG} from "qrcode.react";
-import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,UserRoundPlus,Camera,UserRound} from "lucide-react";
+import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,Camera,UserRound} from "lucide-react";
 import {DelegateBarcode} from "@/components/delegate-barcode";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
 import type {Delegate,AttendanceSession} from "@/lib/types";
 import {displayTime} from "@/lib/attendance-report";
+import {normalizeBirthDate,normalizeGender} from "@/lib/delegate-demographics";
 type Props={
  congressId:string;congressCode:string;delegates:Delegate[];canManage:boolean;
  sessions:AttendanceSession[];
 };
-type Row={full_name:string;unit:string;student_id:string;position:string;delegate_type:"official"|"alternate"|"guest"};
+type Row={full_name:string;unit:string;student_id:string;position:string;delegate_type:"official"|"alternate"|"guest";gender:string;birth_date:string};
 type PhotoTarget={kind:"new"}|{kind:"existing";delegate:Delegate};
 type Card={
  id:string;name:string;code:string;barcodeCode:string;token:string;
  scope:"fixed"|"session";sessionName?:string;startsAt?:string|null;endsAt?:string|null;
 };
+function genderLabel(gender:Delegate["gender"]){return gender==="male"?"Nam":gender==="female"?"Nữ":gender==="other"?"Khác":"Chưa cập nhật";}
+function birthLabel(date:string|null){if(!date)return "Chưa cập nhật";const [y,m,d]=date.split("-");return `${d}/${m}/${y}`;}
 function kindLabel(kind:Delegate["delegate_type"]){
  return kind==="official"?"Chính thức":kind==="alternate"?"Dự khuyết":"Khách mời";
 }
@@ -41,9 +44,11 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
  const [showCard,setShowCard]=useState<Card|null>(null);
  const [cardSession,setCardSession]=useState("");
  const [uploadRows,setUploadRows]=useState<Row[]|null>(null);
- const [provisioning,setProvisioning]=useState(false);
  const [photoTarget,setPhotoTarget]=useState<PhotoTarget|null>(null);
  const [pendingPhoto,setPendingPhoto]=useState<Blob|null>(null);
+ const [demographicsTarget,setDemographicsTarget]=useState<Delegate|null>(null);
+ const [editGender,setEditGender]=useState("");
+ const [editBirthDate,setEditBirthDate]=useState("");
  const [pendingPhotoPreview,setPendingPhotoPreview]=useState<string|null>(null);
  useEffect(()=>()=>{if(pendingPhotoPreview)URL.revokeObjectURL(pendingPhotoPreview);},[pendingPhotoPreview]);
  async function uploadPhoto(delegateId:string,photo:Blob){
@@ -111,7 +116,9 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    unit:String(form.get("unit")||""),
    student_id:String(form.get("student_id")||"").trim(),
    position:String(form.get("position")||"").trim(),
-   delegate_type:parseKind(String(form.get("delegate_type")||"official"))}],pendingPhoto);
+   delegate_type:parseKind(String(form.get("delegate_type")||"official")),
+    gender:String(form.get("gender")||""),
+    birth_date:String(form.get("birth_date")||"")}],pendingPhoto);
  }
  async function handleFile(e:ChangeEvent<HTMLInputElement>){
   const file=e.target.files?.[0];if(!file)return;
@@ -121,7 +128,8 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    let matrix:(string|number|Date|null|undefined)[][]=[];
    if(file.name.toLowerCase().endsWith(".xlsx")){
     const {readSheet}=await import("read-excel-file/browser");
-    matrix=(await readSheet(file)).map(row=>row.map(cell=>cell===null?null:String(cell)));
+    matrix=(await readSheet(file)).map(row=>row.map(cell=>cell===null?null:
+      cell instanceof Date?cell.toISOString().slice(0,10):String(cell)));
    }else if(file.name.toLowerCase().endsWith(".csv")){
     const text=await file.text();
     const records:string[][]=[];
@@ -147,7 +155,9 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     full_name:["hoten","hovaten","tensinhvien","fullname"],
     unit:["chidoan","donvi","lop","unit"],
     position:["chucvu","chucdanh","position"],
-    delegate_type:["vaitro","loaidaibieu","delegatetype"]
+    delegate_type:["vaitro","loaidaibieu","delegatetype"],
+     gender:["gioitinh","sex","gender"],
+     birth_date:["ngaysinh","ngaythangnamsinh","dateofbirth","birthdate","dob"]
    };
    const lookup=(names:string[])=>heading.findIndex(h=>names.map(key).includes(h));
    const header=lookup(fields.full_name)>=0&&(lookup(fields.student_id)>=0||lookup(fields.unit)>=0);
@@ -160,14 +170,19 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
      unit:get(r,"unit",2),
      student_id:get(r,"student_id",0).toUpperCase(),
      position:get(r,"position",3),
-     delegate_type:parseKind(get(r,"delegate_type",4))
+     delegate_type:parseKind(get(r,"delegate_type",4)),
+      gender:get(r,"gender",5),birth_date:get(r,"birth_date",6)
     }));
    if(rows.length>250)throw new Error("Mỗi tệp tối đa 250 đại biểu.");
    if(rows.some(r=>!r.full_name||(!r.student_id&&r.delegate_type!=="guest")))
     throw new Error("Thiếu họ tên hoặc MSSV. Khách mời có thể không có MSSV.");
    if(rows.some(r=>r.student_id&&!/^[A-Za-z0-9][A-Za-z0-9._-]{3,31}$/.test(r.student_id)))
     throw new Error("MSSV phải từ 4–32 ký tự (chữ, số, dấu chấm, - hoặc _).");
-   const ids=rows.map(r=>r.student_id).filter(Boolean);
+   for(let i=0;i<rows.length;i++){
+     try{normalizeGender(rows[i].gender);normalizeBirthDate(rows[i].birth_date);}
+     catch(error){throw new Error("Dòng "+(i+(header?2:1))+": "+(error instanceof Error?error.message:"Ngày sinh/giới tính không hợp lệ."));}
+    }
+    const ids=rows.map(r=>r.student_id).filter(Boolean);
    if(new Set(ids).size!==ids.length)throw new Error("MSSV bị trùng trong tệp Excel.");
    setUploadRows(rows);
   }catch(e){setError(e instanceof Error?e.message:"Không đọc được tệp.");}
@@ -177,46 +192,36 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   try{
    const {default:writeExcelFile}=await import("write-excel-file/browser");
    await writeExcelFile([{sheet:"Danh sach dai bieu",stickyRowsCount:1,data:[
-    ["MSSV","Họ tên","Đơn vị","Chức vụ","Vai trò"],
-    ["2200000001","Nguyễn Văn A","22DTH1","Bí thư","Chính thức"],
-    ["","","","",""],
-    ["","Trần Thị B","Đơn vị khách mời","Đại diện","Khách mời"]
+    ["MSSV","Họ tên","Đơn vị","Chức vụ","Vai trò","Giới tính","Ngày sinh"],
+    ["2200000001","Nguyễn Văn A","22DTH1","Bí thư","Chính thức","Nam","24/09/2003"],
+    ["","","","","","",""],
+    ["","Trần Thị B","Đơn vị khách mời","Đại diện","Khách mời","Nữ","05/04/1988"]
    ]}]).toFile("mau-danh-sach-dai-bieu.xlsx");
   }catch{setError("Không thể tạo file Excel mẫu.");}
  }
- async function provisionAccounts(){
-  const eligible=delegates.filter(d=>d.student_id&&!d.auth_user_id).slice(0,100);
-  if(!eligible.length)return;
-  if(!window.confirm("Cấp tài khoản cho "+eligible.length+" đại biểu? Mật khẩu chỉ xuất hiện một lần trong file CSV được tải xuống."))return;
-  setProvisioning(true);setError("");setSuccess("");
+ function openDemographics(delegate:Delegate){
+  setDemographicsTarget(delegate);
+  setEditGender(delegate.gender||"");
+  setEditBirthDate(delegate.birth_date||"");
+  setError("");
+ }
+ async function updateDemographics(e:FormEvent<HTMLFormElement>){
+  e.preventDefault();
+  if(!demographicsTarget)return;
+  setBusy(true);setError("");setSuccess("");
   try{
-   const res=await fetch("/api/delegates/accounts",{
-    method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({congressId,delegateIds:eligible.map(d=>d.id)})
+   const response=await fetch("/api/delegates",{
+    method:"PATCH",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({congressId,delegateId:demographicsTarget.id,
+     gender:editGender,birth_date:editBirthDate})
    });
-   const body=await res.json();
-   if(!res.ok)throw new Error(body.error||"Không tạo được tài khoản.");
-   const accounts=body.created as {id:string;name:string;email:string;password:string}[];
-   const errors=body.errors as {id:string;name:string;reason:string}[];
-   const linkedExisting=Number(body.linkedExisting||0);
-   if(accounts.length){
-    const csv=(value:string)=>{
-     const safe=/^[=+\-@]/.test(value)?"'"+value:value;
-     return '"'+safe.replace(/"/g,'""')+'"';
-    };
-    const lines=[["Họ tên","Email đăng nhập","Mật khẩu tạm"].map(csv).join(","),
-     ...accounts.map(d=>[d.name,d.email,d.password].map(csv).join(","))];
-    const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
-    const url=URL.createObjectURL(blob),link=document.createElement("a");
-    link.href=url;link.download="tai-khoan-dai-bieu-"+congressCode+".csv";
-    document.body.appendChild(link);link.click();link.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1500);
-   }
-   setSuccess("Đã cấp "+accounts.length+" tài khoản mới, liên kết "+linkedExisting+" tài khoản có sẵn. "+(errors.length?errors.length+" tài khoản chưa cấp được.":"Hãy lưu CSV an toàn và chuyển mật khẩu riêng cho từng đại biểu."));
-   if(errors.length)setError(errors.slice(0,6).map(e=>e.name+": "+e.reason).join(" · "));
+   const result=await response.json();
+   if(!response.ok)throw new Error(result.error||"Không cập nhật được hồ sơ.");
+   setDemographicsTarget(null);
+   setSuccess("Đã cập nhật giới tính và ngày sinh của "+demographicsTarget.full_name+".");
    router.refresh();
-  }catch(err){setError(err instanceof Error?err.message:"Lỗi cấp tài khoản.");}
-  finally{setProvisioning(false);}
+  }catch(e){setError(e instanceof Error?e.message:"Không cập nhật được hồ sơ.");}
+  finally{setBusy(false);}
  }
  async function openCard(delegate:Delegate,sessionId=""){
   setError("");setBusy(true);
@@ -245,7 +250,6 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     <button type="button" className="btn btn-secondary w-full sm:w-auto" onClick={()=>void downloadTemplate()}><Download size={17}/> Tải Excel mẫu</button>
     <label className="btn btn-secondary w-full cursor-pointer sm:w-auto"><FileSpreadsheet size={18}/> Nhập Excel/CSV
      <input className="hidden" type="file" accept=".xlsx,.csv" onChange={e=>void handleFile(e)}/></label>
-    <button type="button" className="btn btn-secondary w-full sm:w-auto" disabled={busy||provisioning||!delegates.some(d=>d.student_id&&!d.auth_user_id)} onClick={()=>void provisionAccounts()} title="Tối đa 100 tài khoản/lần; tự tải thông tin đăng nhập một lần"><UserRoundPlus size={17}/>{provisioning?"Đang cấp...":"Cấp tài khoản ("+delegates.filter(d=>d.student_id&&!d.auth_user_id).length+")"}</button>
     <button type="button" className="btn btn-primary w-full sm:w-auto" aria-expanded={open} onClick={()=>setOpen(!open)}><Plus size={18}/> Thêm đại biểu</button>
    </div>}
   </div>
@@ -253,8 +257,8 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   {success&&<p role="status" className="bg-green-50 text-green-700 p-3 rounded-xl mb-5">{success}</p>}
   {uploadRows&&<div className="card p-5 mb-5">
    <p className="font-bold">Đã đọc {uploadRows.length} dòng</p>
-   <p className="helper my-3">MSSV · Họ tên · Đơn vị · Chức vụ · Vai trò. Mã đại biểu được tự cấp sau khi lưu. Email đăng nhập tự tạo từ MSSV@dntu.edu.vn.</p>
-   <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Đơn vị</th><th>Vai trò</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.unit}</td><td>{kindLabel(r.delegate_type)}</td></tr>)}</tbody></table></div>
+   <p className="helper my-3">MSSV · Họ tên · Đơn vị · Chức vụ · Vai trò · Giới tính · Ngày sinh (dd/mm/yyyy). Mã đại biểu được tự cấp sau khi lưu. Email đăng nhập tự tạo từ MSSV@dntu.edu.vn.</p>
+   <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Đơn vị</th><th>Vai trò</th><th>Giới tính</th><th>Ngày sinh</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.unit}</td><td>{kindLabel(r.delegate_type)}</td><td>{r.gender||"—"}</td><td>{r.birth_date||"—"}</td></tr>)}</tbody></table></div>
    <div className="flex gap-2"><button disabled={busy} className="btn btn-primary" onClick={()=>void save(uploadRows)}>Xác nhận nhập</button>
     <button className="btn btn-secondary" onClick={()=>setUploadRows(null)}>Hủy</button></div>
   </div>}
@@ -280,7 +284,15 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     <label><span className="label">Loại đại biểu</span><select name="delegate_type" className="field">
      <option value="official">Chính thức</option><option value="alternate">Dự khuyết</option>
      <option value="guest">Khách mời</option></select></label>
-    <button disabled={busy} className="btn btn-primary md:col-span-2">Lưu đại biểu</button>
+    <label><span className="label">Giới tính</span><select name="gender" className="field" defaultValue="">
+      <option value="">Chưa cung cấp</option><option value="male">Nam</option>
+      <option value="female">Nữ</option><option value="other">Khác</option>
+     </select></label>
+     <label><span className="label">Ngày tháng năm sinh</span>
+      <input name="birth_date" type="date" min="1900-01-01" className="field"/>
+      <span className="helper">Không bắt buộc; dùng để thống kê độ tuổi thực tế.</span>
+     </label>
+     <button disabled={busy} className="btn btn-primary md:col-span-2">Lưu đại biểu</button>
    </form>
   </div>}
   <div className="card overflow-hidden">
@@ -291,7 +303,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       placeholder="MSSV, họ tên, đơn vị, chức vụ..."/></div>
    </div>
    <div className="table-wrap desktop-table"><table className="data"><thead><tr>
-    <th>Ảnh</th><th>Mã đại biểu</th><th>Họ tên</th><th>MSSV / Email</th><th className="hide-mobile">Đơn vị / Chức vụ</th><th>Vai trò</th><th>Tài khoản</th><th>Ảnh / Thẻ</th>
+    <th>Ảnh</th><th>Mã đại biểu</th><th>Họ tên</th><th>MSSV / Email</th><th className="hide-mobile">Đơn vị / Chức vụ</th><th>Vai trò</th><th>Giới tính / Ngày sinh</th><th>Tài khoản</th><th>Ảnh / Thẻ</th>
    </tr></thead><tbody>
     {filtered.map(d=><tr key={d.id}>
      <td>{d.photo_path?<Image unoptimized src={"/api/delegates/"+d.id+"/photo"}
@@ -302,6 +314,11 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
      <td><span className="font-semibold">{d.student_id||"—"}</span><span className="block break-all text-[11px] text-[#627c8a]">{d.login_email||""}</span></td>
      <td className="hide-mobile">{d.unit}<span className="block text-[11px] text-[#627c8a]">{d.position||""}</span></td>
      <td><span className="badge badge-gray">{kindLabel(d.delegate_type)}</span></td>
+      <td className="text-xs">{genderLabel(d.gender)}
+       <span className="block text-[#627c8a]">{birthLabel(d.birth_date)}</span>
+       {canManage&&<button type="button" className="mt-1 text-[11px] font-bold text-[#007fae] underline underline-offset-2"
+        onClick={()=>openDemographics(d)}>Chỉnh sửa</button>}
+      </td>
      <td><span className={"badge "+(d.auth_user_id?"badge-green":"badge-gray")}>{d.auth_user_id?"Đã cấp":"Chưa cấp"}</span></td>
      <td><div className="flex flex-wrap gap-1.5">
       {canManage&&<button type="button" className="btn btn-secondary !min-h-9 !px-2.5 !text-xs"
@@ -310,7 +327,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       </button>}
       <button className="btn btn-secondary !min-h-9 !px-2.5 !text-xs" disabled={busy} onClick={()=>void openCard(d)}>
        <ScanBarcode size={15}/> QR / Barcode</button></div></td></tr>)}
-    {!filtered.length&&<tr><td colSpan={8} className="helper text-center py-9!">Không tìm thấy đại biểu.</td></tr>}
+    {!filtered.length&&<tr><td colSpan={9} className="helper text-center py-9!">Không tìm thấy đại biểu.</td></tr>}
    </tbody></table></div>
   </div>
   <div className="mobile-cards px-3 pb-4">
@@ -324,8 +341,11 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       <span className="badge badge-gray shrink-0">{kindLabel(d.delegate_type)}</span>
      </div>
      <p className="mobile-record-meta mt-2">{d.unit||"Chưa cập nhật đơn vị"}{d.position?" · "+d.position:""}{d.student_id?" · "+d.student_id:""}</p>
-     <p className="mt-1 text-[11px] text-[#687f91]">{d.login_email||"Khách mời không có tài khoản"} · {d.auth_user_id?"Đã cấp tài khoản":"Chưa cấp tài khoản"}</p>
+     <p className="mt-1 text-[11px] text-[#687f91]">Giới tính: {genderLabel(d.gender)} · Ngày sinh: {birthLabel(d.birth_date)}</p>
+      <p className="mt-1 text-[11px] text-[#687f91]">{d.login_email||"Khách mời không có tài khoản"} · {d.auth_user_id?"Đã cấp tài khoản":"Chưa cấp tài khoản"}</p>
      <div className="mobile-record-actions">
+      {canManage&&<button type="button" className="btn btn-secondary" disabled={busy}
+       onClick={()=>openDemographics(d)}>Sửa giới tính / ngày sinh</button>}
       {canManage&&<button type="button" className="btn btn-secondary" disabled={busy}
        onClick={()=>setPhotoTarget({kind:"existing",delegate:d})}><Camera size={17}/>{d.photo_path?"Sửa ảnh":"Thêm ảnh"}</button>}
       <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>void openCard(d)}>
@@ -333,6 +353,36 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     </article>)}
     {!filtered.length&&<div className="rounded-xl bg-[#f6fafb] p-7 text-center text-sm text-[#718795]">Không tìm thấy đại biểu phù hợp.</div>}
    </div>
+   {demographicsTarget&&canManage&&<div role="presentation"
+    className="fixed inset-0 z-[70] flex items-center justify-center bg-[#112c42]/65 p-3"
+    onClick={e=>{if(e.target===e.currentTarget&&!busy)setDemographicsTarget(null);}}>
+    <div role="dialog" aria-modal="true" aria-label={"Cập nhật nhân khẩu học "+demographicsTarget.full_name}
+     className="w-full max-w-[460px] rounded-[18px] border border-[#d7e4eb] bg-white p-5 shadow-2xl sm:p-7">
+     <div className="flex items-start justify-between gap-3">
+      <div><h2 className="text-[18px] font-extrabold text-[#213f5b]">Thông tin đại biểu</h2>
+       <p className="mt-1 text-xs text-[#668297]">{demographicsTarget.full_name}</p></div>
+      <button type="button" onClick={()=>setDemographicsTarget(null)} aria-label="Đóng chỉnh sửa"
+       className="rounded-lg bg-[#edf4f8] p-2 text-[#3c6c82]"><X size={19}/></button>
+     </div>
+     <form className="mt-5 space-y-4" onSubmit={e=>void updateDemographics(e)}>
+      <label className="block"><span className="label">Giới tính</span>
+       <select className="field" value={editGender} onChange={e=>setEditGender(e.target.value)}>
+        <option value="">Chưa cung cấp</option><option value="male">Nam</option>
+        <option value="female">Nữ</option><option value="other">Khác</option>
+       </select></label>
+      <label className="block"><span className="label">Ngày tháng năm sinh</span>
+       <input className="field" type="date" min="1900-01-01" value={editBirthDate}
+        onChange={e=>setEditBirthDate(e.target.value)}/></label>
+      <p className="text-xs leading-6 text-[#748d9c]">Thông tin được sử dụng để phân tích chất lượng đại biểu đã điểm danh.</p>
+      {error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+      <div className="flex flex-wrap justify-end gap-2">
+       <button type="button" className="btn btn-secondary" disabled={busy}
+        onClick={()=>setDemographicsTarget(null)}>Hủy</button>
+       <button type="submit" className="btn btn-primary" disabled={busy}>{busy?"Đang lưu...":"Lưu thay đổi"}</button>
+      </div>
+     </form>
+    </div>
+   </div>}
    {showCard&&<div role="presentation" className="modal-overlay fixed inset-0 z-50 bg-[#0c2b43]/65 p-4 flex items-start justify-center overflow-y-auto"
     onClick={()=>setShowCard(null)}>
    <div role="dialog" aria-modal="true" aria-label="Thẻ đại biểu điện tử" className="card mobile-sheet max-w-lg w-full p-5 sm:p-7 md:p-8 my-4 relative delegate-card-print"

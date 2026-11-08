@@ -1,8 +1,9 @@
 "use client";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
+import Link from "next/link";
 import {BrowserMultiFormatReader} from "@zxing/browser";
 import {
- Camera,CheckCheck,ClipboardCheck,History,Plus,RefreshCw,Search,
+ Camera,CheckCheck,ClipboardCheck,History,Plus,RefreshCw,Search,Monitor,QrCode,ArrowLeft,
  ShieldAlert,Users,Wifi,ScanBarcode,Clock3,Settings2
 } from "lucide-react";
 import {createClient} from "@/lib/supabase/browser";
@@ -16,7 +17,8 @@ import {RecentCheckinCard} from "@/components/recent-checkin-card";
 
 type Props={
  congressId:string;delegates:Delegate[];sessions:AttendanceSession[];
- initialCheckins:Checkin[];seatByDelegate:Record<string,SeatPlacement>;canScan:boolean;canManage:boolean;
+ initialCheckins:Checkin[];seatByDelegate:Record<string,SeatPlacement>;
+ canScan:boolean;canManage:boolean;hideManagement?:boolean;defaultSessionId?:string;
 };
 type Tab="qr"|"manual"|"history";
 type Fallback="manual"|"barcode";
@@ -34,12 +36,17 @@ function windowBody(start:string,end:string){
  if(!checked.window)throw new Error(checked.error||"Khoảng thời gian không hợp lệ.");
  return {startsAt,endsAt};
 }
-export function AttendanceClient({congressId,delegates,sessions:initialSessions,initialCheckins,seatByDelegate,canScan,canManage}:Props){
+export function AttendanceClient({congressId,delegates,sessions:initialSessions,initialCheckins,seatByDelegate,
+ canScan,canManage,hideManagement=false,defaultSessionId=""}:Props){
  const [sessions,setSessions]=useState(initialSessions);
- const [sessionId,setSessionId]=useState(initialSessions[0]?.id||"");
+ const [sessionId,setSessionId]=useState(
+ initialSessions.find(s=>s.id===defaultSessionId)?.id||initialSessions[0]?.id||""
+);
  const [checkins,setCheckins]=useState(initialCheckins);
  const [tab,setTab]=useState<Tab>(canScan?"qr":"history");
  const [camera,setCamera]=useState(false);
+ const [cameraDevices,setCameraDevices]=useState<{deviceId:string;label:string}[]>([]);
+ const [selectedCamera,setSelectedCamera]=useState("");
  const [busy,setBusy]=useState(false);
  const [query,setQuery]=useState("");
  const [barcodeInput,setBarcodeInput]=useState("");
@@ -170,16 +177,24 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
    scanLock.current=false;
   }
  }
- async function startCamera(){
+ async function refreshCameras(){
+  if(!navigator.mediaDevices?.enumerateDevices)return;
+  try{
+   const devices=await BrowserMultiFormatReader.listVideoInputDevices();
+   setCameraDevices(devices.filter(d=>d.deviceId).map((d,i)=>({
+    deviceId:d.deviceId,label:d.label||"Camera "+(i+1)
+   })));
+  }catch{setFlash({type:"error",text:"Không thể liệt kê camera. Kiểm tra quyền truy cập."});}
+ }
+ async function startCamera(deviceId=selectedCamera){
   if(!allowed)return setFlash({type:"error",text:"Phiên chưa mở hoặc đã hết thời gian điểm danh."});
   setFlash(null);lastQr.current={token:"",time:0};scanLock.current=false;setCamera(true);
+  void refreshCameras();
   try{
    await new Promise(resolve=>setTimeout(resolve,120));
    if(!videoRef.current)throw new Error("Camera chưa sẵn sàng.");
    const reader=new BrowserMultiFormatReader();
-   controlsRef.current=await reader.decodeFromConstraints({
-    video:{facingMode:{ideal:"environment"}},audio:false
-   },videoRef.current,(result)=>{
+   const onDecode=(result:{getText():string}|undefined|null)=>{
     if(!result||scanLock.current)return;
     const value=result.getText().trim();
     if(value.startsWith("dh1.")||value.startsWith("dh2.")||value.startsWith("dh3.")){
@@ -194,7 +209,11 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
       setFlash({type:"error",text:"Mã quét không thuộc hệ thống Đại hội này."});
      }
     }
-   });
+   };
+   controlsRef.current=deviceId?
+    await reader.decodeFromVideoDevice(deviceId,videoRef.current,onDecode):
+    await reader.decodeFromConstraints({video:{facingMode:{ideal:"environment"}},audio:false},videoRef.current,onDecode);
+   void refreshCameras();
   }catch{
    stopCamera();
    setFlash({type:"error",text:"Không mở được camera. Hãy dùng HTTPS, cho phép quyền camera hoặc dùng phương thức thủ công."});
@@ -253,10 +272,17 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
  return <div>
   <div className="flex flex-wrap justify-between gap-4 items-start">
    <div><p className="text-xs text-[#0ca0a0] font-semibold tracking-widest">ĐIỀU HÀNH ĐẠI HỘI</p>
-    <h1 className="page-title mt-2">Điểm danh đại biểu</h1>
-    <p className="helper mt-2">Quét QR cố định, QR theo phiên, barcode dự phòng hoặc điểm danh thủ công.</p>
+    <h1 className="page-title mt-2">{hideManagement?"Quét tại bàn BTC":"Điểm danh đại biểu"}</h1>
+    <p className="helper mt-2">Quét QR thẻ đại biểu, barcode dự phòng hoặc xác nhận thủ công khi thiết bị gặp sự cố.</p>
    </div>
-   <button type="button" onClick={()=>void reload()} className="btn btn-secondary mobile-full-btn sm:w-auto"><RefreshCw size={17}/>Làm mới</button>
+   <div className="flex flex-wrap gap-2">
+    {hideManagement&&<>
+     <Link href={"/congresses/"+congressId+"/attendance"} className="btn btn-secondary !text-xs"><ArrowLeft size={15}/>Phiên</Link>
+     <Link href={"/congresses/"+congressId+"/attendance/live?sessionId="+sessionId} className="btn btn-secondary !text-xs"><QrCode size={15}/>Màn hình điểm danh</Link>
+     <Link href={"/congresses/"+congressId+"/attendance/live?sessionId="+sessionId} className="btn btn-secondary !text-xs"><Monitor size={15}/>Sơ đồ trực tiếp</Link>
+    </>}
+    <button type="button" onClick={()=>void reload()} className="btn btn-secondary mobile-full-btn sm:w-auto"><RefreshCw size={17}/>Làm mới</button>
+   </div>
   </div>
   <div className="card p-4 sm:p-6 my-5 sm:my-7">
    <div className="flex flex-wrap items-end gap-4">
@@ -269,7 +295,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
      </select>
     </label>
     {session&&<span className={`badge ${windowStatus==="open"?"badge-green":windowStatus==="upcoming"?"badge-yellow":"badge-gray"}`}>{getWindowLabel(windowStatus)}</span>}
-    {canManage&&<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+    {canManage&&!hideManagement&&<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
      <button className="btn btn-secondary whitespace-normal" onClick={()=>openEditor("create")}><Plus size={16}/>Thêm phiên</button>
      {session&&<>
       <button className="btn btn-secondary whitespace-normal" onClick={()=>openEditor("edit")}><Settings2 size={16}/>Cấu hình giờ/QR</button>
@@ -284,7 +310,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
     <span>Đóng: <strong>{displayTime(session.ends_at)}</strong></span>
     <span>{getQrPolicyLabel(session.qr_policy)}</span>
    </div>}
-   {editor&&canManage&&<div className="rounded-xl bg-[#f4f9fc] p-5 mt-5 border border-[#deebf2]">
+   {editor&&canManage&&!hideManagement&&<div className="rounded-xl bg-[#f4f9fc] p-5 mt-5 border border-[#deebf2]">
     <h2 className="font-semibold mb-4">{editor==="create"?"Tạo phiên điểm danh":"Cập nhật thời gian và QR"}</h2>
     <div className="grid md:grid-cols-2 gap-4">
      {editor==="create"&&<label className="md:col-span-2"><span className="label">Tên phiên *</span>
@@ -346,6 +372,22 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
    </div>
    {tab==="qr"&&canScan&&<div className="p-4 text-center sm:p-6">
     <div className="max-w-xl mx-auto">
+     <div className="mb-4 flex flex-wrap items-end gap-2 rounded-xl border border-[#dbe8ec] bg-[#f5fafb] p-3 text-left">
+      <div className="min-w-0 flex-1">
+       <label htmlFor="btc-camera-select" className="text-[12px] font-extrabold text-[#395d71]">Chọn camera quét điểm danh</label>
+       <select id="btc-camera-select" value={selectedCamera}
+        onChange={e=>{const id=e.target.value;setSelectedCamera(id);
+         if(camera){stopCamera();void startCamera(id);}}}
+        className="field mt-2 w-full !rounded-lg !min-h-[45px]">
+        <option value="">Camera sau (tự động)</option>
+        {cameraDevices.map((d,i)=><option key={d.deviceId} value={d.deviceId}>{d.label||"Camera "+(i+1)}</option>)}
+       </select>
+      </div>
+      <button type="button" onClick={()=>void refreshCameras()} aria-label="Làm mới danh sách camera" title="Làm mới danh sách camera"
+       className="flex h-[45px] w-[45px] items-center justify-center rounded-lg border border-[#d2e2e6] bg-white text-[#326a7b]">
+       <RefreshCw size={18}/>
+      </button>
+     </div>
      {camera?<div className="relative rounded-xl overflow-hidden bg-[#0b243a]">
        <video ref={videoRef} autoPlay playsInline muted className="aspect-[4/3] w-full bg-[#0b243a] object-cover sm:aspect-video"/>
        <div className="absolute inset-[15%] border-2 border-[#42e1c9] rounded-xl pointer-events-none"/>

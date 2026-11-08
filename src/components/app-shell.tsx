@@ -2,13 +2,13 @@
 
 import {useEffect,useState} from "react";
 import Link from "next/link";
-import {usePathname,useRouter} from "next/navigation";
+import {usePathname} from "next/navigation";
 import {
-  Armchair,ArrowRight,BarChart3,ChevronDown,ChevronRight,ClipboardList,FileText,
+  Armchair,ArrowRight,BarChart3,ChartColumnIncreasing,ChevronDown,ChevronRight,ClipboardList,FileText,
   LayoutGrid,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X,IdCard,CircleUserRound
 } from "lucide-react";
 import {BrandMark} from "@/components/brand-mark";
-import {createClient} from "@/lib/supabase/browser";
+
 
 type NavItem={name:string;href:string;icon:typeof LayoutGrid};
 type Props={
@@ -18,21 +18,28 @@ type Props={
   congressName?:string;
   canManage?:boolean;
   canViewBch?:boolean;
+  canCheckin?:boolean;
 };
 
-export function AppShell({children,name,congressId,congressName,canManage=false,canViewBch=false}:Props){
+export function AppShell({children,name,congressId,congressName,canManage=false,canViewBch=false,canCheckin=false}:Props){
   const [mobile,setMobile]=useState(false);
   const path=usePathname();
-  const router=useRouter();
+  const [logoutError,setLogoutError]=useState("");
   const overview:NavItem={name:"Tổng quan hệ thống",href:"/dashboard",icon:LayoutGrid};
   const myCard:NavItem={name:"Thẻ đại biểu của tôi",href:"/my-card",icon:IdCard};
   const myAccount:NavItem={name:"Tài khoản của tôi",href:"/account",icon:CircleUserRound};
   const congressItems:NavItem[]=congressId?[
     {name:"Bảng điều hành",href:"/congresses/"+congressId,icon:BarChart3},
     {name:"Đại biểu",href:"/congresses/"+congressId+"/delegates",icon:Users},
+    {name:"Phân tích chất lượng",href:"/congresses/"+congressId+"/delegates/quality",icon:ChartColumnIncreasing},
     {name:"Sơ đồ ghế",href:"/congresses/"+congressId+"/seating",icon:Armchair},
     ...(canViewBch?[{name:"Trích ngang nhân sự BCH",href:"/congresses/"+congressId+"/bch-candidates",icon:ClipboardList}]:[]),
-    {name:"Điểm danh",href:"/congresses/"+congressId+"/attendance",icon:QrCode},
+    ...(canCheckin?[
+     {name:"Trung tâm điểm danh",href:"/congresses/"+congressId+"/attendance",icon:QrCode},
+     {name:"Màn hình điểm danh",href:"/congresses/"+congressId+"/attendance/live",icon:BarChart3},
+
+     {name:"Quét tại bàn BTC",href:"/congresses/"+congressId+"/attendance/desk",icon:QrCode}
+    ]:[]),
     {name:"Báo cáo",href:"/congresses/"+congressId+"/reports",icon:ClipboardList},
     {name:"Tài liệu",href:"/congresses/"+congressId+"/documents",icon:FileText}
   ]:[];
@@ -55,9 +62,12 @@ export function AppShell({children,name,congressId,congressName,canManage=false,
   },[mobile]);
 
   async function logout(){
-    await createClient().auth.signOut();
-    router.push("/login");
-    router.refresh();
+    setLogoutError("");
+    try{
+      const res=await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin",cache:"no-store"});
+      if(!res.ok)throw new Error("Không thể đăng xuất. Vui lòng thử lại.");
+      window.location.replace("/login");
+    }catch(err){setLogoutError(err instanceof Error?err.message:"Lỗi đăng xuất.");}
   }
 
   function navLink(item:NavItem){
@@ -139,6 +149,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false,
             <LogOut size={17}/>
           </button>
         </div>
+        {logoutError&&<p role="alert" className="mt-2 text-[11px] leading-5 text-[#efc0ae]">{logoutError}</p>}
       </div>
     </aside>
 

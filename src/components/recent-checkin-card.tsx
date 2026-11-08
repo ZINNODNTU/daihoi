@@ -37,7 +37,7 @@ export function RecentCheckinCard({latest,recent,delegates,seats,now}:Props){
    <div className="mx-auto w-full max-w-[152px] sm:mx-0">
     {person.photo_path?<Image
       key={person.id} unoptimized
-      src={"/api/delegates/"+encodeURIComponent(person.id)+"/photo"}
+      src={"/api/delegates/"+encodeURIComponent(person.id)+"/photo?w=160"}
       width={152} height={202} alt={"Ảnh đại biểu "+person.full_name}
       className="aspect-[3/4] w-full rounded-xl border border-[#dbe6e9] bg-white object-cover"
     />:<div className="flex aspect-[3/4] w-full items-center justify-center rounded-xl border border-[#dce9eb] bg-[#eef5f7] text-[#91a8ad]">
@@ -68,9 +68,9 @@ export function RecentCheckinCard({latest,recent,delegates,seats,now}:Props){
      </div>
      <div className="min-w-0 rounded-xl border border-[#e3eaf0] bg-[#f8fafb] px-3 py-3.5">
       <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.08em] text-[#8394a0]">
-       <IdCard size={14}/> Mã đại biểu
+       <IdCard size={14}/> Hình thức tham dự
       </p>
-      <p className="mt-1.5 break-words text-[19px] font-extrabold text-[#294f66]">{person.code}</p>
+      <p className="mt-1.5 break-words text-[19px] font-extrabold text-[#294f66]">{modeLabel[latest.method]}</p>
       <p className="mt-1 flex items-center gap-1 text-xs text-[#748a99]">
        <MapPin size={12}/>{person.delegate_type==="guest"?"Khách mời":person.delegate_type==="alternate"?"Đại biểu dự khuyết":"Đại biểu chính thức"}
       </p>
@@ -89,7 +89,7 @@ export function RecentCheckinCard({latest,recent,delegates,seats,now}:Props){
      const d=delegates.get(c.delegate_id);
      const placement=d?seats[d.id]:null;
      return <div key={c.id} className="flex min-w-0 items-center gap-2 rounded-lg bg-[#f7fafb] px-2 py-2">
-      {d?.photo_path?<Image unoptimized src={"/api/delegates/"+d.id+"/photo"}
+      {d?.photo_path?<Image unoptimized src={"/api/delegates/"+d.id+"/photo?w=96"}
        width={32} height={42} alt="" className="h-[42px] w-8 shrink-0 rounded-md object-cover"/>:
        <span className="flex h-[42px] w-8 shrink-0 items-center justify-center rounded-md bg-[#e6eff2] text-[#88a3af]"><UserRound size={18}/></span>}
       <div className="min-w-0"><p className="truncate text-[11px] font-bold text-[#254e64]">{d?.full_name||"Đại biểu"}</p>

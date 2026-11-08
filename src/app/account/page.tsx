@@ -1,15 +1,19 @@
 import {redirect} from "next/navigation";
 import {CircleUserRound,ShieldCheck} from "lucide-react";
 import {AppShell} from "@/components/app-shell";
-import {getAuth} from "@/lib/auth";
+import {DelegateShell} from "@/components/delegate-shell";
+import {getAuth,isStaffUser} from "@/lib/auth";
 import {AccountSecurity} from "@/components/account-security";
 
 export const dynamic="force-dynamic";
-
 export default async function AccountPage(){
  const {supabase,user}=await getAuth();
  if(!user)redirect("/login");
- const {data:profile}=await supabase.from("profiles").select("full_name,platform_role").eq("id",user.id).maybeSingle();
+ const [profileResult,staff]=await Promise.all([
+  supabase.from("profiles").select("full_name,platform_role").eq("id",user.id).maybeSingle(),
+  isStaffUser(supabase,user.id)
+ ]);
+ const profile=profileResult.data;
  const internalDomain="@accounts.daihoi.invalid";
  const loginName=user.email?.endsWith(internalDomain)
   ? user.email.slice(0,-internalDomain.length)+"@dntu.edu.vn"
@@ -17,10 +21,11 @@ export default async function AccountPage(){
  const alias=typeof user.user_metadata?.login_alias==="string"
   ? user.user_metadata.login_alias:loginName;
  const name=profile?.full_name||"Thành viên Đại hội";
- const role=profile?.platform_role==="super_admin"?"Quản trị hệ thống":"Thành viên";
- return <AppShell name={name}>
+ const role=profile?.platform_role==="super_admin"?"Quản trị hệ thống":
+  staff?"Nhân sự Ban Tổ chức":"Đại biểu";
+ const content=<>
   <div className="mb-8 flex flex-wrap items-start gap-4">
-   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#dff4fc] text-[#007eb8]">
+   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#e6f2fa] text-[#007fae]">
     <CircleUserRound size={25}/>
    </div>
    <div>
@@ -44,5 +49,7 @@ export default async function AccountPage(){
    </section>
    <AccountSecurity/>
   </div>
- </AppShell>;
+ </>;
+ return staff?<AppShell name={name}>{content}</AppShell>:
+  <DelegateShell name={name}>{content}</DelegateShell>;
 }

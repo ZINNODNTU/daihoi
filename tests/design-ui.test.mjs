@@ -58,7 +58,8 @@ test("Sidebar, mobile và đăng nhập vẫn giữ nghiệp vụ, keyboard navi
  assert.match(shell,/aria-expanded=\{mobile\}/);
  assert.match(shell,/mobile-bottom-nav/);
  assert.match(shell,/Escape/);
- assert.match(login,/signInWithPassword/);
+ assert.match(login,/\/api\/auth\/login/);
+ assert.match(source("src/app/api/auth/login/route.ts"),/signInWithPassword/);
  assert.match(login,/aria-label=\{showPassword/);
- assert.match(brand,/viewBox="0 0 40 40"/);
+ assert.match(brand,/\/branding\/huy-hieu-doan.png/);
 });

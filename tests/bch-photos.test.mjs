@@ -17,8 +17,9 @@ test("BCH private photo endpoint permits administrators to upload but only admin
  assert.match(api,/export async function GET/);
  assert.match(api,/export async function PUT/);
  assert.match(api,/hasRole\(supabase,user\.id,candidate\.congress_id,"admin"\)/);
- assert.match(api,/member\?\.role!=="secretary"/);
- assert.match(api,/supabase\.from\("bch_candidates"\)/);
+ assert.match(api,/member\.data\?\.role!=="secretary"/);
+  assert.match(api,/\.eq\("auth_user_id",user\.id\)/);
+ assert.match(api,/db\.from\("bch_candidates"\)/);
  assert.match(api,/candidate\.photo_path!==expected/);
  assert.match(api,/private, no-store/);
  assert.match(api,/storage\.from\(BUCKET\)\.download\(expected\)/);

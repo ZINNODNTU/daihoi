@@ -99,7 +99,7 @@ test("BCH UI includes all seven fields and export columns; attendance shows phot
  for(const detail of ["photo_path","full_name","unit","seat?.code","seat.layoutTitle"]){
   assert.ok(flash.includes(detail),detail);
  }
- const page=file("../src/app/congresses/[id]/attendance/page.tsx");
+ const page=file("../src/app/congresses/[id]/attendance/desk/page.tsx");
  assert.match(page,/createAdminClient/);
  assert.match(page,/canReadSeating/);
 });

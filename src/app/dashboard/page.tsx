@@ -5,6 +5,7 @@ import {
   ChevronRight,LayoutGrid,Plus,ShieldCheck
 } from "lucide-react";
 import {createClient} from "@/lib/supabase/server";
+import {isStaffUser} from "@/lib/auth";
 import {AppShell} from "@/components/app-shell";
 import {CreateCongress} from "@/components/create-congress";
 import {CongressDirectory,type CongressSummary} from "@/components/congress-directory";
@@ -25,6 +26,7 @@ export default async function Dashboard(){
   const supabase=await createClient();
   const {data:{user}}=await supabase.auth.getUser();
   if(!user)redirect("/login");
+  if(!(await isStaffUser(supabase,user.id)))redirect("/my-card");
   const [{data:profile},{data:congresses,error}]=await Promise.all([
     supabase.from("profiles").select("full_name,platform_role").eq("id",user.id).maybeSingle(),
     supabase.from("congresses").select("id,name,kind,term,status,slug,venue,created_at").order("created_at",{ascending:false})

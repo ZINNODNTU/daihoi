@@ -16,18 +16,21 @@ async function authorize(id:string,write:boolean){
  if(!uuid.test(id))return {error:fail("Mã nhân sự BCH không hợp lệ.",400)} as const;
  const {supabase,user}=await getAuth();
  if(!user)return {error:fail("Vui lòng đăng nhập.",401)} as const;
- // bch_candidates has RLS: only Congress admins and secretaries can read.
- const {data:candidate,error}=await supabase.from("bch_candidates")
+ const db=createAdminClient();
+ const {data:candidate,error}=await db.from("bch_candidates")
   .select("id,congress_id,photo_path").eq("id",id).maybeSingle();
- if(error)return {error:fail("Không thể xác minh quyền xem ảnh BCH.",500)} as const;
- if(!candidate)return {error:fail("Không tìm thấy nhân sự BCH.",404)} as const;
+ if(error||!candidate)return {error:fail("Không tìm thấy nhân sự BCH.",404)} as const;
  const admin=await hasRole(supabase,user.id,candidate.congress_id,"admin");
- if(write&&!admin)return {error:fail("Chỉ quản trị viên Đại hội được thay ảnh nhân sự BCH.",403)} as const;
+ if(write&&!admin)return {error:fail("Chỉ quản trị Đại hội được thay ảnh nhân sự BCH.",403)} as const;
  if(!write&&!admin){
-  const {data:member, error:memberError}=await supabase.from("congress_members")
-   .select("role").eq("congress_id",candidate.congress_id)
-   .eq("user_id",user.id).maybeSingle();
-  if(memberError||member?.role!=="secretary")
+  const [member,delegate]=await Promise.all([
+   supabase.from("congress_members").select("role").eq("congress_id",candidate.congress_id)
+    .eq("user_id",user.id).maybeSingle(),
+   db.from("delegates").select("id").eq("congress_id",candidate.congress_id)
+    .eq("auth_user_id",user.id).eq("is_active",true).limit(1)
+  ]);
+  if(member.error||delegate.error||
+   member.data?.role!=="secretary"&&!delegate.data?.length)
    return {error:fail("Bạn không có quyền xem ảnh nhân sự BCH.",403)} as const;
  }
  return {candidate,supabase} as const;

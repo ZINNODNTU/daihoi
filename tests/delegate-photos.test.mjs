@@ -1,4 +1,4 @@
-﻿import {test} from "node:test";
+import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync,statSync} from "node:fs";
 
@@ -22,7 +22,7 @@ test("Form không có ô nhập mã và Excel mẫu hiển thị Đơn vị",()=
  const ui=text("../src/components/delegates-client.tsx");
  assert.doesNotMatch(ui,/name="code"/);
  assert.doesNotMatch(ui,/Mã đại biểu \(tùy chọn\)/);
- assert.match(ui,/\["MSSV","Họ tên","Đơn vị","Chức vụ","Vai trò"\]/);
+ assert.match(ui,/\["MSSV","Họ tên","Đơn vị","Chức vụ","Vai trò","Giới tính","Ngày sinh"\]/);
  assert.match(ui,/Mã đại biểu được hệ thống tự cấp/);
  assert.match(ui,/DelegatePhotoEditor/);
 });
@@ -32,7 +32,9 @@ test("API ảnh bắt buộc quyền và JPEG 600x800, kho riêng tư",()=>{
  assert.match(route,/authorize\(id,"admin"\)/);
  assert.match(route,/createAdminClient\(\)/);
  assert.match(route,/meta\.width!==600\|\|meta\.height!==800/);
- assert.match(route,/Cache-Control":"private, no-store/);
+ assert.match(route,/Cache-Control":"private, max-age=180/);
+ assert.match(route,/authorize\(id,"viewer"\)/);
+ assert.match(route,/invalidate\(path\)/);
  assert.match(route,/delegate-photos/);
 });
 test("Tách nền AI chạy trên trình duyệt và ảnh đầu ra nền trắng",()=>{

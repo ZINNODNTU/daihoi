@@ -1,49 +1,28 @@
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
-import {AttendanceClient} from "@/components/attendance-client";
-import {buildDelegateSeatMap,type SeatingLayoutRef,type SeatRef,type SeatAssignmentRef} from "@/lib/attendance-seating";
-import type {Delegate,AttendanceSession,Checkin} from "@/lib/types";
+import {AttendanceSessionsClient} from "@/components/attendance-sessions-client";
+import type {AttendanceSession} from "@/lib/types";
 
+export const dynamic="force-dynamic";
 export default async function AttendancePage({params}:{params:Promise<{id:string}>}){
  const {id}=await params;
  const {supabase,user}=await getAuth();
- const [delegates,sessions,checkins]=await Promise.all([
-  supabase.from("delegates")
-   .select("id,congress_id,code,full_name,unit,delegate_type,qr_version,barcode_code,is_active,photo_path")
-   .eq("congress_id",id).order("code"),
-  supabase.from("attendance_sessions")
-   .select("id,congress_id,name,status,starts_at,ends_at,qr_policy")
-   .eq("congress_id",id).order("created_at",{ascending:false}),
-  supabase.from("checkins").select("*").eq("congress_id",id)
-   .order("checked_in_at",{ascending:false}).limit(1500)
- ]);
- const canScan=!!user&&await hasRole(supabase,user.id,id,"checkin");
  const canManage=!!user&&await hasRole(supabase,user.id,id,"admin");
- const canReadSeating=!!user&&await hasRole(supabase,user.id,id,"viewer");
- let seatByDelegate:ReturnType<typeof buildDelegateSeatMap>={};
- if(canReadSeating){
-  // Seating tables are intentionally service-only; access the privileged client
-  // only after checking congress membership. Never expose service keys to browser.
-  const db=createAdminClient();
-  const [layouts,seats,assignments]=await Promise.all([
-   db.from("seating_layouts").select("id,title,updated_at")
-    .eq("congress_id",id).order("updated_at",{ascending:false}).limit(100),
-   db.from("seats").select("id,code,row_label,seat_number,zone")
-    .eq("congress_id",id).limit(1200),
-   db.from("seat_assignments").select("delegate_id,seat_id,layout_id")
-    .eq("congress_id",id).limit(1200)
-  ]);
-  if(!layouts.error&&!seats.error&&!assignments.error){
-   seatByDelegate=buildDelegateSeatMap(
-    (layouts.data||[]) as SeatingLayoutRef[],
-    (seats.data||[]) as SeatRef[],
-    (assignments.data||[]) as SeatAssignmentRef[]
-   );
-  }
- }
- return <AttendanceClient congressId={id}
-  delegates={(delegates.data||[]) as Delegate[]}
-  sessions={(sessions.data||[]) as AttendanceSession[]}
-  initialCheckins={(checkins.data||[]) as Checkin[]}
-  seatByDelegate={seatByDelegate} canScan={canScan} canManage={canManage}/>;
+ const canView=!!user&&await hasRole(supabase,user.id,id,"viewer");
+ if(!canView)return <p className="card p-6 text-sm text-red-700">Không có quyền quản lý phiên của Đại hội.</p>;
+ const db=createAdminClient();
+ const [sessionRows,layoutRows]=await Promise.all([
+  db.from("attendance_sessions")
+   .select("id,congress_id,name,status,starts_at,ends_at,qr_policy,seating_layout_id")
+   .eq("congress_id",id).order("created_at",{ascending:false}).limit(150),
+  db.from("seating_layouts")
+   .select("id,title,grid_rows,grid_columns")
+   .eq("congress_id",id).order("updated_at",{ascending:false}).limit(100)
+ ]);
+ return sessionRows.error||layoutRows.error?
+  <p className="card p-6 text-sm text-red-700">Không tải được phiên điểm danh hoặc sơ đồ ghế. Kiểm tra migration v10.</p>:
+  <AttendanceSessionsClient congressId={id}
+   initialSessions={(sessionRows.data||[]) as AttendanceSession[]}
+   layouts={(layoutRows.data||[]) as {id:string;title:string;grid_rows:number;grid_columns:number}[]}
+   canManage={canManage}/>;
 }

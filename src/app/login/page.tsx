@@ -1,15 +1,13 @@
 "use client";
 
 import {FormEvent,useState} from "react";
-import {useRouter} from "next/navigation";
+
 import Link from "next/link";
 import {ArrowLeft,ArrowRight,Eye,EyeOff,LockKeyhole,Mail,ShieldCheck} from "lucide-react";
 import {BrandMark} from "@/components/brand-mark";
-import {createClient} from "@/lib/supabase/browser";
-import {toSupabaseAuthEmail} from "@/lib/login-identity";
 
 export default function Login(){
-  const router=useRouter();
+
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
   const [showPassword,setShowPassword]=useState(false);
@@ -23,19 +21,20 @@ export default function Login(){
     setBusy(true);setError("");
     try{
       if(!supabaseReady)throw new Error("Máy chủ chưa có Supabase Publishable Key. Hãy liên hệ quản trị viên.");
-      const client=createClient();
-      const normalized=email.trim().toLowerCase();
-      const internal=toSupabaseAuthEmail(normalized);
-      let {data:authData,error:authError}=await client.auth.signInWithPassword({email:internal,password});
-      // Tài khoản email cơ quan có thật (đã mời từ trước) vẫn đăng nhập được.
-      if(authError&&internal!==normalized){
-       ({data:authData,error:authError}=await client.auth.signInWithPassword({email:normalized,password}));
-      }
-      if(authError||!authData.user)throw authError||new Error("Không thể xác thực tài khoản.");
-      const {data:myDelegate}=await client.from("delegates").select("id").eq("auth_user_id",authData.user.id).eq("is_active",true).limit(1).maybeSingle();
-      router.push(myDelegate?"/my-card":"/dashboard");router.refresh();
+      // Đăng nhập qua API cùng origin để LAN/mobile không phải gọi Supabase trực tiếp.
+      const response=await fetch("/api/auth/login",{
+       method:"POST",credentials:"same-origin",cache:"no-store",
+       headers:{"Content-Type":"application/json"},
+       body:JSON.stringify({email:email.trim().toLowerCase(),password})
+      });
+      const data=await response.json().catch(()=>({error:"Phản hồi máy chủ không hợp lệ."}));
+      if(!response.ok)throw new Error(data.error||"Không thể đăng nhập.");
+      const next=new URLSearchParams(window.location.search).get("next");
+      // Only allow our own QR check-in route; never accept an external redirect.
+      const safeNext=next&&/^\/checkin\/s\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\?t=(?:se2\.[A-Za-z0-9_-]{22}|se1\.[0-9a-z]{5,8}\.[A-Za-z0-9_-]{22})$/i.test(next);
+      window.location.replace(safeNext?next:(data.destination||"/my-card"));
     }catch(err){
-      setError(err instanceof Error?err.message:"Đăng nhập thất bại. Hãy thử lại.");
+      setError(err instanceof TypeError?"Không kết nối được máy chủ trên thiết bị này. Hãy kiểm tra cùng Wi-Fi và địa chỉ IP máy chủ.":err instanceof Error?err.message:"Đăng nhập thất bại. Hãy thử lại.");
       setBusy(false);
     }
   }
