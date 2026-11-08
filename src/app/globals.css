@@ -675,3 +675,20 @@ table.data tr:hover td{background:#f8faff}
  .landing-feature-icon{height:39px;width:39px;flex-basis:39px}
  .landing-hero::before{opacity:.45}
 }
+/* Seating studio: 200-slot interactive auditorium blueprint. */
+.seat-grid-studio{color:#20384a}
+.seat-grid-surface{
+  background-image:linear-gradient(rgba(246,249,252,.62),rgba(255,255,255,0) 180px);
+}
+.seat-grid-cell{
+  box-shadow:0 1px 2px rgba(28,66,90,.06);
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+@media (hover:hover){
+  .seat-grid-cell:not(:disabled):hover{box-shadow:0 2px 7px rgba(23,84,121,.15);transform:translateY(-1px)}
+}
+.seat-grid-cell:active:not(:disabled){transform:scale(.96)}
+@media (prefers-reduced-motion:reduce){
+  .seat-grid-cell{transition:none!important;transform:none!important}
+}

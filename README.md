@@ -194,3 +194,13 @@ Nếu Supabase Dashboard của project `pnxdxdagpeyqarucdphk` chưa có tài kho
 - Đây là cấu hình **local**. Vercel Environment Variables và Google Drive OAuth chưa được xác thực trong đợt này.
 
 SQL đã chạy qua Supabase Studio không tự xuất hiện trong lịch sử Supabase CLI migration; file trong `supabase/` là bản đối chiếu nguồn đã triển khai, không chạy lại tùy tiện.
+
+## Canvas 200 ô tùy biến cho từng hội trường (08/11/2026)
+
+Mở **Đại hội → Sơ đồ ghế → Thiết kế → Lưới 200 ô**. Mặt bằng 10 hàng × 20 cột:
+bật ô vuông để tạo ghế, tắt để chừa lối đi; tô nhiều ô bằng chuột hoặc chạm từng ô trên điện thoại.
+Mẫu nhanh gồm 200 ghế, 180 ghế có lối đi giữa hoặc lưới trống. Bố trí theo từng hội trường bằng
+nhiều sơ đồ độc lập, vẫn hỗ trợ Canvas tự do, phân công đại biểu và Excel.
+Đã bảo vệ ghế có phân công; không cần migration mới.
+
+Hướng dẫn chi tiết: docs/SEATING-GRID-CANVAS.md.

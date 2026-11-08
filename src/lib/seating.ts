@@ -116,3 +116,89 @@ export function validateImport(entries:ImportEntry[],seats:SeatDraft[],delegates
   });
   return issues;
 }
+
+/** 200 ô thiết kế, chia thành 10 hàng × 20 cột. Đây là ô bố trí,
+ * chỉ ô đã được chọn mới trở thành ghế trong Supabase. */
+export const SEAT_GRID_ROWS=10;
+export const SEAT_GRID_COLUMNS=20;
+export const SEAT_GRID_CAPACITY=SEAT_GRID_ROWS*SEAT_GRID_COLUMNS;
+export const SEAT_GRID_LEFT=95;
+export const SEAT_GRID_TOP=190;
+export const SEAT_GRID_STEP_X=58;
+export const SEAT_GRID_STEP_Y=60;
+export type SeatGridPreset="full"|"center-aisle"|"empty";
+
+export function seatGridPosition(row:number,column:number){
+  if(!Number.isInteger(row)||row<0||row>=SEAT_GRID_ROWS||
+    !Number.isInteger(column)||column<0||column>=SEAT_GRID_COLUMNS)
+    throw new Error("Ô lưới không hợp lệ.");
+  return {x:SEAT_GRID_LEFT+column*SEAT_GRID_STEP_X,y:SEAT_GRID_TOP+row*SEAT_GRID_STEP_Y};
+}
+export function seatGridCellIndex(seat:Pick<SeatDraft,"x"|"y">):number|null{
+  const column=(seat.x-SEAT_GRID_LEFT)/SEAT_GRID_STEP_X;
+  const row=(seat.y-SEAT_GRID_TOP)/SEAT_GRID_STEP_Y;
+  return Number.isInteger(row)&&Number.isInteger(column)&&
+    row>=0&&row<SEAT_GRID_ROWS&&column>=0&&column<SEAT_GRID_COLUMNS
+    ?row*SEAT_GRID_COLUMNS+column:null;
+}
+export type SeatGridResult={seats:SeatDraft[];error:string|null};
+
+/** Thay đổi các ô theo cách nguyên tử; ID của ghế giữ nguyên để không
+ * làm mất phân công đại biểu khi cập nhật sơ đồ. Không đụng ghế ngoài lưới.
+ */
+export function setSeatGridCells(
+  current:SeatDraft[],
+  desired:ReadonlySet<number>,
+  assignedSeatIds:ReadonlySet<string>,
+  makeId:()=>string
+):SeatGridResult{
+  if([...desired].some(i=>!Number.isInteger(i)||i<0||i>=SEAT_GRID_CAPACITY))
+    return {seats:current,error:"Vị trí ô lưới không hợp lệ."};
+  const positions=new Map<number,SeatDraft>();
+  const outside:SeatDraft[]=[];
+  const codes=new Set(current.map(s=>s.code.toUpperCase()));
+  for(const seat of current){
+    const index=seatGridCellIndex(seat);
+    if(index===null){outside.push(seat);continue;}
+    if(positions.has(index))return {seats:current,error:"Có nhiều ghế cùng một ô lưới."};
+    positions.set(index,seat);
+  }
+  for(const [index,seat] of positions){
+    if(!desired.has(index)&&assignedSeatIds.has(seat.id))
+      return {seats:current,error:"Ô "+seat.code+" đã phân công đại biểu. Bỏ phân công trước khi xóa ghế."};
+  }
+  if(desired.size+outside.length>500)
+    return {seats:current,error:"Sơ đồ chỉ hỗ trợ tối đa 500 ghế."};
+  const next=[...outside];
+  for(const index of [...desired].sort((a,b)=>a-b)){
+    const existing=positions.get(index);
+    if(existing){next.push(existing);continue;}
+    const row=Math.floor(index/SEAT_GRID_COLUMNS),column=index%SEAT_GRID_COLUMNS;
+    const {x,y}=seatGridPosition(row,column);
+    const rowLabel=rowLabelAt("A",row),seatNumber=column+1;
+    const baseCode="G-"+rowLabel+"-"+String(seatNumber).padStart(2,"0");
+    let code=baseCode,suffix=2;
+    while(codes.has(code.toUpperCase())&&suffix<100){
+      code=baseCode+"-"+suffix++;
+    }
+    if(codes.has(code.toUpperCase()))
+      return {seats:current,error:"Không tạo được mã ghế duy nhất cho ô "+baseCode+"."};
+    codes.add(code.toUpperCase());
+    next.push({id:makeId(),code,zone:"G",rowLabel,seatNumber,x,y,blocked:false});
+  }
+  const validation=validateSeatDrafts(next);
+  if(validation)return {seats:current,error:validation};
+  return {seats:next,error:null};
+}
+export function seatGridPattern(preset:SeatGridPreset):Set<number>{
+  const result=new Set<number>();
+  if(preset==="empty")return result;
+  for(let row=0;row<SEAT_GRID_ROWS;row++){
+    for(let column=0;column<SEAT_GRID_COLUMNS;column++){
+      // Lối đi đôi giữa hội trường: hai cột trung tâm.
+      if(preset==="center-aisle"&&(column===9||column===10))continue;
+      result.add(row*SEAT_GRID_COLUMNS+column);
+    }
+  }
+  return result;
+}
