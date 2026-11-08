@@ -1,4 +1,3 @@
-import {randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 
@@ -23,7 +22,6 @@ export async function POST(request:Request){
    const type=delegateKinds.includes(item.delegate_type as DelegateKind)?item.delegate_type as DelegateKind:"official";
    return {
     congress_id:congressId,
-    code:(String(item.code??"").trim()||studentId||"KM-"+randomUUID().slice(0,8).toUpperCase()).slice(0,40),
     full_name:String(item.full_name??"").trim().slice(0,160),
     unit:String(item.unit??"").trim().slice(0,200),
     student_id:studentId||null,
@@ -32,16 +30,15 @@ export async function POST(request:Request){
     delegate_type:type
    };
   });
-  if(rows.some(r=>!r.code||!r.full_name||(!r.student_id&&r.delegate_type!=="guest")))
+  if(rows.some(r=>!r.full_name||(!r.student_id&&r.delegate_type!=="guest")))
    return reply("Đại biểu cần có MSSV và họ tên; khách mời có thể để trống MSSV.",400);
   if(rows.some(r=>r.student_id&&!studentIdPattern.test(r.student_id)))
    return reply("MSSV phải gồm 4–32 ký tự chữ, số, dấu chấm, gạch nối hoặc gạch dưới.",400);
-  const codes=rows.map(r=>r.code.toLowerCase());
   const students=rows.filter(r=>r.student_id).map(r=>r.student_id!.toLowerCase());
-  if(new Set(codes).size!==codes.length||new Set(students).size!==students.length)
-   return reply("Có MSSV hoặc mã đại biểu bị trùng trong tệp.",400);
+  if(new Set(students).size!==students.length)
+   return reply("MSSV bị trùng trong tệp.",400);
   const {data,error}=await supabase.from("delegates").insert(rows).select("id,code,full_name");
-  if(error)return reply(error.code==="23505"?"MSSV/mã đại biểu đã tồn tại trong dữ liệu.":"Không thể lưu danh sách. Kiểm tra đã áp dụng nâng cấp cơ sở dữ liệu v5.",error.code==="23505"?409:500);
-  return NextResponse.json({ok:true,count:data?.length??0},{headers:{"Cache-Control":"no-store"}});
+  if(error)return reply(error.code==="23505"?"MSSV đã tồn tại trong dữ liệu.":"Không thể lưu danh sách. Kiểm tra migration v7 cấp mã tự động.",error.code==="23505"?409:500);
+  return NextResponse.json({ok:true,count:data?.length??0,created:data??[]},{headers:{"Cache-Control":"no-store"}});
  }catch{return reply("Yêu cầu không hợp lệ.",400);}
 }

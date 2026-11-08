@@ -1,16 +1,19 @@
 "use client";
 import {ChangeEvent,FormEvent,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
+import Image from "next/image";
 import {QRCodeSVG} from "qrcode.react";
-import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,UserRoundPlus} from "lucide-react";
+import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,UserRoundPlus,Camera,UserRound} from "lucide-react";
 import {DelegateBarcode} from "@/components/delegate-barcode";
+import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
 import type {Delegate,AttendanceSession} from "@/lib/types";
 import {displayTime} from "@/lib/attendance-report";
 type Props={
  congressId:string;congressCode:string;delegates:Delegate[];canManage:boolean;
  sessions:AttendanceSession[];
 };
-type Row={code:string;full_name:string;unit:string;student_id:string;position:string;delegate_type:"official"|"alternate"|"guest"};
+type Row={full_name:string;unit:string;student_id:string;position:string;delegate_type:"official"|"alternate"|"guest"};
+type PhotoTarget={kind:"new"}|{kind:"existing";delegate:Delegate};
 type Card={
  id:string;name:string;code:string;barcodeCode:string;token:string;
  scope:"fixed"|"session";sessionName?:string;startsAt?:string|null;endsAt?:string|null;
@@ -39,6 +42,33 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
  const [cardSession,setCardSession]=useState("");
  const [uploadRows,setUploadRows]=useState<Row[]|null>(null);
  const [provisioning,setProvisioning]=useState(false);
+ const [photoTarget,setPhotoTarget]=useState<PhotoTarget|null>(null);
+ const [pendingPhoto,setPendingPhoto]=useState<Blob|null>(null);
+ const [pendingPhotoPreview,setPendingPhotoPreview]=useState<string|null>(null);
+ useEffect(()=>()=>{if(pendingPhotoPreview)URL.revokeObjectURL(pendingPhotoPreview);},[pendingPhotoPreview]);
+ async function uploadPhoto(delegateId:string,photo:Blob){
+  const data=new FormData();
+  data.append("photo",new File([photo],"portrait.jpg",{type:"image/jpeg"}));
+  const response=await fetch("/api/delegates/"+encodeURIComponent(delegateId)+"/photo",{
+   method:"PUT",body:data
+  });
+  const body=await response.json();
+  if(!response.ok)throw new Error(body.error||"Không lưu được ảnh đại biểu.");
+ }
+ async function photoSaved(blob:Blob){
+  if(!photoTarget)return;
+  if(photoTarget.kind==="new"){
+   setPendingPhoto(blob);
+   setPendingPhotoPreview(URL.createObjectURL(blob));
+   setPhotoTarget(null);
+   return;
+  }
+  await uploadPhoto(photoTarget.delegate.id,blob);
+  setPhotoTarget(null);
+  setSuccess("Đã lưu ảnh nền trắng cho "+photoTarget.delegate.full_name+".");
+  router.refresh();
+ }
+
   useEffect(()=>{
     if(!showCard)return;
     const priorOverflow=document.body.style.overflow;
@@ -52,7 +82,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    .includes(search.toLocaleLowerCase("vi"))
  ),[delegates,search]);
  const sessionQrChoices=sessions.filter(s=>s.qr_policy!=="fixed");
- async function save(rows:Row[]){
+ async function save(rows:Row[],photo?:Blob|null){
   setBusy(true);setError("");setSuccess("");
   try{
    const response=await fetch("/api/delegates",{
@@ -61,7 +91,14 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    });
    const result=await response.json();
    if(!response.ok)throw new Error(result.error||"Không thể thêm đại biểu.");
-   setSuccess(`Đã nhập thành công ${result.count} đại biểu.`);
+   let photoWarning="";
+   if(photo&&result.created?.[0]?.id){
+    try{await uploadPhoto(result.created[0].id,photo);}
+    catch(e){photoWarning="Hồ sơ đã được tạo nhưng ảnh chưa lưu: "+(e instanceof Error?e.message:"Lỗi ảnh");}
+   }
+   setSuccess(`Đã nhập thành công ${result.count} đại biểu. Mã được hệ thống tự cấp.`);
+   if(photoWarning)setError(photoWarning);
+   setPendingPhoto(null);setPendingPhotoPreview(null);
    setUploadRows(null);setOpen(false);router.refresh();
   }catch(e){setError(e instanceof Error?e.message:"Lỗi nhập dữ liệu.");}
   finally{setBusy(false);}
@@ -69,12 +106,12 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();
   const form=new FormData(e.currentTarget);
-  await save([{code:String(form.get("code")||"").trim(),
+  await save([{
    full_name:String(form.get("full_name")||"").trim(),
    unit:String(form.get("unit")||""),
    student_id:String(form.get("student_id")||"").trim(),
    position:String(form.get("position")||"").trim(),
-   delegate_type:parseKind(String(form.get("delegate_type")||"official"))}]);
+   delegate_type:parseKind(String(form.get("delegate_type")||"official"))}],pendingPhoto);
  }
  async function handleFile(e:ChangeEvent<HTMLInputElement>){
   const file=e.target.files?.[0];if(!file)return;
@@ -110,25 +147,23 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     full_name:["hoten","hovaten","tensinhvien","fullname"],
     unit:["chidoan","donvi","lop","unit"],
     position:["chucvu","chucdanh","position"],
-    delegate_type:["vaitro","loaidaibieu","delegatetype"],
-    code:["madaibieu","madinhdanh","code"]
+    delegate_type:["vaitro","loaidaibieu","delegatetype"]
    };
    const lookup=(names:string[])=>heading.findIndex(h=>names.map(key).includes(h));
-   const header=lookup(fields.full_name)>=0&&(lookup(fields.student_id)>=0||lookup(fields.unit)>=0||lookup(fields.code)>=0);
+   const header=lookup(fields.full_name)>=0&&(lookup(fields.student_id)>=0||lookup(fields.unit)>=0);
    const get=(cells:(string|number|Date|null|undefined)[],field:keyof typeof fields,fallback:number)=>
     String(cells[header?lookup(fields[field]):fallback]??"").trim();
    const rows:Row[]=matrix.slice(header?1:0)
     .filter(r=>r.some(x=>x!==null&&String(x).trim()))
     .map(r=>({
-     code:get(r,"code",0),
      full_name:get(r,"full_name",1),
      unit:get(r,"unit",2),
-     student_id:get(r,"student_id",-1).toUpperCase(),
-     position:get(r,"position",-1),
-     delegate_type:parseKind(get(r,"delegate_type",3))
+     student_id:get(r,"student_id",0).toUpperCase(),
+     position:get(r,"position",3),
+     delegate_type:parseKind(get(r,"delegate_type",4))
     }));
    if(rows.length>250)throw new Error("Mỗi tệp tối đa 250 đại biểu.");
-   if(rows.some(r=>!r.full_name||(!r.student_id&&!r.code&&r.delegate_type!=="guest")))
+   if(rows.some(r=>!r.full_name||(!r.student_id&&r.delegate_type!=="guest")))
     throw new Error("Thiếu họ tên hoặc MSSV. Khách mời có thể không có MSSV.");
    if(rows.some(r=>r.student_id&&!/^[A-Za-z0-9][A-Za-z0-9._-]{3,31}$/.test(r.student_id)))
     throw new Error("MSSV phải từ 4–32 ký tự (chữ, số, dấu chấm, - hoặc _).");
@@ -142,10 +177,10 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   try{
    const {default:writeExcelFile}=await import("write-excel-file/browser");
    await writeExcelFile([{sheet:"Danh sach dai bieu",stickyRowsCount:1,data:[
-    ["MSSV","Họ tên","Chi đoàn","Chức vụ","Vai trò","Mã đại biểu"],
-    ["2200000001","Nguyễn Văn A","22DTH1","Bí thư","Chính thức",""],
-    ["","","","","",""],
-    ["","Trần Thị B","Đơn vị khách mời","Đại diện","Khách mời","KM-001"]
+    ["MSSV","Họ tên","Đơn vị","Chức vụ","Vai trò"],
+    ["2200000001","Nguyễn Văn A","22DTH1","Bí thư","Chính thức"],
+    ["","","","",""],
+    ["","Trần Thị B","Đơn vị khách mời","Đại diện","Khách mời"]
    ]}]).toFile("mau-danh-sach-dai-bieu.xlsx");
   }catch{setError("Không thể tạo file Excel mẫu.");}
  }
@@ -218,8 +253,8 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   {success&&<p role="status" className="bg-green-50 text-green-700 p-3 rounded-xl mb-5">{success}</p>}
   {uploadRows&&<div className="card p-5 mb-5">
    <p className="font-bold">Đã đọc {uploadRows.length} dòng</p>
-   <p className="helper my-3">MSSV · Họ tên · Chi đoàn · Chức vụ · Vai trò. Email đăng nhập tự tạo từ MSSV@dntu.edu.vn.</p>
-   <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Chi đoàn</th><th>Vai trò</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.unit}</td><td>{kindLabel(r.delegate_type)}</td></tr>)}</tbody></table></div>
+   <p className="helper my-3">MSSV · Họ tên · Đơn vị · Chức vụ · Vai trò. Mã đại biểu được tự cấp sau khi lưu. Email đăng nhập tự tạo từ MSSV@dntu.edu.vn.</p>
+   <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Đơn vị</th><th>Vai trò</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.unit}</td><td>{kindLabel(r.delegate_type)}</td></tr>)}</tbody></table></div>
    <div className="flex gap-2"><button disabled={busy} className="btn btn-primary" onClick={()=>void save(uploadRows)}>Xác nhận nhập</button>
     <button className="btn btn-secondary" onClick={()=>setUploadRows(null)}>Hủy</button></div>
   </div>}
@@ -227,9 +262,21 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    <form onSubmit={submit} className="grid md:grid-cols-2 gap-4">
     <label><span className="label">MSSV</span><input className="field" name="student_id" placeholder="Mã số sinh viên" maxLength={32}/><span className="helper">Đăng nhập: MSSV@dntu.edu.vn</span></label>
     <label><span className="label">Họ tên *</span><input className="field" name="full_name" required placeholder="Nguyễn Văn A"/></label>
-    <label><span className="label">Chi đoàn</span><input className="field" name="unit" placeholder="Chi đoàn 22DTH1"/></label>
+    <label><span className="label">Đơn vị</span><input className="field" name="unit" placeholder="Khoa CNTT, lớp 22DTH1 hoặc cơ quan"/></label>
     <label><span className="label">Chức vụ</span><input className="field" name="position" placeholder="Bí thư, đoàn viên, khách mời..."/></label>
-    <label><span className="label">Mã đại biểu (tùy chọn)</span><input className="field" name="code" placeholder="Mặc định dùng MSSV hoặc sinh mã khách mời"/></label>
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#dae7ef] bg-[#f5f9fc] p-3 md:col-span-2">
+     {pendingPhotoPreview?<Image src={pendingPhotoPreview} alt="Ảnh đại biểu đã căn chỉnh" unoptimized width={66} height={88}
+       className="h-[88px] w-[66px] rounded-lg border border-[#d5e1e8] object-cover"/>:
+       <div className="flex h-[88px] w-[66px] items-center justify-center rounded-lg border border-dashed border-[#b8cedd] bg-white text-[#809aaf]"><UserRound size={27}/></div>}
+     <div className="min-w-0 flex-1"><p className="text-sm font-bold text-[#365c72]">Ảnh chân dung đại biểu</p>
+      <p className="mt-1 text-xs leading-5 text-[#728c9e]">Tự xóa phông sang nền trắng, kéo căn khuôn mặt và crop ảnh 3:4.</p>
+      <button type="button" className="btn btn-secondary mt-2 !min-h-9 !text-xs"
+       onClick={()=>setPhotoTarget({kind:"new"})}><Camera size={15}/>{pendingPhoto?"Chỉnh lại ảnh":"Chọn và xử lý ảnh"}</button>
+     </div>
+    </div>
+    <p className="rounded-lg border border-[#d6eaf1] bg-[#f0f8fc] p-3 text-xs font-semibold text-[#236785] md:col-span-2">
+     Mã đại biểu được hệ thống tự cấp sau khi lưu, không nhập thủ công.
+    </p>
     <label><span className="label">Loại đại biểu</span><select name="delegate_type" className="field">
      <option value="official">Chính thức</option><option value="alternate">Dự khuyết</option>
      <option value="guest">Khách mời</option></select></label>
@@ -241,32 +288,48 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     <h2 className="font-semibold flex gap-2 items-center"><Users size={20} className="text-[#007eae]"/>Danh sách</h2>
     <div className="relative w-full sm:w-[300px]"><Search size={18} className="absolute left-3 top-3 text-[#90a5b8]"/>
      <input value={search} onChange={e=>setSearch(e.target.value)} className="field pl-10!"
-      placeholder="MSSV, họ tên, chi đoàn, chức vụ..."/></div>
+      placeholder="MSSV, họ tên, đơn vị, chức vụ..."/></div>
    </div>
    <div className="table-wrap desktop-table"><table className="data"><thead><tr>
-    <th>Mã đại biểu</th><th>Họ tên</th><th>MSSV / Email</th><th className="hide-mobile">Chi đoàn / Chức vụ</th><th>Vai trò</th><th>Tài khoản</th><th>Thẻ</th>
+    <th>Ảnh</th><th>Mã đại biểu</th><th>Họ tên</th><th>MSSV / Email</th><th className="hide-mobile">Đơn vị / Chức vụ</th><th>Vai trò</th><th>Tài khoản</th><th>Ảnh / Thẻ</th>
    </tr></thead><tbody>
     {filtered.map(d=><tr key={d.id}>
+     <td>{d.photo_path?<Image unoptimized src={"/api/delegates/"+d.id+"/photo"}
+      alt={"Ảnh "+d.full_name} width={40} height={54} loading="lazy"
+      className="h-[54px] w-10 rounded-lg border border-[#d7e4ec] bg-white object-cover"/>:
+      <div className="flex h-[54px] w-10 items-center justify-center rounded-lg bg-[#f0f5f8] text-[#9aafbc]"><UserRound size={22}/></div>}</td>
      <td className="font-bold text-[#006d9e]">{d.code}</td><td className="font-bold">{d.full_name}</td>
      <td><span className="font-semibold">{d.student_id||"—"}</span><span className="block break-all text-[11px] text-[#627c8a]">{d.login_email||""}</span></td>
      <td className="hide-mobile">{d.unit}<span className="block text-[11px] text-[#627c8a]">{d.position||""}</span></td>
      <td><span className="badge badge-gray">{kindLabel(d.delegate_type)}</span></td>
      <td><span className={"badge "+(d.auth_user_id?"badge-green":"badge-gray")}>{d.auth_user_id?"Đã cấp":"Chưa cấp"}</span></td>
-     <td><button className="btn btn-secondary text-xs!" disabled={busy} onClick={()=>void openCard(d)}>
-      <ScanBarcode size={15}/> QR / Barcode</button></td></tr>)}
-    {!filtered.length&&<tr><td colSpan={7} className="helper text-center py-9!">Không tìm thấy đại biểu.</td></tr>}
+     <td><div className="flex flex-wrap gap-1.5">
+      {canManage&&<button type="button" className="btn btn-secondary !min-h-9 !px-2.5 !text-xs"
+       onClick={()=>setPhotoTarget({kind:"existing",delegate:d})} disabled={busy}>
+       <Camera size={15}/>{d.photo_path?"Sửa ảnh":"Thêm ảnh"}
+      </button>}
+      <button className="btn btn-secondary !min-h-9 !px-2.5 !text-xs" disabled={busy} onClick={()=>void openCard(d)}>
+       <ScanBarcode size={15}/> QR / Barcode</button></div></td></tr>)}
+    {!filtered.length&&<tr><td colSpan={8} className="helper text-center py-9!">Không tìm thấy đại biểu.</td></tr>}
    </tbody></table></div>
   </div>
   <div className="mobile-cards px-3 pb-4">
     {filtered.map(d=><article key={d.id} className="mobile-record">
      <div className="flex items-start justify-between gap-3">
+      {d.photo_path?<Image unoptimized src={"/api/delegates/"+d.id+"/photo"}
+       alt={"Ảnh "+d.full_name} width={54} height={72} loading="lazy"
+       className="h-[72px] w-[54px] shrink-0 rounded-lg border border-[#d6e6ec] bg-white object-cover"/>:
+       <div className="flex h-[72px] w-[54px] shrink-0 items-center justify-center rounded-lg bg-[#f0f5f8] text-[#9aafbc]"><UserRound size={26}/></div>}
       <div className="min-w-0 flex-1"><p className="text-[11px] font-semibold tracking-wider text-[#007eb8]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
       <span className="badge badge-gray shrink-0">{kindLabel(d.delegate_type)}</span>
      </div>
-     <p className="mobile-record-meta mt-2">{d.unit||"Chưa cập nhật chi đoàn"}{d.position?" · "+d.position:""}{d.student_id?" · "+d.student_id:""}</p>
+     <p className="mobile-record-meta mt-2">{d.unit||"Chưa cập nhật đơn vị"}{d.position?" · "+d.position:""}{d.student_id?" · "+d.student_id:""}</p>
      <p className="mt-1 text-[11px] text-[#687f91]">{d.login_email||"Khách mời không có tài khoản"} · {d.auth_user_id?"Đã cấp tài khoản":"Chưa cấp tài khoản"}</p>
-     <div className="mobile-record-actions"><button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>void openCard(d)}>
-      <ScanBarcode size={17}/> Xem QR / Barcode</button></div>
+     <div className="mobile-record-actions">
+      {canManage&&<button type="button" className="btn btn-secondary" disabled={busy}
+       onClick={()=>setPhotoTarget({kind:"existing",delegate:d})}><Camera size={17}/>{d.photo_path?"Sửa ảnh":"Thêm ảnh"}</button>}
+      <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>void openCard(d)}>
+       <ScanBarcode size={17}/> Xem QR / Barcode</button></div>
     </article>)}
     {!filtered.length&&<div className="rounded-xl bg-[#f6fafb] p-7 text-center text-sm text-[#718795]">Không tìm thấy đại biểu phù hợp.</div>}
    </div>
@@ -277,7 +340,12 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     <button className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-xl bg-[#eef5f6] text-[#2a6177] hover:bg-[#e0f0f0] print:hidden" aria-label="Đóng thẻ đại biểu" onClick={()=>setShowCard(null)}><X/></button>
     <p className="text-xs tracking-widest font-semibold text-[#007eae]">THẺ ĐẠI BIỂU ĐIỆN TỬ</p>
     <p className="helper mt-2">Đại hội: <strong>{congressCode.toUpperCase()}</strong></p>
-    <h3 className="text-xl font-semibold mt-3">{showCard.name}</h3>
+    <div className="mt-4 flex items-start gap-4">
+     {delegates.find(d=>d.id===showCard.id)?.photo_path&&<Image unoptimized
+      src={"/api/delegates/"+showCard.id+"/photo"} width={90} height={120}
+      alt={"Ảnh "+showCard.name} className="h-[120px] w-[90px] shrink-0 rounded-lg border border-[#dfe9ee] bg-white object-cover"/>}
+     <h3 className="text-xl font-semibold mt-2">{showCard.name}</h3>
+    </div>
     <p className="text-[#4d6880] text-sm mt-1">Mã định danh đại biểu: <strong>{showCard.code}</strong></p>
     <label className="block mt-6 print:hidden"><span className="label">Chọn loại mã QR</span>
      <select className="field" value={cardSession} onChange={e=>{
@@ -306,5 +374,9 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     </div>
    </div>
   </div>}
+   {photoTarget&&<DelegatePhotoEditor name={photoTarget.kind==="new"?"Đại biểu mới":photoTarget.delegate.full_name}
+    initialPhotoUrl={photoTarget.kind==="new"?pendingPhotoPreview:
+      photoTarget.delegate.photo_path?"/api/delegates/"+photoTarget.delegate.id+"/photo":null}
+    onClose={()=>setPhotoTarget(null)} onSave={photoSaved}/>}
  </div>;
 }

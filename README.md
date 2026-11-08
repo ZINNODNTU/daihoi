@@ -214,3 +214,17 @@ Ghế đại biểu nhận hồ sơ chính thức/dự khuyết; ghế khách m�
 Quy tắc được kiểm tra trong API, nhập Excel và Supabase RPC.
 Đã áp dụng migration supabase/upgrade-seating-v6.sql; tài liệu sử dụng tại
 docs/SEATING-GRID-CANVAS.md.
+
+## Ảnh đại biểu nền trắng và mã định danh tự cấp – v7 (08/11/2026)
+
+Trong Đại hội → Danh sách đại biểu → Thêm đại biểu, có thể tải ảnh chân dung,
+dùng MediaPipe để tự xóa nền thành trắng (xử lý tại trình duyệt), kéo căn khuôn
+mặt và crop chuẩn 3:4 600x800. Ảnh được lưu vào Supabase Storage bucket
+private delegate-photos, chỉ truy cập qua API kiểm tra quyền Đại hội.
+Mã đại biểu cấp tự động theo từng Đại hội (DB-000001...) qua trigger database,
+không còn trường nhập mã thủ công, kể cả trong Excel. Trường Chi đoàn đổi
+tên hiển thị thành Đơn vị; Excel cũ vẫn được đọc để tương thích.
+
+Đã triển khai migration supabase/upgrade-delegate-photos-v7.sql và tạo bucket
+private trong Supabase. Khi cài dự án mới, chạy npm run setup:delegate-photos.
+Chi tiết: docs/DAI-BIEU-ANH.md.

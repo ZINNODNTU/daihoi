@@ -1,9 +1,10 @@
 "use client";
 import {useEffect,useState} from "react";
 import {QRCodeSVG} from "qrcode.react";
+import Image from "next/image";
 import {CheckCircle2,Download,Eye,EyeOff,IdCard,LockKeyhole,Printer} from "lucide-react";
 import {DelegateBarcode} from "@/components/delegate-barcode";
-type Item={id:string;code:string;full_name:string;unit:string;position:string;student_id:string|null;login_email:string|null;congress_id:string};
+type Item={id:string;code:string;full_name:string;unit:string;position:string;student_id:string|null;login_email:string|null;congress_id:string;photo_path?:string|null};
 type Card={token:string;barcodeCode:string;scope:string;code:string;full_name:string};
 export function MyDelegateCards({items}:{items:Item[]}){
  const [cards,setCards]=useState<Record<string,Card>>({});
@@ -47,9 +48,16 @@ export function MyDelegateCards({items}:{items:Item[]}){
     <span className="badge badge-blue">Đại hội {i+1}</span>
    </div>
    <div className="p-5 sm:p-7">
-    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#007eb8]">{d.unit||"Đại biểu"}</p>
-    <h2 className="mt-2 text-[23px] font-bold text-[#17334a]">{d.full_name}</h2>
-    <p className="helper mt-1">{d.position||"Đại biểu"} · {d.student_id||d.code}</p>
+    <div className="flex items-start gap-4">
+     {d.photo_path&&<Image unoptimized src={"/api/delegates/"+d.id+"/photo"}
+      width={90} height={120} alt={"Ảnh "+d.full_name}
+      className="h-[120px] w-[90px] shrink-0 rounded-lg border border-[#d7e5ec] bg-white object-cover"/>}
+     <div className="min-w-0">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#007eb8]">{d.unit||"Đại biểu"}</p>
+      <h2 className="mt-2 text-[23px] font-bold text-[#17334a]">{d.full_name}</h2>
+      <p className="helper mt-1">{d.position||"Đại biểu"} · {d.student_id||d.code}</p>
+     </div>
+    </div>
     {cards[d.id]?<div className="mt-6 flex flex-col items-center rounded-xl border border-[#daedf6] bg-[#f8fcfe] p-5">
      <div className="rounded-xl border border-[#e5ecf0] bg-white p-3"><QRCodeSVG id={"my-qr-"+d.id} value={cards[d.id].token} size={200} level="M" marginSize={1}/></div>
      <p className="mt-3 text-center text-xs text-[#517589]">QR định danh cố định · Chỉ sử dụng cho chính bạn</p>

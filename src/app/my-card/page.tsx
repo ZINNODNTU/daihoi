@@ -14,7 +14,7 @@ export default async function MyCardPage(){
  const [{data:profile},{data:delegates,error}]=await Promise.all([
   supabase.from("profiles").select("full_name").eq("id",user.id).maybeSingle(),
   supabase.from("delegates")
-   .select("id,code,full_name,unit,position,student_id,login_email,congress_id")
+   .select("id,code,full_name,unit,position,student_id,login_email,congress_id,photo_path")
    .eq("auth_user_id",user.id).eq("is_active",true).order("created_at",{ascending:false})
  ]);
  return <AppShell name={profile?.full_name||user.email||"Đại biểu"}>
