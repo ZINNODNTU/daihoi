@@ -5,7 +5,7 @@ import Link from "next/link";
 import {usePathname,useRouter} from "next/navigation";
 import {
   Armchair,ArrowRight,BarChart3,ChevronDown,ChevronRight,ClipboardList,FileText,
-  LayoutGrid,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X,IdCard
+  LayoutGrid,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X,IdCard,CircleUserRound
 } from "lucide-react";
 import {BrandMark} from "@/components/brand-mark";
 import {createClient} from "@/lib/supabase/browser";
@@ -25,6 +25,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
   const router=useRouter();
   const overview:NavItem={name:"Tổng quan hệ thống",href:"/dashboard",icon:LayoutGrid};
   const myCard:NavItem={name:"Thẻ đại biểu của tôi",href:"/my-card",icon:IdCard};
+  const myAccount:NavItem={name:"Tài khoản của tôi",href:"/account",icon:CircleUserRound};
   const congressItems:NavItem[]=congressId?[
     {name:"Bảng điều hành",href:"/congresses/"+congressId,icon:BarChart3},
     {name:"Đại biểu",href:"/congresses/"+congressId+"/delegates",icon:Users},
@@ -37,7 +38,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
     {name:"Nhân sự BTC",href:"/congresses/"+congressId+"/team",icon:UserRoundCog},
     {name:"Cấu hình",href:"/congresses/"+congressId+"/settings",icon:Settings2}
   ]:[];
-  const items=[overview,myCard,...congressItems,...adminItems];
+  const items=[overview,myCard,myAccount,...congressItems,...adminItems];
   const active=items.find(x=>x.href===path)||overview;
   const displayName=name.trim()||"Thành viên BTC";
   const avatar=displayName.charAt(0).toLocaleUpperCase("vi");
@@ -91,7 +92,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
       <div className="app-sidebar-scroll flex-1 overflow-y-auto px-3.5 pb-4">
         <div className="pt-7">
           <p className="sidebar-group-label">Hệ thống</p>
-          <nav aria-label="Hệ thống">{navLink(overview)}{navLink(myCard)}</nav>
+          <nav aria-label="Hệ thống">{navLink(overview)}{navLink(myCard)}{navLink(myAccount)}</nav>
         </div>
 
         {congressId&&<>

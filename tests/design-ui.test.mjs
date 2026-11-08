@@ -3,24 +3,25 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 const source=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 
-test("V3 dùng bản sắc institutional navy, gold, cobalt và các token thống nhất",()=>{
+test("Giao diện Đoàn - Hội dùng navy, xanh thanh niên, vàng và token thống nhất",()=>{
  const css=source("src/app/globals.css");
  assert.match(css,/--navy:#141f33/);
- assert.match(css,/--brand:#315bcc/);
- assert.match(css,/--gold:#dfb86b/);
+ assert.match(css,/--brand:#0084bd/);
+ assert.match(css,/--gold:#ffcd48/);
  assert.match(css,/\.premium-hero\{/);
  assert.match(css,/\.command-hero\{/);
- assert.match(css,/\.app-sidebar\{\s*background:#151f32/);
+ assert.match(css,/\.app-sidebar\{background:#053f62/);
  assert.match(css,/\.field:focus/);
  assert.match(css,/prefers-reduced-motion/);
 });
-test("Trang chủ trình bày giao diện tương tác và đánh dấu dữ liệu minh họa",()=>{
+test("Trang chủ tối giản, rõ hành động và đánh dấu giao diện minh họa",()=>{
  const home=source("src/app/page.tsx");
- assert.match(home,/ExperiencePreview compact/);
- assert.match(home,/premium-title/);
+ assert.match(home,/landing-hero/);
+ assert.match(home,/landing-heading/);
+ assert.match(home,/landing-preview/);
  assert.match(home,/BrandMark/);
  assert.match(home,/href="\/preview"/);
- assert.match(home,/Chỉ dùng dữ liệu mẫu/);
+ assert.match(home,/Giao diện minh họa/);
  assert.doesNotMatch(home,/Sparkles|blur-\[|bg-gradient-to/);
 });
 test("Trang demo hoạt động độc lập không yêu cầu dữ liệu thật",()=>{

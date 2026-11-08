@@ -178,3 +178,19 @@ Nếu Supabase Dashboard của project `pnxdxdagpeyqarucdphk` chưa có tài kho
 5. Thay đổi mật khẩu trong mục tài khoản sau lần đăng nhập đầu tiên; không chia sẻ Secret Key hoặc mật khẩu qua chat, Git, commit hoặc tệp công khai.
 
 `admin:promote` được giới hạn vào đúng project, đúng email nội bộ và từ chối tự động tạo Super Admin thứ hai nếu đã có tài khoản khác có quyền đó. Khởi tạo từ script với mật khẩu được cung cấp qua môi trường cũng có thể dùng `npm run bootstrap:admin` nhưng không nên đặt mật khẩu tĩnh trong source code.
+
+## Trạng thái Supabase live — 08/11/2026
+
+**Project:** `pnxdxdagpeyqarucdphk` — chỉ cấu hình trong máy local, không commit secrets.
+
+- Supabase Auth: một Super Admin được tạo trong Dashboard, chuẩn hóa email Auth thành `admin@accounts.daihoi.invalid` (giữ nguyên mật khẩu), gán `profiles.platform_role='super_admin'`, email Auth đã xác thực. Tên đăng nhập trên website: `admin@dntu.edu.vn`.
+- Migrations đã áp dụng trong **SQL Editor** theo thứ tự: `upgrade-attendance-v2.sql` → `upgrade-management-v3.sql` → `upgrade-seating-v4.sql` → `upgrade-delegate-accounts-v5.sql`. Không chạy lại `schema.sql`.
+- Đã xác minh trực tiếp: `attendance_sessions.qr_policy`, `checkins.qr_scope`, `delegates.barcode_code/student_id/position/login_email/auth_user_id`, `seating_layouts`, `seats`, `seat_assignments`.
+- Kiểm tra bảo mật: `anon` bị chặn truy cập bảng `seating_layouts` và gọi RPC `seating_save_layout` (PostgreSQL `42501`).
+- Sao lưu dữ liệu logic trước migration: `%LOCALAPPDATA%/DAIHOI/database-backups/`. Bao gồm 13 bảng `public` và metadata người dùng Auth; **không** gồm password hashes hoặc bản sao đầy đủ PostgreSQL. Cần managed backup/PITR để phục hồi hoàn chỉnh.
+- Chạy `npm run check:supabase` để xác minh Auth, khóa, schema v2–v5 và phân quyền; `npm run backup:supabase` để sao lưu logic. Script từ chối khi project ref không đúng.
+- Trang `/account` đã thêm cho mọi tài khoản, bao gồm Super Admin: hiển thị định danh đăng nhập và đổi mật khẩu sau khi xác thực lại mật khẩu hiện tại (mật khẩu mới tối thiểu 12 ký tự).
+- Cần chạy thử đăng nhập bằng mật khẩu người dùng tự đặt, tạo Đại hội, nhập đại biểu và check-in thực tế trước khi đưa vào sử dụng.
+- Đây là cấu hình **local**. Vercel Environment Variables và Google Drive OAuth chưa được xác thực trong đợt này.
+
+SQL đã chạy qua Supabase Studio không tự xuất hiện trong lịch sử Supabase CLI migration; file trong `supabase/` là bản đối chiếu nguồn đã triển khai, không chạy lại tùy tiện.
