@@ -1,4 +1,6 @@
+export type SeatType="delegate"|"guest";
 export type SeatDraft={
+  seatType?:SeatType;
   id:string;
   code:string;
   zone:string;
@@ -11,10 +13,11 @@ export type SeatDraft={
 export type Seat=SeatDraft & {layout_id:string;congress_id:string};
 export type SeatingLayout={
   id:string;congress_id:string;title:string;stage_label:string;version:number;
+  grid_rows:number;grid_columns:number;
   created_at:string;updated_at:string;
 };
 export type SeatAssignment={seat_id:string;layout_id:string;delegate_id:string;assigned_at:string};
-export type SeatingDelegate={id:string;code:string;full_name:string;unit:string;is_active:boolean};
+export type SeatingDelegate={id:string;code:string;full_name:string;unit:string;is_active:boolean;delegate_type?:"official"|"alternate"|"guest"};
 export type SeatingSession={id:string;name:string;status:string};
 export type GeneratedSection={
   zone:string;startRow:string;rowCount:number;seatsPerRow:number;
@@ -69,6 +72,7 @@ export function validateSeatDrafts(seats:SeatDraft[]):string|null{
     const code=seat.code.trim().toUpperCase();
     const position=seat.x+":"+seat.y;
     if(!code||code.length>36||!seat.zone||seat.zone.length>40||
+       (seat.seatType!==undefined&&seat.seatType!=="delegate"&&seat.seatType!=="guest")||
        !seat.rowLabel||seat.rowLabel.length>12||
        !Number.isInteger(seat.seatNumber)||seat.seatNumber<1||seat.seatNumber>10000||
        !Number.isInteger(seat.x)||!Number.isInteger(seat.y)||
@@ -109,6 +113,9 @@ export function validateImport(entries:ImportEntry[],seats:SeatDraft[],delegates
     if(delegateCode){
       const person=delegateByCode.get(delegateCode);
       if(!person)issues.push({line,message:"Không có mã đại biểu: "+entry.delegateCode});
+      else if(!seatByCode.get(seatCode)?.blocked&&
+        ((seatByCode.get(seatCode)?.seatType==="guest")!==(person.delegate_type==="guest")))
+        issues.push({line,message:"Loại ghế không phù hợp với đại biểu/khách mời: "+entry.seatCode});
       else if(!person.is_active)issues.push({line,message:"Đại biểu không còn hoạt động: "+entry.delegateCode});
       if(usedPeople.has(delegateCode))issues.push({line,message:"Đại biểu được phân nhiều ghế: "+entry.delegateCode});
       usedPeople.add(delegateCode);
@@ -117,55 +124,70 @@ export function validateImport(entries:ImportEntry[],seats:SeatDraft[],delegates
   return issues;
 }
 
-/** 200 ô thiết kế, chia thành 10 hàng × 20 cột. Đây là ô bố trí,
- * chỉ ô đã được chọn mới trở thành ghế trong Supabase. */
+/** Kích thước mỗi hội trường được lưu riêng; mặc định 10×20. */
 export const SEAT_GRID_ROWS=10;
 export const SEAT_GRID_COLUMNS=20;
 export const SEAT_GRID_CAPACITY=SEAT_GRID_ROWS*SEAT_GRID_COLUMNS;
+export const SEAT_GRID_MAX_ROWS=25;
+export const SEAT_GRID_MAX_COLUMNS=30;
+export const SEAT_GRID_MAX_CELLS=500;
 export const SEAT_GRID_LEFT=95;
 export const SEAT_GRID_TOP=190;
 export const SEAT_GRID_STEP_X=58;
 export const SEAT_GRID_STEP_Y=60;
+export type SeatGridSize={rows:number;columns:number};
+export const DEFAULT_SEAT_GRID_SIZE:SeatGridSize={rows:10,columns:20};
 export type SeatGridPreset="full"|"center-aisle"|"empty";
 
-export function seatGridPosition(row:number,column:number){
-  if(!Number.isInteger(row)||row<0||row>=SEAT_GRID_ROWS||
-    !Number.isInteger(column)||column<0||column>=SEAT_GRID_COLUMNS)
+export function seatGridSizeValid(size:SeatGridSize){
+  return Number.isInteger(size.rows)&&Number.isInteger(size.columns)&&
+    size.rows>=1&&size.rows<=SEAT_GRID_MAX_ROWS&&
+    size.columns>=1&&size.columns<=SEAT_GRID_MAX_COLUMNS&&
+    size.rows*size.columns<=SEAT_GRID_MAX_CELLS;
+}
+export function seatGridPosition(row:number,column:number,size:SeatGridSize=DEFAULT_SEAT_GRID_SIZE){
+  if(!seatGridSizeValid(size)||!Number.isInteger(row)||row<0||row>=size.rows||
+    !Number.isInteger(column)||column<0||column>=size.columns)
     throw new Error("Ô lưới không hợp lệ.");
   return {x:SEAT_GRID_LEFT+column*SEAT_GRID_STEP_X,y:SEAT_GRID_TOP+row*SEAT_GRID_STEP_Y};
 }
-export function seatGridCellIndex(seat:Pick<SeatDraft,"x"|"y">):number|null{
+export function seatGridCellIndex(
+  seat:Pick<SeatDraft,"x"|"y">,size:SeatGridSize=DEFAULT_SEAT_GRID_SIZE
+):number|null{
+  if(!seatGridSizeValid(size))return null;
   const column=(seat.x-SEAT_GRID_LEFT)/SEAT_GRID_STEP_X;
   const row=(seat.y-SEAT_GRID_TOP)/SEAT_GRID_STEP_Y;
   return Number.isInteger(row)&&Number.isInteger(column)&&
-    row>=0&&row<SEAT_GRID_ROWS&&column>=0&&column<SEAT_GRID_COLUMNS
-    ?row*SEAT_GRID_COLUMNS+column:null;
+    row>=0&&row<size.rows&&column>=0&&column<size.columns
+    ?row*size.columns+column:null;
 }
 export type SeatGridResult={seats:SeatDraft[];error:string|null};
 
-/** Thay đổi các ô theo cách nguyên tử; ID của ghế giữ nguyên để không
- * làm mất phân công đại biểu khi cập nhật sơ đồ. Không đụng ghế ngoài lưới.
+/** Lưu nguyên tử các ô: giữ ID và loại ghế cũ, bảo vệ ghế đã phân công.
+ * Ghế ngoài vùng lưới vẫn được giữ lại khi đổi kích thước hội trường.
  */
 export function setSeatGridCells(
-  current:SeatDraft[],
-  desired:ReadonlySet<number>,
-  assignedSeatIds:ReadonlySet<string>,
-  makeId:()=>string
+  current:SeatDraft[],desired:ReadonlySet<number>,
+  assignedSeatIds:ReadonlySet<string>,makeId:()=>string,
+  size:SeatGridSize=DEFAULT_SEAT_GRID_SIZE,
+  seatType:SeatType="delegate"
 ):SeatGridResult{
-  if([...desired].some(i=>!Number.isInteger(i)||i<0||i>=SEAT_GRID_CAPACITY))
+  if(!seatGridSizeValid(size)||[...desired].some(i=>!Number.isInteger(i)||i<0||i>=size.rows*size.columns))
     return {seats:current,error:"Vị trí ô lưới không hợp lệ."};
+  if(seatType!=="delegate"&&seatType!=="guest")
+    return {seats:current,error:"Loại ghế không hợp lệ."};
   const positions=new Map<number,SeatDraft>();
   const outside:SeatDraft[]=[];
   const codes=new Set(current.map(s=>s.code.toUpperCase()));
   for(const seat of current){
-    const index=seatGridCellIndex(seat);
+    const index=seatGridCellIndex(seat,size);
     if(index===null){outside.push(seat);continue;}
     if(positions.has(index))return {seats:current,error:"Có nhiều ghế cùng một ô lưới."};
     positions.set(index,seat);
   }
   for(const [index,seat] of positions){
     if(!desired.has(index)&&assignedSeatIds.has(seat.id))
-      return {seats:current,error:"Ô "+seat.code+" đã phân công đại biểu. Bỏ phân công trước khi xóa ghế."};
+      return {seats:current,error:"Ô "+seat.code+" đã phân công đại biểu/khách mời. Bỏ phân công trước khi xóa ghế."};
   }
   if(desired.size+outside.length>500)
     return {seats:current,error:"Sơ đồ chỉ hỗ trợ tối đa 500 ghế."};
@@ -173,31 +195,34 @@ export function setSeatGridCells(
   for(const index of [...desired].sort((a,b)=>a-b)){
     const existing=positions.get(index);
     if(existing){next.push(existing);continue;}
-    const row=Math.floor(index/SEAT_GRID_COLUMNS),column=index%SEAT_GRID_COLUMNS;
-    const {x,y}=seatGridPosition(row,column);
+    const row=Math.floor(index/size.columns),column=index%size.columns;
+    const {x,y}=seatGridPosition(row,column,size);
     const rowLabel=rowLabelAt("A",row),seatNumber=column+1;
     const baseCode="G-"+rowLabel+"-"+String(seatNumber).padStart(2,"0");
     let code=baseCode,suffix=2;
-    while(codes.has(code.toUpperCase())&&suffix<100){
-      code=baseCode+"-"+suffix++;
-    }
+    while(codes.has(code.toUpperCase())&&suffix<100)code=baseCode+"-"+suffix++;
     if(codes.has(code.toUpperCase()))
       return {seats:current,error:"Không tạo được mã ghế duy nhất cho ô "+baseCode+"."};
     codes.add(code.toUpperCase());
-    next.push({id:makeId(),code,zone:"G",rowLabel,seatNumber,x,y,blocked:false});
+    next.push({id:makeId(),code,zone:"G",rowLabel,seatNumber,x,y,blocked:false,seatType});
   }
   const validation=validateSeatDrafts(next);
   if(validation)return {seats:current,error:validation};
   return {seats:next,error:null};
 }
-export function seatGridPattern(preset:SeatGridPreset):Set<number>{
+export function seatGridPattern(
+  preset:SeatGridPreset,size:SeatGridSize=DEFAULT_SEAT_GRID_SIZE
+):Set<number>{
+  if(!seatGridSizeValid(size))throw new Error("Kích thước lưới không hợp lệ.");
   const result=new Set<number>();
   if(preset==="empty")return result;
-  for(let row=0;row<SEAT_GRID_ROWS;row++){
-    for(let column=0;column<SEAT_GRID_COLUMNS;column++){
-      // Lối đi đôi giữa hội trường: hai cột trung tâm.
-      if(preset==="center-aisle"&&(column===9||column===10))continue;
-      result.add(row*SEAT_GRID_COLUMNS+column);
+  const middleLeft=Math.floor((size.columns-1)/2);
+  const middleRight=Math.ceil((size.columns-1)/2);
+  for(let row=0;row<size.rows;row++){
+    for(let column=0;column<size.columns;column++){
+      if(preset==="center-aisle"&&
+        (column===middleLeft||column===middleRight))continue;
+      result.add(row*size.columns+column);
     }
   }
   return result;

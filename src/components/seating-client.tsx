@@ -1,6 +1,7 @@
 "use client";
 
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
+import Link from "next/link";
 import {
   Armchair,ArrowDown,ArrowLeft,ArrowRight,ArrowUp,Check,CheckCircle2,
   CircleAlert,Copy,Download,FileSpreadsheet,Grid3X3,Layers3,LoaderCircle,
@@ -9,9 +10,9 @@ import {
 } from "lucide-react";
 import {
   generateSection,parseSeatImport,validateImport,validateSeatDrafts,
-  seatGridCellIndex,seatGridPattern,setSeatGridCells,
+  seatGridCellIndex,seatGridPattern,seatGridSizeValid,setSeatGridCells,
   type SeatDraft,type SeatAssignment,type SeatingDelegate,type SeatingLayout,
-  type SeatingSession,type ImportEntry,type ImportIssue,type SeatGridPreset
+  type SeatingSession,type ImportEntry,type ImportIssue,type SeatGridPreset,type SeatType,type SeatGridSize
 } from "@/lib/seating";
 import {SeatGridCanvas} from "@/components/seat-grid-canvas";
 
@@ -44,6 +45,8 @@ export function SeatingClient({congressId,canManage}:Props){
   const [layoutId,setLayoutId]=useState("");
   const [title,setTitle]=useState("");
   const [stageLabel,setStageLabel]=useState("SÂN KHẤU");
+  const [gridRows,setGridRows]=useState(10);
+  const [gridColumns,setGridColumns]=useState(20);
   const [seats,setSeats]=useState<SeatDraft[]>([]);
   const [dirty,setDirty]=useState(false);
   const [mode,setMode]=useState<"assign"|"edit">("assign");
@@ -74,8 +77,11 @@ export function SeatingClient({congressId,canManage}:Props){
       if(!response.ok)throw new Error(next.error||"Không tải được sơ đồ.");
       setData(next);setLayoutId(next.layout?.id||"");
       setTitle(next.layout?.title||"");setStageLabel(next.layout?.stage_label||"SÂN KHẤU");
+      const nextSize={rows:next.layout?.grid_rows??10,columns:next.layout?.grid_columns??20};
+      setGridRows(seatGridSizeValid(nextSize)?nextSize.rows:10);
+      setGridColumns(seatGridSizeValid(nextSize)?nextSize.columns:20);
       seatsSnapshot.current=next.seats;setSeats(next.seats);setSessionId(next.selectedSessionId||"");
-      setDesignSurface(next.seats.some(s=>seatGridCellIndex(s)===null)?"free":"grid");
+      setDesignSurface(!next.seats.length||next.seats.some(s=>seatGridCellIndex(s,nextSize)!==null)?"grid":"free");
       setDirty(false);setImportEntries([]);setImportIssues([]);
     }catch(reason){setError(reason instanceof Error?reason.message:"Không thể tải sơ đồ.");}
     finally{setLoading(false);}
@@ -89,6 +95,7 @@ export function SeatingClient({congressId,canManage}:Props){
   const occupiedByDelegate=useMemo(()=>new Map(activeAssignments.map(a=>[a.delegate_id,a.seat_id])),[activeAssignments]);
   const checkedIn=useMemo(()=>new Set(data?.checkedInDelegateIds||[]),[data?.checkedInDelegateIds]);
   const selectedSeat=seats.find(s=>s.id===selectedSeatId)||null;
+  const gridSize:SeatGridSize={rows:gridRows,columns:gridColumns};
   const selectedDelegate=selectedSeat?delegatesById.get(assignments.get(selectedSeat.id)||""):null;
   const assignedCount=activeAssignments.length;
   const assignedSeatIds=useMemo(()=>new Set(activeAssignments.map(a=>a.seat_id)),[activeAssignments]);
@@ -97,7 +104,8 @@ export function SeatingClient({congressId,canManage}:Props){
   const boardHeight=Math.max(500,...seats.map(s=>s.y+95));
   const occupiedPresent=activeAssignments.filter(a=>checkedIn.has(a.delegate_id)).length;
   const filteredDelegates=(data?.delegates||[]).filter(d=>
-    d.is_active&&cleanSearch(d.code+" "+d.full_name+" "+d.unit).includes(cleanSearch(delegateQuery))
+    d.is_active&&(!selectedSeat||((selectedSeat.seatType==="guest")===(d.delegate_type==="guest")))&&
+    cleanSearch(d.code+" "+d.full_name+" "+d.unit).includes(cleanSearch(delegateQuery))
   ).slice(0,60);
   function ensureCanChange(){
     if(!canManage)return false;
@@ -115,6 +123,7 @@ export function SeatingClient({congressId,canManage}:Props){
     setLayoutId(fresh);
     setTitle(copy?(title||"Sơ đồ hội trường")+" (bản sao)":"Sơ đồ hội trường");
     setStageLabel(copy?stageLabel:"SÂN KHẤU");
+    setGridRows(copy?gridRows:10);setGridColumns(copy?gridColumns:20);
     const freshSeats=copy?seats.map(s=>({...s,id:crypto.randomUUID()})):[];
     seatsSnapshot.current=freshSeats;setSeats(freshSeats);
     setDesignSurface(copy?designSurface:"grid");
@@ -130,6 +139,7 @@ export function SeatingClient({congressId,canManage}:Props){
   function addSection(){
     try{
       const generated=generateSection(section,seats,()=>crypto.randomUUID());
+      generated.forEach(seat=>{seat.seatType="delegate";});
       const updated=[...seatsSnapshot.current,...generated];
       seatsSnapshot.current=updated;setSeats(updated);setDirty(true);setError("");setImportEntries([]);
       setNotice("Đã tạo "+generated.length+" ghế. Nhấn Lưu sơ đồ để ghi vào Supabase.");
@@ -138,36 +148,50 @@ export function SeatingClient({congressId,canManage}:Props){
         startX:105,startY:Math.min(3500,largestY+110)}));
     }catch(reason){setError(reason instanceof Error?reason.message:"Không thể tạo khu vực.");}
   }
-  function patchGrid(row:number,column:number,present:boolean){
+  function patchGrid(row:number,column:number,present:boolean,seatType:SeatType){
     if(!canManage||working||!layoutId)return;
     const original=seatsSnapshot.current;
-    const target=new Set(original.map(seat=>seatGridCellIndex(seat)).filter((index):index is number=>index!==null));
-    const index=row*20+column;
-    if(target.has(index)===present)return;
+    const target=new Set(original.map(seat=>seatGridCellIndex(seat,gridSize)).filter((index):index is number=>index!==null));
+    const index=row*gridColumns+column;
+    const current=original.find(seat=>seatGridCellIndex(seat,gridSize)===index);
+    if(present&&current){
+      if(current.seatType===seatType||(current.seatType===undefined&&seatType==="delegate"))return;
+      if(assignedSeatIds.has(current.id)){setError("Bỏ phân công người ngồi trước khi đổi loại ghế.");return;}
+      updateSeat(current.id,{seatType});setError("");return;
+    }
+    if(!present&&!current)return;
     if(present)target.add(index);else target.delete(index);
-    const result=setSeatGridCells(original,target,assignedSeatIds,()=>crypto.randomUUID());
+    const result=setSeatGridCells(original,target,assignedSeatIds,()=>crypto.randomUUID(),gridSize,seatType);
     if(result.error){setError(result.error);return;}
     seatsSnapshot.current=result.seats;
     setSeats(result.seats);setDirty(true);setError("");setNotice("");setImportEntries([]);
+    if(present)setSelectedSeatId(result.seats.find(seat=>seatGridCellIndex(seat,gridSize)===index)?.id||"");
     if(selectedSeatId&&!result.seats.some(seat=>seat.id===selectedSeatId))setSelectedSeatId("");
   }
-  function useGridPreset(preset:SeatGridPreset){
+  function useGridPreset(preset:SeatGridPreset,seatType:SeatType){
     if(!canManage||working||!layoutId)return;
     const original=seatsSnapshot.current;
-    const next=seatGridPattern(preset);
-    const previous=new Set(original.map(seat=>seatGridCellIndex(seat)).filter((index):index is number=>index!==null));
+    const next=seatGridPattern(preset,gridSize);
+    const previous=new Set(original.map(seat=>seatGridCellIndex(seat,gridSize)).filter((index):index is number=>index!==null));
     if(next.size===previous.size&&[...next].every(index=>previous.has(index)))return;
     const removed=[...previous].filter(index=>!next.has(index)).length;
     if(removed&&!window.confirm(
       "Mẫu bố trí sẽ bỏ "+removed+" ghế trên lưới. Ghế đã có đại biểu sẽ được bảo vệ. Tiếp tục?"
     ))return;
-    const result=setSeatGridCells(original,next,assignedSeatIds,()=>crypto.randomUUID());
+    const result=setSeatGridCells(original,next,assignedSeatIds,()=>crypto.randomUUID(),gridSize,seatType);
     if(result.error){setError(result.error);return;}
     seatsSnapshot.current=result.seats;
     setSeats(result.seats);setDirty(true);setError("");
     setSelectedSeatId("");setImportEntries([]);
-    setNotice("Đã áp dụng mẫu "+(preset==="full"?"đủ 200 ghế":preset==="center-aisle"?"lối đi giữa":"lưới trống")+
+    setNotice("Đã áp dụng mẫu "+(preset==="full"?"lấp đầy canvas":preset==="center-aisle"?"lối đi giữa":"lưới trống")+
       ". Nhấn Lưu sơ đồ để ghi vào Supabase.");
+  }
+  function resizeGrid(size:SeatGridSize){
+    if(!seatGridSizeValid(size)){setError("Canvas tối đa 500 ô, 25 hàng và 30 cột.");return;}
+    if(gridRows===size.rows&&gridColumns===size.columns)return;
+    setGridRows(size.rows);setGridColumns(size.columns);setDirty(true);
+    setSelectedSeatId("");setError("");setImportEntries([]);
+    setNotice("Đã đổi canvas thành "+size.rows+" hàng × "+size.columns+" cột. Ghế ngoài vùng mới được giữ lại.");
   }
   async function saveLayout(){
     const problem=validateSeatDrafts(seats);
@@ -177,7 +201,8 @@ export function SeatingClient({congressId,canManage}:Props){
     try{
       await postSeat({action:"save-layout",congressId,layoutId,
         expectedVersion:data?.layout?.id===layoutId?data.layout.version:0,
-        title,stageLabel,seats});
+        title,stageLabel,gridRows,gridColumns,
+        seats:seats.map(s=>({...s,seatType:s.seatType||"delegate"}))});
       await load(layoutId,sessionId);
       setNotice("Đã lưu sơ đồ và vị trí ghế thành công.");
     }catch(reason){setError(reason instanceof Error?reason.message:"Không lưu được sơ đồ.");}
@@ -185,7 +210,7 @@ export function SeatingClient({congressId,canManage}:Props){
   }
   async function applyAssignments(items:{seatId:string;delegateId:string|null}[],assignMode:"merge"|"replace"="merge"){
     if(dirty||!data?.layout||data.layout.id!==layoutId){
-      setError("Hãy lưu sơ đồ trước khi phân công đại biểu.");return;
+      setError("Hãy lưu sơ đồ trước khi chọn người ngồi.");return;
     }
     setWorking(true);setError("");setNotice("");
     try{
@@ -198,6 +223,12 @@ export function SeatingClient({congressId,canManage}:Props){
   }
   async function assignOne(personId:string|null){
     if(!selectedSeat||selectedSeat.blocked)return;
+    if(personId){
+      const person=delegatesById.get(personId);
+      if(!person||((selectedSeat.seatType==="guest")!==(person.delegate_type==="guest"))){
+        setError("Loại ghế không phù hợp: ghế khách mời chỉ dành cho khách mời.");return;
+      }
+    }
     const previous=personId?occupiedByDelegate.get(personId):undefined;
     if(previous&&previous!==selectedSeat.id&&!window.confirm("Đại biểu đang có chỗ ngồi khác. Chuyển sang "+selectedSeat.code+"?"))return;
     const occupant=assignments.get(selectedSeat.id);
@@ -238,11 +269,11 @@ export function SeatingClient({congressId,canManage}:Props){
       const {default:writeExcelFile}=await import("write-excel-file/browser");
       const assignmentsBySeat=new Map(activeAssignments.map(a=>[a.seat_id,a.delegate_id]));
       const seatRows: (string|number)[][]=[
-        ["Mã ghế","Khu vực","Hàng","Số ghế","Mã đại biểu","Họ tên (tham khảo)","Đơn vị (tham khảo)","ID sơ đồ","Phiên bản"]
+        ["Mã ghế","Loại ghế","Khu vực","Hàng","Số ghế","Mã đại biểu","Họ tên (tham khảo)","Đơn vị (tham khảo)","ID sơ đồ","Phiên bản"]
       ];
       for(const s of seats){
         const d=delegatesById.get(assignmentsBySeat.get(s.id)||"");
-        seatRows.push([s.code,s.zone,s.rowLabel,s.seatNumber,d?.code||"",d?.full_name||"",d?.unit||"",layoutId,data.layout.version]);
+        seatRows.push([s.code,s.seatType==="guest"?"Khách mời":"Đại biểu",s.zone,s.rowLabel,s.seatNumber,d?.code||"",d?.full_name||"",d?.unit||"",layoutId,data.layout.version]);
       }
       const delegateRows:(string|number)[][]=[["Mã đại biểu","Họ và tên","Đơn vị","Trạng thái"]];
       for(const d of data.delegates){
@@ -380,13 +411,13 @@ export function SeatingClient({congressId,canManage}:Props){
             <button type="button" aria-pressed={mode==="edit"} onClick={()=>setMode("edit")} className={"btn "+(mode==="edit"?"btn-primary":"btn-secondary")}><Move size={16}/> Thiết kế</button>
           </div>}
         </div>
-        {canManage&&mode==="edit"&&<div className="flex w-full flex-wrap items-center gap-2 border-t border-[#edf1f5] pt-3">
+        {canManage&&<div className="flex w-full flex-wrap items-center gap-2 border-t border-[#edf1f5] pt-3">
           <span className="mr-1 text-[11px] font-bold text-[#73889b]">Mặt bằng thiết kế</span>
           <div role="group" aria-label="Kiểu canvas thiết kế" className="inline-flex flex-wrap gap-1 rounded-lg bg-[#f1f5f8] p-1">
             <button type="button" aria-pressed={designSurface==="grid"} onClick={()=>setDesignSurface("grid")}
               className={"inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-[11px] font-bold "+
                 (designSurface==="grid"?"bg-white text-[#075d88] shadow-sm":"text-[#6e8496] hover:text-[#1b506a]")}>
-              <Grid3X3 size={15}/> Lưới 200 ô
+              <Grid3X3 size={15}/> Canvas linh hoạt
             </button>
             <button type="button" aria-pressed={designSurface==="free"} onClick={()=>setDesignSurface("free")}
               className={"inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-[11px] font-bold "+
@@ -404,17 +435,18 @@ export function SeatingClient({congressId,canManage}:Props){
             <div><h2 className="text-base font-semibold">Vị trí trong hội trường</h2>
               <p className="helper">{mode==="edit"&&canManage?(designSurface==="grid"?"Chọn ô vuông để đặt hoặc xóa ghế; giữ chuột để vẽ nhiều ô.":"Kéo ghế để thay đổi vị trí; nhấn ghế để chỉnh sửa thông tin."):"Chọn ghế để xem hoặc phân công đại biểu."}</p>
             </div>
-            {!(canManage&&mode==="edit"&&designSurface==="grid")&&<div className="flex gap-1">
+            {designSurface!=="grid"&&<div className="flex gap-1">
               <button type="button" className="btn btn-secondary !px-3" onClick={()=>setZoom(z=>Math.max(.6,+(z-.1).toFixed(2)))} aria-label="Thu nhỏ" disabled={zoom<=.6}><ZoomOut size={17}/></button>
               <span className="flex min-w-12 items-center justify-center text-sm font-semibold">{Math.round(zoom*100)}%</span>
               <button type="button" className="btn btn-secondary !px-3" onClick={()=>setZoom(z=>Math.min(1.5,+(z+.1).toFixed(2)))} aria-label="Phóng to" disabled={zoom>=1.5}><ZoomIn size={17}/></button>
             </div>}
           </div>
-          {canManage&&mode==="edit"&&designSurface==="grid"
-            ?<SeatGridCanvas seats={seats} assignedSeatIds={assignedSeatIds}
+          {designSurface==="grid"
+            ?<SeatGridCanvas key={layoutId} seats={seats} assignedSeatIds={assignedSeatIds}
                 stageLabel={stageLabel} selectedSeatId={selectedSeatId}
-                editable={!working&&!!layoutId} onPaint={patchGrid}
-                onSelect={chooseSeat} onPreset={useGridPreset}/>
+                rows={gridRows} columns={gridColumns} onResize={resizeGrid}
+                editable={canManage&&mode==="edit"&&!working&&!!layoutId}
+                onPaint={patchGrid} onSelect={chooseSeat} onPreset={useGridPreset}/>
             :<>
           <div className="overflow-x-auto overflow-y-auto bg-[#f4f8fb] p-3 sm:p-4" style={{maxHeight:"690px"}} tabIndex={0} aria-label="Cuộn để xem các khu vực ghế">
             <div className="seat-map-board relative overflow-hidden rounded-xl border border-[#d9e5ec] bg-white shadow-sm" style={{width:boardWidth*zoom,height:boardHeight*zoom}}>
@@ -438,6 +470,7 @@ export function SeatingClient({congressId,canManage}:Props){
                     s.blocked?"border-[#ced7df] bg-[#e9eef2] text-[#8b9dad] ":
                     isPresent?"border-[#66cfa7] bg-[#dff8ec] text-[#126543] ":
                     personId?"border-[#74b4d9] bg-[#e0f0fc] text-[#155d89] ":
+                     s.seatType==="guest"?"border-[#ad91d6] bg-[#eee6fb] text-[#744fa2] ":
                     "border-[#cad8e1] bg-white text-[#527087] hover:border-[#0e8c8c] hover:bg-[#e6f7f3] ")+
                     (mode==="edit"&&canManage?"cursor-grab active:cursor-grabbing touch-none":"")}
                   style={{left:s.x*zoom,top:s.y*zoom,width:47*zoom,height:42*zoom,fontSize:Math.max(9,11*zoom)}}>
@@ -453,6 +486,7 @@ export function SeatingClient({congressId,canManage}:Props){
             {[
               {text:"Chưa phân",style:"bg-white border-[#cad8e1]"},
               {text:"Đã phân",style:"bg-[#e0f0fc] border-[#74b4d9]"},
+               {text:"Ghế khách mời",style:"bg-[#eee6fb] border-[#ad91d6]"},
               {text:"Đã điểm danh",style:"bg-[#dff8ec] border-[#66cfa7]"},
               {text:"Đã khóa",style:"bg-[#e9eef2] border-[#ced7df]"}
             ].map(l=><span key={l.text} className="inline-flex items-center gap-2">
@@ -494,14 +528,20 @@ export function SeatingClient({congressId,canManage}:Props){
                 <div className="flex items-center justify-between gap-2"><p className="text-xl font-bold">{selectedSeat.code}</p><span className={"badge "+(selectedSeat.blocked?"badge-gray":selectedDelegate?"badge-green":"badge-yellow")}>
                   {selectedSeat.blocked?"Khóa":selectedDelegate?"Đã phân":"Ghế trống"}
                 </span></div>
-                <p className="helper mt-1">{selectedSeat.zone} · Hàng {selectedSeat.rowLabel} · Vị trí {selectedSeat.seatNumber}</p>
+                <p className="helper mt-1">{selectedSeat.zone} · Hàng {selectedSeat.rowLabel} · Vị trí {selectedSeat.seatNumber} · {selectedSeat.seatType==="guest"?"Ghế khách mời":"Ghế đại biểu"}</p>
                 {selectedDelegate&&<div className="mt-3 border-t border-[#e0eaef] pt-3 text-sm font-semibold">
                   {selectedDelegate.full_name}<p className="helper">{selectedDelegate.code} · {selectedDelegate.unit}</p>
                   {checkedIn.has(selectedDelegate.id)&&<span className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-700"><Check size={15}/> Đã điểm danh phiên chọn</span>}
                 </div>}
               </div>
-              {canManage&&mode==="edit"?<div className="mt-4 space-y-3">
-                <label><span className="label">Mã ghế</span>
+              {canManage&&mode==="edit"&&<div className="mt-4 space-y-3">
+                <label><span className="label">Loại ghế</span>
+                   <select className="field" value={selectedSeat.seatType||"delegate"} disabled={!!selectedDelegate}
+                     onChange={e=>updateSeat(selectedSeat.id,{seatType:e.target.value as SeatType})}>
+                     <option value="delegate">Ghế đại biểu</option><option value="guest">Ghế khách mời</option>
+                   </select>
+                 </label>
+                 <label><span className="label">Mã ghế</span>
                   <input className="field" maxLength={36} value={selectedSeat.code} onChange={e=>updateSeat(selectedSeat.id,{code:e.target.value.toUpperCase().trim()})}/>
                 </label>
                 <label><span className="label">Khu vực</span>
@@ -537,15 +577,21 @@ export function SeatingClient({congressId,canManage}:Props){
                   }}><Trash2 size={17}/> Xóa</button>
                 </div>
                 {selectedDelegate&&<p className="helper">Muốn khóa hoặc xóa ghế, hãy bỏ phân công đại biểu trước.</p>}
-              </div>:canManage&&!selectedSeat.blocked?<div className="mt-4">
-                {!data?.layout||dirty?<p className="helper">Hãy lưu sơ đồ trước khi phân công đại biểu.</p>:<>
-                  <label><span className="label">Tìm đại biểu để gán</span>
+              </div>}{canManage&&!selectedSeat.blocked&&<div className="mt-4 border-t border-[#e2ebf1] pt-4">
+                {!data?.layout||dirty?<p className="helper">Hãy lưu sơ đồ trước khi chọn người ngồi.</p>:<>
+                  <label><span className="label">Chọn {selectedSeat.seatType==="guest"?"khách mời":"đại biểu"} ngồi tại ghế</span>
                     <div className="relative"><Search size={17} className="absolute left-3 top-3.5 text-[#8297a6]"/>
                       <input className="field pl-10" placeholder="Tên, mã hoặc đơn vị..." value={delegateQuery}
                         onChange={e=>setDelegateQuery(e.target.value)}/></div>
                   </label>
                   <div className="mt-3 max-h-52 space-y-1 overflow-auto rounded-xl border border-[#e0ecf1] p-1">
-                    {!filteredDelegates.length&&<p className="helper p-3">Không tìm thấy đại biểu.</p>}
+                    {!filteredDelegates.length&&<div className="p-3">
+                      <p className="helper">Không tìm thấy người phù hợp với loại ghế.</p>
+                      <Link href={"/congresses/"+congressId+"/delegates"}
+                        className="mt-2 inline-flex text-xs font-bold text-[#0876aa] hover:underline">
+                        Mở danh sách đại biểu để bổ sung hồ sơ
+                      </Link>
+                    </div>}
                     {filteredDelegates.map(d=><button key={d.id} type="button" disabled={working} onClick={()=>void assignOne(d.id)}
                       className={"flex w-full items-start justify-between gap-2 rounded-lg p-2.5 text-left text-sm hover:bg-[#eaf6f4] "+(selectedDelegate?.id===d.id?"bg-[#e2f6f1]":"")}>
                       <span className="min-w-0"><strong className="block truncate">{d.full_name}</strong><span className="block truncate text-xs text-[#6d8797]">{d.code} · {d.unit}</span></span>
@@ -556,7 +602,7 @@ export function SeatingClient({congressId,canManage}:Props){
                     <Trash2 size={16}/> Bỏ phân công ghế này
                   </button>}
                 </>}
-              </div>:selectedSeat.blocked?<p className="helper mt-3">Ghế đã khóa, không thể phân công.</p>:null}
+              </div>}{selectedSeat.blocked&&<p className="helper mt-3">Ghế đã khóa, không thể phân công.</p>}
             </>}
           </section>
         </aside>
@@ -609,10 +655,11 @@ export function SeatingClient({congressId,canManage}:Props){
         <h2 className="section-title">Danh sách phân công</h2>
         <p className="helper mt-1">Đối chiếu nhanh khi chuẩn bị sơ đồ và đón đại biểu.</p>
         {!activeAssignments.length?<p className="helper mt-4">Chưa phân công đại biểu vào ghế nào.</p>:
-        <div className="table-wrap mt-4"><table className="data"><thead><tr><th>Ghế</th><th>Đại biểu</th><th>Đơn vị</th><th>Điểm danh</th></tr></thead>
+        <div className="table-wrap mt-4"><table className="data"><thead><tr><th>Ghế</th><th>Loại ghế</th><th>Người ngồi</th><th>Đơn vị</th><th>Điểm danh</th></tr></thead>
           <tbody>{activeAssignments.map(a=>{
             const s=seats.find(s=>s.id===a.seat_id);const d=delegatesById.get(a.delegate_id);
             return <tr key={a.seat_id}><td className="font-semibold">{s?.code||"—"}</td>
+               <td>{s?.seatType==="guest"?"Khách mời":"Đại biểu"}</td>
               <td>{d?.full_name||"—"} <span className="text-[#7a91a0]">({d?.code})</span></td>
               <td>{d?.unit||"—"}</td>
               <td><span className={"badge "+(checkedIn.has(a.delegate_id)?"badge-green":"badge-gray")}>

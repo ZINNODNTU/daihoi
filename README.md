@@ -204,3 +204,13 @@ nhiều sơ đồ độc lập, vẫn hỗ trợ Canvas tự do, phân công đ�
 Đã bảo vệ ghế có phân công; không cần migration mới.
 
 Hướng dẫn chi tiết: docs/SEATING-GRID-CANVAS.md.
+
+## Canvas tùy biến số ô và phân loại ghế – v6 (08/11/2026)
+
+Canvas sơ đồ hội trường hiện cho nhập số hàng × số cột (tối đa 500 ô),
+đặt riêng cho từng hội trường. Quản trị viên chọn ghế đại biểu hoặc ghế khách mời,
+tự tô ghế/chừa lối đi, chọn người ngồi ngay trên sơ đồ và xuất/nhập Excel.
+Ghế đại biểu nhận hồ sơ chính thức/dự khuyết; ghế khách mời chỉ nhận khách mời.
+Quy tắc được kiểm tra trong API, nhập Excel và Supabase RPC.
+Đã áp dụng migration supabase/upgrade-seating-v6.sql; tài liệu sử dụng tại
+docs/SEATING-GRID-CANVAS.md.
