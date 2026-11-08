@@ -1,7 +1,7 @@
 export type BchCandidate={
  id:string;congress_id:string;full_name:string;birth_year:number;hometown:string;
  ethnicity:string;education_level:string;union_join_year:number;current_position:string;
- display_order:number;created_at:string;updated_at:string;
+ photo_path:string|null;display_order:number;created_at:string;updated_at:string;
 };
 export type BchCandidateInput=Pick<BchCandidate,
  "full_name"|"birth_year"|"hometown"|"ethnicity"|"education_level"|

@@ -244,3 +244,15 @@ lấy nhanh Họ tên/Chức vụ từ đại biểu và xuất Excel trích nga
 Bảng Supabase public.bch_candidates có RLS riêng; không phải kết quả bầu cử.
 Đã triển khai supabase/upgrade-bch-candidates-v8.sql.
 Chi tiết: docs/NHAN-SU-BCH.md.
+
+
+## Ảnh trích ngang BCH giống ảnh đại biểu – v9 (08/11/2026)
+
+Trích ngang nhân sự BCH đã có ảnh chân dung trên danh sách và form
+thêm/sửa; dùng chung công cụ xóa nền trắng + crop chuẩn 3:4
+(600×800) của Đại biểu. Có thể tải ảnh mới, thay ảnh trực tiếp
+hoặc lấy ảnh từ hồ sơ đại biểu đã chọn. Ảnh nhân sự BCH lưu độc lập
+trong kho private `delegate-photos/<congress_id>/bch/<candidate_id>.jpg`,
+được phân quyền riêng cho quản trị viên/thư ký. Migration
+`supabase/upgrade-bch-photos-v9.sql` đã áp dụng. Hướng dẫn:
+`docs/NHAN-SU-BCH.md`.

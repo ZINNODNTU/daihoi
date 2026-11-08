@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Kiem tra live Supabase: key, Auth, schema v2-v8, kho anh private va quyen RLS.
+/** Kiem tra live Supabase: key, Auth, schema v2-v9, kho anh private va quyen RLS.
  * KHONG in mat khau, Secret Key, token, hay du lieu dai bieu.
  */
 import nextEnv from "@next/env";
@@ -53,7 +53,7 @@ if(url===expectedUrl){
     ["delegates","login_email"],["delegates","auth_user_id"],
     ["checkins","qr_scope"],["seating_layouts","id"],
     ["seats","id"],["seat_assignments","seat_id"],
-    ["delegates","photo_path"],["bch_candidates","id"],["bch_candidates","birth_year"],["bch_candidates","ethnicity"],
+    ["delegates","photo_path"],["bch_candidates","id"],["bch_candidates","birth_year"],["bch_candidates","ethnicity"],["bch_candidates","photo_path"],
     ["seating_layouts","grid_rows"],["seating_layouts","grid_columns"],["seats","seat_type"]
    ];
    for(const [table,column] of checks){
@@ -61,7 +61,7 @@ if(url===expectedUrl){
     state(!error,table+"."+column+" hiện diện"+(error?" ("+error.code+")":"")+".");
    }
    const {data:photoBucket,error:bucketError}=await admin.storage.getBucket("delegate-photos");
-   state(!bucketError&&photoBucket?.public===false,"Kho ảnh đại biểu được cấu hình riêng tư.");
+   state(!bucketError&&photoBucket?.public===false,"Kho ảnh đại biểu/BCH được cấu hình riêng tư.");
    state(Boolean(photoBucket?.allowed_mime_types?.includes("image/jpeg")),"Kho ảnh chỉ nhận JPEG.");
 
   }
@@ -96,4 +96,4 @@ if(url===expectedUrl){
 if(failures){
  console.error("Chưa đạt "+failures+" bước kiểm tra. Xem README phần triển khai Supabase.");
  process.exitCode=1;
-}else console.log("Supabase và schema v2–v8, lưu trữ ảnh đã kiểm tra thành công.");
+}else console.log("Supabase và schema v2–v9, lưu trữ ảnh đã kiểm tra thành công.");

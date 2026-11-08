@@ -5,6 +5,7 @@ import {ImagePlus,Move,ScanFace,SlidersHorizontal,UserRound,X} from "lucide-reac
 
 type Props={
  name:string;
+ title?:string;
  initialPhotoUrl?:string|null;
  onClose:()=>void;
  onSave:(photo:Blob)=>Promise<void>|void;
@@ -89,7 +90,7 @@ function drawPortrait(
  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
  ctx.drawImage(source,x,y,w,h);
 }
-export function DelegatePhotoEditor({name,initialPhotoUrl,onClose,onSave}:Props){
+export function DelegatePhotoEditor({name,title="Ảnh hồ sơ đại biểu",initialPhotoUrl,onClose,onSave}:Props){
  const [state,setState]=useState<State>("idle");
  const [processed,setProcessed]=useState<HTMLCanvasElement|null>(null);
  const [file,setFile]=useState<File|null>(null);
@@ -174,9 +175,9 @@ export function DelegatePhotoEditor({name,initialPhotoUrl,onClose,onSave}:Props)
  }
  return <div className="modal-overlay fixed inset-0 z-[70] overflow-y-auto bg-[#102c3e]/75 p-3 sm:p-6" onClick={()=>{if(!saving)onClose();}}>
   <div className="mx-auto my-2 max-w-[790px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_80px_rgba(7,24,40,.28)] sm:my-6"
-   role="dialog" aria-modal="true" aria-label={"Chỉnh ảnh đại biểu "+name} onClick={e=>e.stopPropagation()}>
+   role="dialog" aria-modal="true" aria-label={"Chỉnh ảnh "+name} onClick={e=>e.stopPropagation()}>
    <div className="flex items-center justify-between gap-3 border-b border-[#e0eaf0] px-5 py-4">
-    <div><p className="text-[11px] font-bold uppercase tracking-[.12em] text-[#0a7cac]">Ảnh hồ sơ đại biểu</p>
+    <div><p className="text-[11px] font-bold uppercase tracking-[.12em] text-[#0a7cac]">{title}</p>
      <h2 className="mt-1 text-lg font-bold text-[#193b53]">{name}</h2>
      <p className="mt-1 text-xs text-[#708799]">Ảnh chân dung 3:4 · 600 × 800 px · nền trắng</p>
     </div>

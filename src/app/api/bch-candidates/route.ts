@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 import {validateBchInput} from "@/lib/bch-candidates";
+import {createAdminClient} from "@/lib/supabase/admin";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -33,7 +34,7 @@ export async function GET(request:Request){
   const auth=await authorize(congressId,false);
   if("error" in auth)return auth.error;
   const {data,error}=await auth.supabase.from("bch_candidates").select(
-   "id,congress_id,full_name,birth_year,hometown,ethnicity,education_level,union_join_year,current_position,display_order,created_at,updated_at"
+   "id,congress_id,full_name,birth_year,hometown,ethnicity,education_level,union_join_year,current_position,photo_path,display_order,created_at,updated_at"
   ).eq("congress_id",congressId).order("display_order",{ascending:true})
    .order("created_at",{ascending:true}).limit(500);
   if(error)return fail("Không đọc được danh sách nhân sự BCH. Kiểm tra migration v8.",500);
@@ -85,9 +86,15 @@ export async function DELETE(request:Request){
   const auth=await authorize(congressId,true);
   if("error" in auth)return auth.error;
   const {data,error}=await auth.supabase.from("bch_candidates").delete()
-   .eq("id",id).eq("congress_id",congressId).select("id").maybeSingle();
+   .eq("id",id).eq("congress_id",congressId).select("id,photo_path").maybeSingle();
   if(error)return fail("Không thể xóa hồ sơ nhân sự.",500);
   if(!data)return fail("Không tìm thấy hồ sơ cần xóa.",404);
+  const expected=congressId+"/bch/"+id+".jpg";
+  if(data.photo_path===expected){
+   const {error:cleanupError}=await createAdminClient().storage
+    .from("delegate-photos").remove([expected]);
+   if(cleanupError)console.error("bch photo cleanup failed",cleanupError.name);
+  }
   return NextResponse.json({ok:true},{headers:{"Cache-Control":"no-store"}});
  }catch{return fail("Dữ liệu gửi lên không hợp lệ.",400);}
 }

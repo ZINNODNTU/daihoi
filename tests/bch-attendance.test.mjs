@@ -82,7 +82,12 @@ test("BCH RLS limits reading to admin and secretary; write endpoints require adm
  const api=file("../src/app/api/bch-candidates/route.ts");
  assert.match(api,/authorize\(congressId,true\)/);
  assert.match(api,/\.eq\("id",id\)\.eq\("congress_id",congressId\)/);
- assert.doesNotMatch(api,/createAdminClient/);
+ // Candidate create/edit remain user-scoped, only post-delete photo cleanup uses admin storage.
+ const writes=api.slice(api.indexOf("export async function POST"),
+  api.indexOf("export async function DELETE"));
+ assert.doesNotMatch(writes,/createAdminClient\(\)/);
+ const deletion=api.slice(api.indexOf("export async function DELETE"));
+ assert.match(deletion,/\.from\("delegate-photos"\)\.remove\(\[expected\]\)/);
 });
 test("BCH UI includes all seven fields and export columns; attendance shows photo and seat",()=>{
  const ui=file("../src/components/bch-candidates-client.tsx");
