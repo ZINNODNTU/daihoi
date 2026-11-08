@@ -228,3 +228,19 @@ tên hiển thị thành Đơn vị; Excel cũ vẫn được đọc để tươ
 Đã triển khai migration supabase/upgrade-delegate-photos-v7.sql và tạo bucket
 private trong Supabase. Khi cài dự án mới, chạy npm run setup:delegate-photos.
 Chi tiết: docs/DAI-BIEU-ANH.md.
+
+## Flashcard điểm danh & Trích ngang nhân sự BCH (08/11/2026)
+
+Trang Điểm danh có flashcard hiển thị đại biểu vừa ghi nhận:
+ảnh chân dung, họ tên, đơn vị, mã ghế/hội trường, mã đại biểu và giờ quét.
+Được cập nhật ngay sau check-in thành công, tự đồng bộ thiết bị BTC khác
+mỗi 8 giây. Nếu chưa phân ghế hiển thị đúng trạng thái chưa xếp chỗ.
+Chi tiết: docs/FLASHCARD-DIEM-DANH.md.
+
+Menu Đại hội bổ sung **Trích ngang nhân sự BCH** (quản trị / thư ký):
+lưu 7 trường Họ tên – Năm sinh – Quê quán – Dân tộc – Trình độ –
+Năm vào Đoàn – Chức vụ hiện tại, cho phép thêm, sửa, xóa, tìm kiếm,
+lấy nhanh Họ tên/Chức vụ từ đại biểu và xuất Excel trích ngang.
+Bảng Supabase public.bch_candidates có RLS riêng; không phải kết quả bầu cử.
+Đã triển khai supabase/upgrade-bch-candidates-v8.sql.
+Chi tiết: docs/NHAN-SU-BCH.md.

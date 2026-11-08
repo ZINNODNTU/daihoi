@@ -17,9 +17,10 @@ type Props={
   congressId?:string;
   congressName?:string;
   canManage?:boolean;
+  canViewBch?:boolean;
 };
 
-export function AppShell({children,name,congressId,congressName,canManage=false}:Props){
+export function AppShell({children,name,congressId,congressName,canManage=false,canViewBch=false}:Props){
   const [mobile,setMobile]=useState(false);
   const path=usePathname();
   const router=useRouter();
@@ -30,6 +31,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
     {name:"Bảng điều hành",href:"/congresses/"+congressId,icon:BarChart3},
     {name:"Đại biểu",href:"/congresses/"+congressId+"/delegates",icon:Users},
     {name:"Sơ đồ ghế",href:"/congresses/"+congressId+"/seating",icon:Armchair},
+    ...(canViewBch?[{name:"Trích ngang nhân sự BCH",href:"/congresses/"+congressId+"/bch-candidates",icon:ClipboardList}]:[]),
     {name:"Điểm danh",href:"/congresses/"+congressId+"/attendance",icon:QrCode},
     {name:"Báo cáo",href:"/congresses/"+congressId+"/reports",icon:ClipboardList},
     {name:"Tài liệu",href:"/congresses/"+congressId+"/documents",icon:FileText}

@@ -16,7 +16,7 @@ if(!secret)throw new Error("Missing server secret");
 const client=createClient(url,secret,{
  auth:{persistSession:false,autoRefreshToken:false}
 });
-const tables=["profiles","organizations","congresses","congress_members","attendance_sessions","delegates","checkins","audit_logs","documents","voting_sessions","voting_options","voting_eligibilities","votes"];
+const tables=["profiles","organizations","congresses","congress_members","attendance_sessions","delegates","checkins","audit_logs","documents","voting_sessions","voting_options","voting_eligibilities","votes","bch_candidates"];
 const backup={projectId,capturedAt:new Date().toISOString(),tables:{},authUsers:[]};
 for(const table of tables){
  const rows=[];
@@ -44,7 +44,7 @@ for(let page=1;page<=100;page++){
 }
 const folder=join(process.env.LOCALAPPDATA||process.env.USERPROFILE||".","DAIHOI","database-backups");
 mkdirSync(folder,{recursive:true});
-const filename=`supabase-${projectId}-pre-v2-v5-${new Date().toISOString().replace(/[:.]/g,"-")}.json`;
+const filename=`supabase-${projectId}-snapshot-${new Date().toISOString().replace(/[:.]/g,"-")}.json`;
 const target=join(folder,filename);
 writeFileSync(target,JSON.stringify(backup,null,2),{encoding:"utf8",flag:"wx",mode:0o600});
 console.log("[OK] Local backup completed; authentication metadata and all public rows retained.");

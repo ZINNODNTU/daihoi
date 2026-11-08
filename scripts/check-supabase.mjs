@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Kiem tra live Supabase: key, Auth, schema v2-v7, kho anh private va quyen RLS.
+/** Kiem tra live Supabase: key, Auth, schema v2-v8, kho anh private va quyen RLS.
  * KHONG in mat khau, Secret Key, token, hay du lieu dai bieu.
  */
 import nextEnv from "@next/env";
@@ -53,7 +53,7 @@ if(url===expectedUrl){
     ["delegates","login_email"],["delegates","auth_user_id"],
     ["checkins","qr_scope"],["seating_layouts","id"],
     ["seats","id"],["seat_assignments","seat_id"],
-    ["delegates","photo_path"],
+    ["delegates","photo_path"],["bch_candidates","id"],["bch_candidates","birth_year"],["bch_candidates","ethnicity"],
     ["seating_layouts","grid_rows"],["seating_layouts","grid_columns"],["seats","seat_type"]
    ];
    for(const [table,column] of checks){
@@ -85,6 +85,9 @@ if(url===expectedUrl){
     p_title:"check",p_stage_label:"check",p_grid_rows:10,p_grid_columns:20,p_seats:[]
    });
    state(v6Error?.code==="42501","Quyền ghi sơ đồ v6 bị chặn với anon.");
+   const {error:bchAnonError}=await anon.from("bch_candidates").select("id").limit(1);
+   state(bchAnonError?.code==="42501","Quyền đọc danh sách BCH bị chặn với anon.");
+
   }
  }catch(error){
   state(false,"Không kết nối được Supabase: "+(error instanceof Error?error.name:"unknown"));
@@ -93,4 +96,4 @@ if(url===expectedUrl){
 if(failures){
  console.error("Chưa đạt "+failures+" bước kiểm tra. Xem README phần triển khai Supabase.");
  process.exitCode=1;
-}else console.log("Supabase và schema v2–v7, lưu trữ ảnh đã kiểm tra thành công.");
+}else console.log("Supabase và schema v2–v8, lưu trữ ảnh đã kiểm tra thành công.");

@@ -11,10 +11,12 @@ import {
  getWindowStatus,getWindowLabel,getQrPolicyLabel,vietnamTimeToUtc,utcToVietnamInput,type QrPolicy
 } from "@/lib/attendance-window";
 import type {Delegate,AttendanceSession,Checkin} from "@/lib/types";
+import {currentSessionCheckins,type SeatPlacement} from "@/lib/attendance-seating";
+import {RecentCheckinCard} from "@/components/recent-checkin-card";
 
 type Props={
  congressId:string;delegates:Delegate[];sessions:AttendanceSession[];
- initialCheckins:Checkin[];canScan:boolean;canManage:boolean;
+ initialCheckins:Checkin[];seatByDelegate:Record<string,SeatPlacement>;canScan:boolean;canManage:boolean;
 };
 type Tab="qr"|"manual"|"history";
 type Fallback="manual"|"barcode";
@@ -30,7 +32,7 @@ function windowBody(start:string,end:string){
   throw new Error("Giờ đóng phải sau giờ mở; sử dụng giờ Việt Nam (GMT+7).");
  return {startsAt,endsAt};
 }
-export function AttendanceClient({congressId,delegates,sessions:initialSessions,initialCheckins,canScan,canManage}:Props){
+export function AttendanceClient({congressId,delegates,sessions:initialSessions,initialCheckins,seatByDelegate,canScan,canManage}:Props){
  const [sessions,setSessions]=useState(initialSessions);
  const [sessionId,setSessionId]=useState(initialSessions[0]?.id||"");
  const [checkins,setCheckins]=useState(initialCheckins);
@@ -55,7 +57,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
  const session=sessions.find(s=>s.id===sessionId);
  const windowStatus=session?getWindowStatus(session,new Date(clock)):"not-configured";
  const allowed=windowStatus==="open" && canScan;
- const filtered=useMemo(()=>checkins.filter(c=>c.session_id===sessionId),[checkins,sessionId]);
+ const filtered=useMemo(()=>currentSessionCheckins(checkins,sessionId),[checkins,sessionId]);
  const checkedIds=useMemo(()=>new Set(filtered.map(c=>c.delegate_id)),[filtered]);
  const eligible=useMemo(()=>delegates.filter(d=>d.is_active),[delegates]);
  const activeIds=useMemo(()=>new Set(eligible.map(d=>d.id)),[eligible]);
@@ -80,11 +82,18 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
   ]);
  },[sessionId,congressId]);
  useEffect(()=>{
-  const t=setInterval(()=>{setClock(Date.now());void reload();},12000);
+  const t=setInterval(()=>{setClock(Date.now());void reload();},8000);
   queueMicrotask(()=>void reload());
   return()=>clearInterval(t);
  },[reload]);
- useEffect(()=>()=>{controlsRef.current?.stop();},[]);
+ useEffect(()=>{
+   const updateWhenVisible=()=>{
+    if(document.visibilityState==="visible"){setClock(()=>Date.now());void reload();}
+   };
+   window.addEventListener("visibilitychange",updateWhenVisible);
+   return()=>window.removeEventListener("visibilitychange",updateWhenVisible);
+  },[reload]);
+  useEffect(()=>()=>{controlsRef.current?.stop();},[]);
   useEffect(()=>{
     if(!review)return;
     const priorOverflow=document.body.style.overflow;
@@ -140,7 +149,15 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
    const result=await res.json();
    if(!res.ok)throw new Error(result.error||"Điểm danh thất bại.");
    setFlash({type:"success",text:`Đã điểm danh: ${result.delegate.full_name} (${result.delegate.code}) – ${method==="qr"?"QR":method==="barcode"?"Barcode dự phòng":"BTC xác nhận thủ công"}.`});
-   setReview(null);setBarcodeInput("");
+   // Latest check-in is displayed immediately, then reconciled from database.
+    const inserted:Checkin={
+     id:result.checkin.id,congress_id:congressId,session_id:sessionId,
+     delegate_id:result.delegate.id,method,qr_scope:result.qrScope??null,
+     checked_in_by:"",checked_in_at:result.checkin.checked_in_at,
+     note:method==="qr"?null:note
+    };
+    setCheckins(previous=>[inserted,...previous.filter(item=>item.id!==inserted.id)]);
+    setReview(null);setBarcodeInput("");
    await reload();
   }catch(e){
    setFlash({type:"error",text:e instanceof Error?e.message:"Điểm danh thất bại."});
@@ -309,7 +326,10 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
    <p className="helper mt-3">Số liệu chỉ phản ánh check-in, không tự xác nhận tư cách hoặc quyền biểu quyết.</p>
   </div>
   {flash&&<p role={flash.type==="error"?"alert":"status"} className={`rounded-xl p-4 mb-6 font-semibold text-sm ${flash.type==="success"?"bg-[#ddf8ed] text-[#117d54]":"bg-red-50 text-red-700"}`}>{flash.text}</p>}
-  <div className="card overflow-hidden">
+
+   <div className={"grid min-w-0 gap-5 "+(tab==="history"?"":"xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,.9fr)] xl:items-start")}>
+    <div className="order-2 min-w-0 xl:order-1">
+     <div className="card overflow-hidden">
    <div className="grid grid-cols-2 gap-2 border-b border-[#e8f0f5] p-3 sm:flex sm:flex-wrap sm:p-4">
     {canScan&&<>
      <button aria-pressed={tab==="qr"} className={`btn min-w-0 whitespace-normal ${tab==="qr"?"btn-primary":"btn-secondary"}`} onClick={()=>{stopCamera();setTab("qr");}}>
@@ -385,8 +405,15 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
      <td className="hide-mobile">{c.note||"—"}</td></tr>)}
      {!filtered.length&&<tr><td colSpan={4} className="text-center helper py-8!">Chưa có lượt điểm danh.</td></tr>}
     </tbody></table></div>}
-  </div>
-  {review&&<div role="presentation" className="modal-overlay fixed inset-0 z-50 bg-[#0d2945]/60 flex items-center justify-center p-4"
+
+     </div>
+    </div>
+    <div className="order-1 min-w-0 xl:order-2 xl:sticky xl:top-[105px]">
+     <RecentCheckinCard latest={filtered[0]||null} recent={filtered.slice(0,4)}
+      delegates={lookup} seats={seatByDelegate} now={clock}/>
+    </div>
+   </div>
+   {review&&<div role="presentation" className="modal-overlay fixed inset-0 z-50 bg-[#0d2945]/60 flex items-center justify-center p-4"
    ><button type="button" tabIndex={-1} aria-label="Đóng hộp thoại xác nhận" className="absolute inset-0" onClick={()=>setReview(null)}/><div role="dialog" aria-modal="true" aria-label="Xác nhận điểm danh dự phòng" className="card mobile-sheet relative z-10 max-w-lg w-full p-5 sm:p-7">
     <div className="flex gap-3 items-center text-[#126a89]"><ShieldAlert size={23}/>
      <h3 className="text-xl font-semibold">Xác nhận điểm danh dự phòng</h3></div>
