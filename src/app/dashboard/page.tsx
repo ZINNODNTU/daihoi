@@ -47,7 +47,7 @@ export default async function Dashboard(){
         <div>
           <p className="command-label">HỆ THỐNG ĐIỀU HÀNH / TỔNG QUAN</p>
           <h1 className="mt-4 text-[clamp(29px,3vw,39px)] font-semibold leading-[1.16] tracking-[-.052em] text-white">Một không gian.<br/>
-            <span className="font-[Georgia] font-normal italic text-[#e7c88f]">Mọi kỳ Đại hội.</span></h1>
+            <span className="font-sans font-semibold not-italic tracking-[-.025em] text-[#ffde7c]">Mọi kỳ Đại hội.</span></h1>
           <p className="mt-4 max-w-[630px] text-[13px] leading-[1.8] text-[#b6c6dc]">Quản lý thông tin và tình trạng các Đại hội trong cùng một hệ thống, thuận tiện cho việc phối hợp công tác.</p>
         </div>
         <div className="flex flex-wrap items-end gap-4">

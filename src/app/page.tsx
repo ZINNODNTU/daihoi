@@ -25,7 +25,7 @@ export default function Home(){
         <div className="premium-container flex h-full items-center justify-between gap-4">
           <Link href="/" aria-label="Trang chủ Đại hội số" className="flex shrink-0 items-center gap-3">
             <BrandMark/>
-            <span className="text-[17px] font-bold tracking-[-.04em] text-white sm:text-[18px]">Đại hội số<span className="ml-1 text-[#dbb875]">.</span></span>
+            <span className="text-[17px] font-bold tracking-[-.04em] text-white sm:text-[18px]">Đại hội số<span className="ml-1 text-[#ffd35a]">.</span></span>
           </Link>
           <div className="hidden items-center gap-8 text-[12px] font-medium text-[#adbed8] md:flex">
             <a href="#giai-phap" className="hover:text-white">Giải pháp</a>
@@ -114,7 +114,7 @@ export default function Home(){
             <p className="mt-3 max-w-[485px]">Quản lý nhiều nhiệm kỳ và đơn vị, mỗi không gian có quyền truy cập và dữ liệu riêng.</p>
           </div>
           <div className="editorial-feature dark min-h-[230px] sm:min-h-[254px]">
-            <div className="flex items-start justify-between gap-3"><span className="feature-count">SẴN SÀNG CHO VẬN HÀNH</span><QrCode size={24} className="text-[#e1bd7c]"/></div>
+            <div className="flex items-start justify-between gap-3"><span className="feature-count">SẴN SÀNG CHO VẬN HÀNH</span><QrCode size={24} className="text-[#ffcf5b]"/></div>
             <h3 className="mt-auto max-w-sm !text-[24px] !leading-snug !tracking-[-.04em]">Mọi phiên làm việc.<br/>Một cách điều hành.</h3>
             <p className="mt-3 max-w-[440px]">Cấu hình phiên điểm danh theo khung giờ, kết hợp quét QR và phương án thủ công dự phòng.</p>
           </div>

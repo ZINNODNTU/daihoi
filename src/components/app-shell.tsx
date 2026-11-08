@@ -5,7 +5,7 @@ import Link from "next/link";
 import {usePathname,useRouter} from "next/navigation";
 import {
   Armchair,ArrowRight,BarChart3,ChevronDown,ChevronRight,ClipboardList,FileText,
-  LayoutGrid,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X
+  LayoutGrid,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X,IdCard
 } from "lucide-react";
 import {BrandMark} from "@/components/brand-mark";
 import {createClient} from "@/lib/supabase/browser";
@@ -24,6 +24,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
   const path=usePathname();
   const router=useRouter();
   const overview:NavItem={name:"Tổng quan hệ thống",href:"/dashboard",icon:LayoutGrid};
+  const myCard:NavItem={name:"Thẻ đại biểu của tôi",href:"/my-card",icon:IdCard};
   const congressItems:NavItem[]=congressId?[
     {name:"Bảng điều hành",href:"/congresses/"+congressId,icon:BarChart3},
     {name:"Đại biểu",href:"/congresses/"+congressId+"/delegates",icon:Users},
@@ -36,7 +37,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
     {name:"Nhân sự BTC",href:"/congresses/"+congressId+"/team",icon:UserRoundCog},
     {name:"Cấu hình",href:"/congresses/"+congressId+"/settings",icon:Settings2}
   ]:[];
-  const items=[overview,...congressItems,...adminItems];
+  const items=[overview,myCard,...congressItems,...adminItems];
   const active=items.find(x=>x.href===path)||overview;
   const displayName=name.trim()||"Thành viên BTC";
   const avatar=displayName.charAt(0).toLocaleUpperCase("vi");
@@ -80,8 +81,8 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
           aria-label="Đại hội số — Tổng quan" className="flex min-w-0 items-center gap-3">
           <BrandMark/>
           <span className="min-w-0 leading-tight">
-            <span className="block text-[16px] font-bold tracking-[-.035em] text-white">Đại hội số<span className="ml-1.5 text-[#dcb976]">.</span></span>
-            <span className="mt-1 block text-[9px] font-medium uppercase tracking-[.17em] text-[#91a0ba]">CONGRESS WORKSPACE</span>
+            <span className="block text-[16px] font-bold tracking-[-.035em] text-white">Đại hội số<span className="ml-1.5 text-[#ffd052]">.</span></span>
+            <span className="mt-1 block text-[9px] font-medium uppercase tracking-[.17em] text-[#91a0ba]">NỀN TẢNG ĐẠI HỘI</span>
           </span>
         </Link>
         <button type="button" className="flex h-9 w-9 items-center justify-center rounded-lg text-[#c0ccdb] hover:bg-white/10 lg:hidden"
@@ -90,7 +91,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
       <div className="app-sidebar-scroll flex-1 overflow-y-auto px-3.5 pb-4">
         <div className="pt-7">
           <p className="sidebar-group-label">Hệ thống</p>
-          <nav aria-label="Hệ thống">{navLink(overview)}</nav>
+          <nav aria-label="Hệ thống">{navLink(overview)}{navLink(myCard)}</nav>
         </div>
 
         {congressId&&<>
@@ -128,7 +129,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-white/15 bg-white/10 text-[12px] font-bold text-white">{avatar}</span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[12px] font-semibold text-white">{displayName}</p>
-            <p className="mt-1 text-[10px] text-[#9aaac3]">Tài khoản BTC</p>
+            <p className="mt-1 text-[10px] text-[#9aaac3]">Tài khoản Đại hội</p>
           </div>
           <button type="button" onClick={logout} aria-label="Đăng xuất" title="Đăng xuất"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] text-[#b4c2d6] hover:bg-white/10 hover:text-white">
@@ -147,7 +148,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false}
           </button>
           <div className="min-w-0">
             <div className="hidden items-center gap-2 text-[11px] text-[#8996a8] sm:flex">
-              <Link href="/dashboard" className="hover:text-[#345ac5]">Workspace</Link>
+              <Link href="/dashboard" className="hover:text-[#007eaf]">Workspace</Link>
               <ChevronRight size={12} className="text-[#c0cad6]"/>
               {congressName&&<><span className="max-w-[220px] truncate">{congressName}</span><ChevronRight size={12} className="text-[#c0cad6]"/></>}
               <span>{active.name}</span>

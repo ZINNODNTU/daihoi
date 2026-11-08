@@ -3,7 +3,7 @@ export type Congress={
  term:string;venue:string;status:"preparing"|"live"|"completed";starts_at:string|null;ends_at:string|null;
 };
 export type Delegate={
- id:string;congress_id:string;code:string;full_name:string;unit:string;
+ id:string;congress_id:string;code:string;full_name:string;unit:string;student_id:string|null;position:string;login_email:string|null;auth_user_id:string|null;
  delegate_type:"official"|"alternate"|"guest";qr_version:number;barcode_code:string;is_active:boolean;
 };
 export type AttendanceSession={

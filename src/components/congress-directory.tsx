@@ -69,7 +69,7 @@ export function CongressDirectory({items}:{items:CongressSummary[]}){
             <LayoutGrid size={20} strokeWidth={1.8}/>
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="line-clamp-2 text-[14px] font-bold leading-6 text-[#27364c] group-hover:text-[#2456c9]">{item.name}</h3>
+            <h3 className="line-clamp-2 text-[14px] font-bold leading-6 text-[#27364c] group-hover:text-[#007eb8]">{item.name}</h3>
             <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-[#8793a2]">
               <span>{item.kind==="doan"?"Đoàn TNCS Hồ Chí Minh":"Hội Sinh viên Việt Nam"}</span>
               {item.term&&<span className="inline-flex items-center gap-1"><CalendarDays size={12}/>{item.term}</span>}
@@ -78,7 +78,7 @@ export function CongressDirectory({items}:{items:CongressSummary[]}){
           </div>
           <div className="flex items-center justify-between gap-4 sm:justify-end">
             <span className={"badge gap-1.5 "+state.badge}><span className={"h-1.5 w-1.5 rounded-full "+state.dot}/>{state.label}</span>
-            <span className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa5b4] group-hover:bg-[#eff4ff] group-hover:text-[#2456c9]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa5b4] group-hover:bg-[#eff4ff] group-hover:text-[#007eb8]">
               <ArrowUpRight size={17}/>
             </span>
           </div>

@@ -21,7 +21,7 @@ export function CongressSettingsClient({initial}:{initial:Values}){
   finally{setBusy(false);}
  }
  return <div className="max-w-3xl space-y-6">
-  <div><p className="text-sm font-bold text-[#2456c9] tracking-wider">THIẾT LẬP</p><h1 className="page-title mt-2">Cấu hình Đại hội</h1><p className="helper mt-2">Chỉnh sửa thông tin điều hành. Mã định danh và loại Đại hội không thay đổi.</p></div>
+  <div><p className="text-sm font-bold text-[#007eb8] tracking-wider">THIẾT LẬP</p><h1 className="page-title mt-2">Cấu hình Đại hội</h1><p className="helper mt-2">Chỉnh sửa thông tin điều hành. Mã định danh và loại Đại hội không thay đổi.</p></div>
   {error&&<p role="alert" className="card p-4 text-red-700">{error}</p>}
   {message&&<p role="status" className="card p-4 text-teal-700">{message}</p>}
   <form className="card p-4 sm:p-6 space-y-5" onSubmit={save}>

@@ -1,25 +1,47 @@
+import {randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
-export async function POST(request:Request) {
- try {
+
+export const runtime="nodejs";
+const studentIdPattern=/^[A-Za-z0-9][A-Za-z0-9._-]{3,31}$/;
+const delegateKinds=["official","alternate","guest"] as const;
+type DelegateKind=(typeof delegateKinds)[number];
+const reply=(error:string,status:number)=>NextResponse.json({error},{status,headers:{"Cache-Control":"no-store"}});
+
+export async function POST(request:Request){
+ try{
   const {supabase,user}=await getAuth();
-  if(!user) return NextResponse.json({error:"Cần đăng nhập."},{status:401});
+  if(!user)return reply("Cần đăng nhập.",401);
   const body=await request.json();
   const congressId=String(body.congressId||"");
-  if(!(await hasRole(supabase,user.id,congressId,"admin"))) return NextResponse.json({error:"Không có quyền quản lý đại biểu."},{status:403});
-  const entries:Record<string,unknown>[]=Array.isArray(body.delegates)?body.delegates:[body];
-  if(!entries.length||entries.length>250) return NextResponse.json({error:"Mỗi lần nhập tối đa 250 đại biểu."},{status:400});
-  const rows=entries.map((item:Record<string,unknown>)=>({
+  if(!(await hasRole(supabase,user.id,congressId,"admin")))return reply("Không có quyền quản lý đại biểu.",403);
+  const entries:unknown[]=Array.isArray(body.delegates)?body.delegates:[body];
+  if(!entries.length||entries.length>250)return reply("Mỗi lần nhập tối đa 250 đại biểu.",400);
+  const rows=entries.map(entry=>{
+   const item=(entry&&typeof entry==="object"&&!Array.isArray(entry)?entry:{}) as Record<string,unknown>;
+   const studentId=String(item.student_id??"").trim().toUpperCase();
+   const type=delegateKinds.includes(item.delegate_type as DelegateKind)?item.delegate_type as DelegateKind:"official";
+   return {
     congress_id:congressId,
-    code:String(item.code||"").trim().slice(0,40),
-    full_name:String(item.full_name||"").trim().slice(0,160),
-    unit:String(item.unit||"").trim().slice(0,200),
-    delegate_type:["official","alternate","guest"].includes(String(item.delegate_type))?item.delegate_type:"official",
-  }));
-  if(rows.some(r=>!r.code||!r.full_name)) return NextResponse.json({error:"Mỗi đại biểu phải có mã và họ tên."},{status:400});
-  if(new Set(rows.map(r=>r.code.toLowerCase())).size!==rows.length) return NextResponse.json({error:"Có mã đại biểu trùng trong danh sách."},{status:400});
+    code:(String(item.code??"").trim()||studentId||"KM-"+randomUUID().slice(0,8).toUpperCase()).slice(0,40),
+    full_name:String(item.full_name??"").trim().slice(0,160),
+    unit:String(item.unit??"").trim().slice(0,200),
+    student_id:studentId||null,
+    position:String(item.position??"").trim().slice(0,160),
+    login_email:studentId?studentId.toLowerCase()+"@dntu.edu.vn":null,
+    delegate_type:type
+   };
+  });
+  if(rows.some(r=>!r.code||!r.full_name||(!r.student_id&&r.delegate_type!=="guest")))
+   return reply("Đại biểu cần có MSSV và họ tên; khách mời có thể để trống MSSV.",400);
+  if(rows.some(r=>r.student_id&&!studentIdPattern.test(r.student_id)))
+   return reply("MSSV phải gồm 4–32 ký tự chữ, số, dấu chấm, gạch nối hoặc gạch dưới.",400);
+  const codes=rows.map(r=>r.code.toLowerCase());
+  const students=rows.filter(r=>r.student_id).map(r=>r.student_id!.toLowerCase());
+  if(new Set(codes).size!==codes.length||new Set(students).size!==students.length)
+   return reply("Có MSSV hoặc mã đại biểu bị trùng trong tệp.",400);
   const {data,error}=await supabase.from("delegates").insert(rows).select("id,code,full_name");
-  if(error) return NextResponse.json({error:error.code==="23505"?"Mã đại biểu đã tồn tại.": "Không lưu được danh sách đại biểu."},{status:error.code==="23505"?409:500});
-  return NextResponse.json({ok:true,count:data?.length??0});
- } catch {return NextResponse.json({error:"Yêu cầu không hợp lệ."},{status:400});}
+  if(error)return reply(error.code==="23505"?"MSSV/mã đại biểu đã tồn tại trong dữ liệu.":"Không thể lưu danh sách. Kiểm tra đã áp dụng nâng cấp cơ sở dữ liệu v5.",error.code==="23505"?409:500);
+  return NextResponse.json({ok:true,count:data?.length??0},{headers:{"Cache-Control":"no-store"}});
+ }catch{return reply("Yêu cầu không hợp lệ.",400);}
 }

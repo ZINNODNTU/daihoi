@@ -9,10 +9,10 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
   const {supabase,user}=await getAuth();
   if(!user)return NextResponse.json({error:"Cần đăng nhập."},{status:401});
   const {data:d}=await supabase.from("delegates")
-   .select("id,congress_id,qr_version,barcode_code,code,full_name,is_active")
+   .select("id,congress_id,qr_version,barcode_code,code,full_name,is_active,auth_user_id")
    .eq("id",id).maybeSingle();
   if(!d||!d.is_active)return NextResponse.json({error:"Không tìm thấy đại biểu."},{status:404});
-  if(!(await hasRole(supabase,user.id,d.congress_id,"viewer")))
+  if(!(await hasRole(supabase,user.id,d.congress_id,"checkin"))&&d.auth_user_id!==user.id)
    return NextResponse.json({error:"Không đủ quyền."},{status:403});
   const sessionId=new URL(request.url).searchParams.get("sessionId");
   if(sessionId){

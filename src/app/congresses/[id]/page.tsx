@@ -87,12 +87,12 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
             <span className="action-icon"><area.icon size={19} strokeWidth={1.8}/></span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3">
-                <p className="action-title group-hover:text-[#315bcc]">{area.title}</p>
+                <p className="action-title group-hover:text-[#0084bd]">{area.title}</p>
                 <span className="hidden text-[10px] font-bold text-[#bac5d5] sm:inline">{String(index+1).padStart(2,"0")}</span>
               </div>
               <p className="action-desc mt-1">{area.description}</p>
             </div>
-            <ArrowUpRight size={17} className="shrink-0 text-[#a0afc2] group-hover:text-[#315bcc]"/>
+            <ArrowUpRight size={17} className="shrink-0 text-[#a0afc2] group-hover:text-[#0084bd]"/>
           </Link>)}
         </div>
       </section>
@@ -106,7 +106,7 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
           </div>
           <div className="flex flex-col items-center px-5 pb-6 pt-7 text-center">
             <div className="relative flex h-[150px] w-[150px] items-center justify-center rounded-full"
-              style={{background:"conic-gradient(#315bcc "+percent+"%,#e9edf5 "+percent+"% 100%)"}}>
+              style={{background:"conic-gradient(#0084bd "+percent+"%,#e9edf5 "+percent+"% 100%)"}}>
               <div className="flex h-[121px] w-[121px] flex-col items-center justify-center rounded-full bg-white">
                 <span className="text-[37px] font-bold leading-none tracking-[-.06em] text-[#263957]">{percent}%</span>
                 <span className="mt-2 text-[10px] text-[#8998a9]">ĐÃ ĐIỂM DANH</span>
@@ -126,7 +126,7 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
     <section className="workspace-panel overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e6ebf2] px-5 py-4 sm:px-6">
         <div><p className="page-kicker">DANH SÁCH PHIÊN</p><h2 className="section-title mt-1">Các phiên điểm danh</h2></div>
-        <Link href={"/congresses/"+id+"/attendance"} className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#315bcc] hover:underline">Quản lý phiên <ArrowRight size={16}/></Link>
+        <Link href={"/congresses/"+id+"/attendance"} className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#0084bd] hover:underline">Quản lý phiên <ArrowRight size={16}/></Link>
       </div>
       {!sessions?.length?<div className="empty-state">
         <QrCode size={25} className="mx-auto text-[#8798b0]"/>

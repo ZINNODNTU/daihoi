@@ -6,6 +6,7 @@ import Link from "next/link";
 import {ArrowLeft,ArrowRight,Eye,EyeOff,LockKeyhole,Mail,ShieldCheck} from "lucide-react";
 import {BrandMark} from "@/components/brand-mark";
 import {createClient} from "@/lib/supabase/browser";
+import {toSupabaseAuthEmail} from "@/lib/login-identity";
 
 export default function Login(){
   const router=useRouter();
@@ -20,9 +21,18 @@ export default function Login(){
     if(busy)return;
     setBusy(true);setError("");
     try{
-      const {error:authError}=await createClient().auth.signInWithPassword({email,password});
-      if(authError)throw authError;
-      router.push("/dashboard");router.refresh();
+      if(!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)throw new Error("Hệ thống chưa cấu hình kết nối Supabase. Hãy liên hệ quản trị viên.");
+      const client=createClient();
+      const normalized=email.trim().toLowerCase();
+      const internal=toSupabaseAuthEmail(normalized);
+      let {data:authData,error:authError}=await client.auth.signInWithPassword({email:internal,password});
+      // Tài khoản email cơ quan có thật (đã mời từ trước) vẫn đăng nhập được.
+      if(authError&&internal!==normalized){
+       ({data:authData,error:authError}=await client.auth.signInWithPassword({email:normalized,password}));
+      }
+      if(authError||!authData.user)throw authError||new Error("Không thể xác thực tài khoản.");
+      const {data:myDelegate}=await client.from("delegates").select("id").eq("auth_user_id",authData.user.id).eq("is_active",true).limit(1).maybeSingle();
+      router.push(myDelegate?"/my-card":"/dashboard");router.refresh();
     }catch(err){
       setError(err instanceof Error?err.message:"Đăng nhập thất bại. Hãy thử lại.");
       setBusy(false);
@@ -38,8 +48,8 @@ export default function Login(){
       </Link>
       <div className="relative max-w-[510px] pb-8">
         <p className="premium-eyebrow">KHÔNG GIAN ĐIỀU HÀNH NỘI BỘ</p>
-        <h1 className="mt-9 text-[clamp(39px,4.1vw,62px)] font-semibold leading-[1.14] tracking-[-.062em] text-white">
-          Vững vàng<br/>trong từng<br/><span className="font-[Georgia] font-normal italic text-[#e2bd7b]">quyết định.</span>
+        <h1 className="mt-9 text-[clamp(37px,3.5vw,55px)] font-semibold leading-[1.22] tracking-[-.035em] text-white">
+          Tổ chức<br/>chuẩn mực.<br/><span className="font-sans font-semibold not-italic tracking-[-.035em] text-[#ffdf83]">Điều hành chủ động.</span>
         </h1>
         <p className="mt-7 max-w-[380px] text-[14px] leading-[1.95] text-[#b6c7df]">
           Một hệ thống thống nhất để Ban Tổ chức chuẩn bị, phối hợp và điều hành Đại hội từ đầu đến cuối.
@@ -64,12 +74,12 @@ export default function Login(){
     <section className="flex min-w-0 flex-1 flex-col px-5 pb-12 pt-6 sm:px-10 sm:py-11 lg:justify-center lg:px-14">
       <div className="mx-auto w-full max-w-[430px]">
         <div className="mb-14 flex items-center justify-between lg:mb-18">
-          <Link href="/" className="inline-flex min-h-10 items-center gap-2 text-[12px] font-semibold text-[#778499] hover:text-[#315bcc]"><ArrowLeft size={16}/> Trang chủ</Link>
+          <Link href="/" className="inline-flex min-h-10 items-center gap-2 text-[12px] font-semibold text-[#778499] hover:text-[#0084bd]"><ArrowLeft size={16}/> Trang chủ</Link>
           <Link href="/" className="flex items-center gap-2 text-[12px] font-bold text-[#263650] lg:hidden"><BrandMark className="brand-symbol-light !h-8 !w-8 !flex-[0_0_32px] !rounded-[8px] [&_svg]:!h-6 [&_svg]:!w-6"/> Đại hội số</Link>
         </div>
 
         <div className="mb-9">
-          <p className="page-kicker">ĐĂNG NHẬP QUẢN TRỊ</p>
+          <p className="page-kicker">ĐĂNG NHẬP HỆ THỐNG</p>
           <h2 className="mt-5 text-[35px] font-bold leading-[1.14] tracking-[-.055em] text-[#1c2b41] sm:text-[41px]">Chào mừng<br/>trở lại.</h2>
           <p className="mt-4 max-w-[400px] text-[14px] leading-7 text-[#758398]">Sử dụng tài khoản đã được Ban Tổ chức cấp quyền để truy cập không gian làm việc.</p>
         </div>
@@ -91,7 +101,7 @@ export default function Login(){
                 value={password} onChange={e=>setPassword(e.target.value)} placeholder="Nhập mật khẩu"/>
               <button type="button" aria-label={showPassword?"Ẩn mật khẩu":"Hiện mật khẩu"} aria-pressed={showPassword}
                 onClick={()=>setShowPassword(value=>!value)}
-                className="absolute right-1 top-0 flex h-[44px] w-10 items-center justify-center rounded-md text-[#8c98a8] hover:text-[#315bcc]">
+                className="absolute right-1 top-0 flex h-[44px] w-10 items-center justify-center rounded-md text-[#8c98a8] hover:text-[#0084bd]">
                 {showPassword?<EyeOff size={18}/>:<Eye size={18}/>}
               </button>
             </span>

@@ -5,9 +5,9 @@ import {createAdminClient} from "@/lib/supabase/admin";
 export const runtime="nodejs";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-type MemberRole="admin"|"checkin"|"secretary";
+type MemberRole="admin"|"checkin"|"secretary"|"guest";
 function validRole(value:unknown):value is MemberRole{
- return value==="admin"||value==="checkin"||value==="secretary";
+ return value==="admin"||value==="checkin"||value==="secretary"||value==="guest";
 }
 function failure(error:string,status:number){
  return NextResponse.json({error},{status,headers:{"Cache-Control":"no-store"}});

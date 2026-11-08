@@ -81,7 +81,7 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
           <tbody>{filtered.map(doc=>{
             const Icon=iconFor(doc.mime_type);
             return <tr key={doc.id}>
-              <td><div className="flex max-w-[420px] items-center gap-3"><span className="shrink-0 rounded-xl bg-[#edf3ff] p-2 text-[#2456c9]"><Icon size={19}/></span><span className="min-w-0 break-words font-bold">{doc.file_name}</span></div></td>
+              <td><div className="flex max-w-[420px] items-center gap-3"><span className="shrink-0 rounded-xl bg-[#edf3ff] p-2 text-[#007eb8]"><Icon size={19}/></span><span className="min-w-0 break-words font-bold">{doc.file_name}</span></div></td>
               <td>{kind(doc.mime_type)}</td><td>{fileSize(doc.byte_size)}</td>
               <td>{new Date(doc.created_at).toLocaleDateString("vi-VN")}</td>
               <td><a className="btn btn-secondary" href={`/api/documents/${doc.id}`}><Download size={17}/> Tải về</a></td>
@@ -92,7 +92,7 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
           {filtered.map(doc=>{
             const Icon=iconFor(doc.mime_type);
             return <article key={doc.id} className="mobile-record">
-              <div className="flex items-start gap-3"><span className="rounded-xl bg-[#edf3ff] p-2.5 text-[#2456c9]"><Icon size={21}/></span><div className="min-w-0 flex-1"><h3 className="mobile-record-title">{doc.file_name}</h3><p className="mobile-record-meta mt-1">{kind(doc.mime_type)} · {fileSize(doc.byte_size)} · {new Date(doc.created_at).toLocaleDateString("vi-VN")}</p></div></div>
+              <div className="flex items-start gap-3"><span className="rounded-xl bg-[#edf3ff] p-2.5 text-[#007eb8]"><Icon size={21}/></span><div className="min-w-0 flex-1"><h3 className="mobile-record-title">{doc.file_name}</h3><p className="mobile-record-meta mt-1">{kind(doc.mime_type)} · {fileSize(doc.byte_size)} · {new Date(doc.created_at).toLocaleDateString("vi-VN")}</p></div></div>
               <div className="mobile-record-actions"><a className="btn btn-secondary" href={`/api/documents/${doc.id}`}><Download size={17}/> Tải tài liệu</a></div>
             </article>;
           })}

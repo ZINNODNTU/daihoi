@@ -5,7 +5,7 @@ export default async function DelegatesPage({params}:{params:Promise<{id:string}
  const {id}=await params;const {supabase,user}=await getAuth();
  const [delegates,sessions,congress]=await Promise.all([
   supabase.from("delegates")
-   .select("id,congress_id,code,full_name,unit,delegate_type,qr_version,barcode_code,is_active")
+   .select("id,congress_id,code,full_name,unit,student_id,position,login_email,auth_user_id,delegate_type,qr_version,barcode_code,is_active")
    .eq("congress_id",id).order("code"),
   supabase.from("attendance_sessions")
    .select("id,congress_id,name,status,starts_at,ends_at,qr_policy")

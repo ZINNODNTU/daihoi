@@ -1,6 +1,6 @@
 import "server-only";
 import {createClient} from "@/lib/supabase/server";
-export type Role="admin"|"checkin"|"secretary";
+export type Role="admin"|"checkin"|"secretary"|"delegate"|"guest";
 export async function getAuth() {
   const supabase=await createClient();
   const {data:{user},error}=await supabase.auth.getUser();

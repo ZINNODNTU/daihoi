@@ -2,7 +2,7 @@
 import {ChangeEvent,FormEvent,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
 import {QRCodeSVG} from "qrcode.react";
-import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode} from "lucide-react";
+import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,UserRoundPlus} from "lucide-react";
 import {DelegateBarcode} from "@/components/delegate-barcode";
 import type {Delegate,AttendanceSession} from "@/lib/types";
 import {displayTime} from "@/lib/attendance-report";
@@ -10,7 +10,7 @@ type Props={
  congressId:string;congressCode:string;delegates:Delegate[];canManage:boolean;
  sessions:AttendanceSession[];
 };
-type Row={code:string;full_name:string;unit:string;delegate_type:"official"|"alternate"|"guest"};
+type Row={code:string;full_name:string;unit:string;student_id:string;position:string;delegate_type:"official"|"alternate"|"guest"};
 type Card={
  id:string;name:string;code:string;barcodeCode:string;token:string;
  scope:"fixed"|"session";sessionName?:string;startsAt?:string|null;endsAt?:string|null;
@@ -38,6 +38,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
  const [showCard,setShowCard]=useState<Card|null>(null);
  const [cardSession,setCardSession]=useState("");
  const [uploadRows,setUploadRows]=useState<Row[]|null>(null);
+ const [provisioning,setProvisioning]=useState(false);
   useEffect(()=>{
     if(!showCard)return;
     const priorOverflow=document.body.style.overflow;
@@ -47,7 +48,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     return()=>{window.removeEventListener("keydown",onEscape);document.body.style.overflow=priorOverflow;};
   },[showCard]);
  const filtered=useMemo(()=>delegates.filter(d=>
-  [d.full_name,d.code,d.unit,d.barcode_code].join(" ").toLocaleLowerCase("vi")
+  [d.full_name,d.code,d.unit,d.student_id,d.position,d.login_email,d.barcode_code].join(" ").toLocaleLowerCase("vi")
    .includes(search.toLocaleLowerCase("vi"))
  ),[delegates,search]);
  const sessionQrChoices=sessions.filter(s=>s.qr_policy!=="fixed");
@@ -71,10 +72,13 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   await save([{code:String(form.get("code")||"").trim(),
    full_name:String(form.get("full_name")||"").trim(),
    unit:String(form.get("unit")||""),
+   student_id:String(form.get("student_id")||"").trim(),
+   position:String(form.get("position")||"").trim(),
    delegate_type:parseKind(String(form.get("delegate_type")||"official"))}]);
  }
  async function handleFile(e:ChangeEvent<HTMLInputElement>){
   const file=e.target.files?.[0];if(!file)return;
+  if(file.size>2*1024*1024){setError("File Excel/CSV không được vượt quá 2 MB.");e.target.value="";return;}
   setError("");setUploadRows(null);
   try{
    let matrix:(string|number|Date|null|undefined)[][]=[];
@@ -98,18 +102,86 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     matrix=records;
    }else throw new Error("Hãy chọn tệp .xlsx hoặc .csv.");
    if(matrix.length<2)throw new Error("Tệp chưa có dữ liệu.");
-   const first=matrix[0].map(v=>String(v??"").toLocaleLowerCase("vi"));
-   const hasHeader=first.some(v=>v.includes("mã")||v.includes("họ")||v.includes("code"));
-   const rows=matrix.slice(hasHeader?1:0)
+   const key=(value:unknown)=>String(value??"").trim().toLocaleLowerCase("vi")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]/g,"");
+   const heading=matrix[0].map(key);
+   const fields={
+    student_id:["mssv","masosinhvien","studentid"],
+    full_name:["hoten","hovaten","tensinhvien","fullname"],
+    unit:["chidoan","donvi","lop","unit"],
+    position:["chucvu","chucdanh","position"],
+    delegate_type:["vaitro","loaidaibieu","delegatetype"],
+    code:["madaibieu","madinhdanh","code"]
+   };
+   const lookup=(names:string[])=>heading.findIndex(h=>names.map(key).includes(h));
+   const header=lookup(fields.full_name)>=0&&(lookup(fields.student_id)>=0||lookup(fields.unit)>=0||lookup(fields.code)>=0);
+   const get=(cells:(string|number|Date|null|undefined)[],field:keyof typeof fields,fallback:number)=>
+    String(cells[header?lookup(fields[field]):fallback]??"").trim();
+   const rows:Row[]=matrix.slice(header?1:0)
     .filter(r=>r.some(x=>x!==null&&String(x).trim()))
-    .map(r=>({code:String(r[0]??"").trim(),full_name:String(r[1]??"").trim(),
-     unit:String(r[2]??"").trim(),delegate_type:parseKind(String(r[3]??""))}));
-   if(rows.length>250)throw new Error("Mỗi tệp được nhập tối đa 250 đại biểu.");
-   if(rows.some(r=>!r.code||!r.full_name))
-    throw new Error("Cột A phải có mã đại biểu, cột B phải có họ tên.");
+    .map(r=>({
+     code:get(r,"code",0),
+     full_name:get(r,"full_name",1),
+     unit:get(r,"unit",2),
+     student_id:get(r,"student_id",-1).toUpperCase(),
+     position:get(r,"position",-1),
+     delegate_type:parseKind(get(r,"delegate_type",3))
+    }));
+   if(rows.length>250)throw new Error("Mỗi tệp tối đa 250 đại biểu.");
+   if(rows.some(r=>!r.full_name||(!r.student_id&&!r.code&&r.delegate_type!=="guest")))
+    throw new Error("Thiếu họ tên hoặc MSSV. Khách mời có thể không có MSSV.");
+   if(rows.some(r=>r.student_id&&!/^[A-Za-z0-9][A-Za-z0-9._-]{3,31}$/.test(r.student_id)))
+    throw new Error("MSSV phải từ 4–32 ký tự (chữ, số, dấu chấm, - hoặc _).");
+   const ids=rows.map(r=>r.student_id).filter(Boolean);
+   if(new Set(ids).size!==ids.length)throw new Error("MSSV bị trùng trong tệp Excel.");
    setUploadRows(rows);
   }catch(e){setError(e instanceof Error?e.message:"Không đọc được tệp.");}
   e.target.value="";
+ }
+ async function downloadTemplate(){
+  try{
+   const {default:writeExcelFile}=await import("write-excel-file/browser");
+   await writeExcelFile([{sheet:"Danh sach dai bieu",stickyRowsCount:1,data:[
+    ["MSSV","Họ tên","Chi đoàn","Chức vụ","Vai trò","Mã đại biểu"],
+    ["2200000001","Nguyễn Văn A","22DTH1","Bí thư","Chính thức",""],
+    ["","","","","",""],
+    ["","Trần Thị B","Đơn vị khách mời","Đại diện","Khách mời","KM-001"]
+   ]}]).toFile("mau-danh-sach-dai-bieu.xlsx");
+  }catch{setError("Không thể tạo file Excel mẫu.");}
+ }
+ async function provisionAccounts(){
+  const eligible=delegates.filter(d=>d.student_id&&!d.auth_user_id).slice(0,100);
+  if(!eligible.length)return;
+  if(!window.confirm("Cấp tài khoản cho "+eligible.length+" đại biểu? Mật khẩu chỉ xuất hiện một lần trong file CSV được tải xuống."))return;
+  setProvisioning(true);setError("");setSuccess("");
+  try{
+   const res=await fetch("/api/delegates/accounts",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({congressId,delegateIds:eligible.map(d=>d.id)})
+   });
+   const body=await res.json();
+   if(!res.ok)throw new Error(body.error||"Không tạo được tài khoản.");
+   const accounts=body.created as {id:string;name:string;email:string;password:string}[];
+   const errors=body.errors as {id:string;name:string;reason:string}[];
+   const linkedExisting=Number(body.linkedExisting||0);
+   if(accounts.length){
+    const csv=(value:string)=>{
+     const safe=/^[=+\-@]/.test(value)?"'"+value:value;
+     return '"'+safe.replace(/"/g,'""')+'"';
+    };
+    const lines=[["Họ tên","Email đăng nhập","Mật khẩu tạm"].map(csv).join(","),
+     ...accounts.map(d=>[d.name,d.email,d.password].map(csv).join(","))];
+    const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob),link=document.createElement("a");
+    link.href=url;link.download="tai-khoan-dai-bieu-"+congressCode+".csv";
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+   }
+   setSuccess("Đã cấp "+accounts.length+" tài khoản mới, liên kết "+linkedExisting+" tài khoản có sẵn. "+(errors.length?errors.length+" tài khoản chưa cấp được.":"Hãy lưu CSV an toàn và chuyển mật khẩu riêng cho từng đại biểu."));
+   if(errors.length)setError(errors.slice(0,6).map(e=>e.name+": "+e.reason).join(" · "));
+   router.refresh();
+  }catch(err){setError(err instanceof Error?err.message:"Lỗi cấp tài khoản.");}
+  finally{setProvisioning(false);}
  }
  async function openCard(delegate:Delegate,sessionId=""){
   setError("");setBusy(true);
@@ -129,14 +201,16 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
  }
  return <div>
   <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
-   <div><p className="text-xs tracking-widest text-[#169ca1] font-semibold">QUẢN LÝ ĐẠI HỘI</p>
+   <div><p className="text-xs tracking-widest text-[#007fae] font-semibold">QUẢN LÝ ĐẠI HỘI</p>
     <h1 className="page-title mt-2">Danh sách đại biểu</h1>
     <p className="helper mt-2">{delegates.length} đại biểu • QR cố định hoặc QR từng phiên • Barcode dự phòng.</p>
     <p className="helper mt-1">Mã định danh Đại hội: <strong>{congressCode.toUpperCase()}</strong></p>
    </div>
    {canManage&&<div className="mobile-toolbar w-full sm:flex sm:w-auto sm:flex-wrap sm:gap-2">
+    <button type="button" className="btn btn-secondary w-full sm:w-auto" onClick={()=>void downloadTemplate()}><Download size={17}/> Tải Excel mẫu</button>
     <label className="btn btn-secondary w-full cursor-pointer sm:w-auto"><FileSpreadsheet size={18}/> Nhập Excel/CSV
      <input className="hidden" type="file" accept=".xlsx,.csv" onChange={e=>void handleFile(e)}/></label>
+    <button type="button" className="btn btn-secondary w-full sm:w-auto" disabled={busy||provisioning||!delegates.some(d=>d.student_id&&!d.auth_user_id)} onClick={()=>void provisionAccounts()} title="Tối đa 100 tài khoản/lần; tự tải thông tin đăng nhập một lần"><UserRoundPlus size={17}/>{provisioning?"Đang cấp...":"Cấp tài khoản ("+delegates.filter(d=>d.student_id&&!d.auth_user_id).length+")"}</button>
     <button type="button" className="btn btn-primary w-full sm:w-auto" aria-expanded={open} onClick={()=>setOpen(!open)}><Plus size={18}/> Thêm đại biểu</button>
    </div>}
   </div>
@@ -144,15 +218,18 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   {success&&<p role="status" className="bg-green-50 text-green-700 p-3 rounded-xl mb-5">{success}</p>}
   {uploadRows&&<div className="card p-5 mb-5">
    <p className="font-bold">Đã đọc {uploadRows.length} dòng</p>
-   <p className="helper my-3">A: Mã đại biểu · B: Họ tên · C: Đơn vị · D: Loại đại biểu.</p>
+   <p className="helper my-3">MSSV · Họ tên · Chi đoàn · Chức vụ · Vai trò. Email đăng nhập tự tạo từ MSSV@dntu.edu.vn.</p>
+   <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Chi đoàn</th><th>Vai trò</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.unit}</td><td>{kindLabel(r.delegate_type)}</td></tr>)}</tbody></table></div>
    <div className="flex gap-2"><button disabled={busy} className="btn btn-primary" onClick={()=>void save(uploadRows)}>Xác nhận nhập</button>
     <button className="btn btn-secondary" onClick={()=>setUploadRows(null)}>Hủy</button></div>
   </div>}
   {open&&canManage&&<div className="card p-6 mb-6"><h2 className="section-title mb-5">Thêm đại biểu</h2>
    <form onSubmit={submit} className="grid md:grid-cols-2 gap-4">
-    <label><span className="label">Mã đại biểu *</span><input className="field" name="code" required placeholder="DB001"/></label>
+    <label><span className="label">MSSV</span><input className="field" name="student_id" placeholder="Mã số sinh viên" maxLength={32}/><span className="helper">Đăng nhập: MSSV@dntu.edu.vn</span></label>
     <label><span className="label">Họ tên *</span><input className="field" name="full_name" required placeholder="Nguyễn Văn A"/></label>
-    <label><span className="label">Đơn vị</span><input className="field" name="unit" placeholder="Khoa Công nghệ thông tin"/></label>
+    <label><span className="label">Chi đoàn</span><input className="field" name="unit" placeholder="Chi đoàn 22DTH1"/></label>
+    <label><span className="label">Chức vụ</span><input className="field" name="position" placeholder="Bí thư, đoàn viên, khách mời..."/></label>
+    <label><span className="label">Mã đại biểu (tùy chọn)</span><input className="field" name="code" placeholder="Mặc định dùng MSSV hoặc sinh mã khách mời"/></label>
     <label><span className="label">Loại đại biểu</span><select name="delegate_type" className="field">
      <option value="official">Chính thức</option><option value="alternate">Dự khuyết</option>
      <option value="guest">Khách mời</option></select></label>
@@ -161,30 +238,33 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   </div>}
   <div className="card overflow-hidden">
    <div className="p-4 sm:p-5 flex items-center justify-between flex-wrap gap-3">
-    <h2 className="font-semibold flex gap-2 items-center"><Users size={20} className="text-[#1d98a4]"/>Danh sách</h2>
+    <h2 className="font-semibold flex gap-2 items-center"><Users size={20} className="text-[#007eae]"/>Danh sách</h2>
     <div className="relative w-full sm:w-[300px]"><Search size={18} className="absolute left-3 top-3 text-[#90a5b8]"/>
      <input value={search} onChange={e=>setSearch(e.target.value)} className="field pl-10!"
-      placeholder="Mã, họ tên, đơn vị, barcode..."/></div>
+      placeholder="MSSV, họ tên, chi đoàn, chức vụ..."/></div>
    </div>
    <div className="table-wrap desktop-table"><table className="data"><thead><tr>
-    <th>Mã đại biểu</th><th>Họ tên</th><th className="hide-mobile">Đơn vị</th><th>Loại</th><th>Thẻ</th>
+    <th>Mã đại biểu</th><th>Họ tên</th><th>MSSV / Email</th><th className="hide-mobile">Chi đoàn / Chức vụ</th><th>Vai trò</th><th>Tài khoản</th><th>Thẻ</th>
    </tr></thead><tbody>
     {filtered.map(d=><tr key={d.id}>
-     <td className="font-bold text-[#116d93]">{d.code}</td><td className="font-bold">{d.full_name}</td>
-     <td className="hide-mobile">{d.unit}</td>
+     <td className="font-bold text-[#006d9e]">{d.code}</td><td className="font-bold">{d.full_name}</td>
+     <td><span className="font-semibold">{d.student_id||"—"}</span><span className="block break-all text-[11px] text-[#627c8a]">{d.login_email||""}</span></td>
+     <td className="hide-mobile">{d.unit}<span className="block text-[11px] text-[#627c8a]">{d.position||""}</span></td>
      <td><span className="badge badge-gray">{kindLabel(d.delegate_type)}</span></td>
+     <td><span className={"badge "+(d.auth_user_id?"badge-green":"badge-gray")}>{d.auth_user_id?"Đã cấp":"Chưa cấp"}</span></td>
      <td><button className="btn btn-secondary text-xs!" disabled={busy} onClick={()=>void openCard(d)}>
       <ScanBarcode size={15}/> QR / Barcode</button></td></tr>)}
-    {!filtered.length&&<tr><td colSpan={5} className="helper text-center py-9!">Không tìm thấy đại biểu.</td></tr>}
+    {!filtered.length&&<tr><td colSpan={7} className="helper text-center py-9!">Không tìm thấy đại biểu.</td></tr>}
    </tbody></table></div>
   </div>
   <div className="mobile-cards px-3 pb-4">
     {filtered.map(d=><article key={d.id} className="mobile-record">
      <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1"><p className="text-[11px] font-semibold tracking-wider text-[#2456c9]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
+      <div className="min-w-0 flex-1"><p className="text-[11px] font-semibold tracking-wider text-[#007eb8]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
       <span className="badge badge-gray shrink-0">{kindLabel(d.delegate_type)}</span>
      </div>
-     <p className="mobile-record-meta mt-2">{d.unit||"Chưa cập nhật đơn vị"}</p>
+     <p className="mobile-record-meta mt-2">{d.unit||"Chưa cập nhật chi đoàn"}{d.position?" · "+d.position:""}{d.student_id?" · "+d.student_id:""}</p>
+     <p className="mt-1 text-[11px] text-[#687f91]">{d.login_email||"Khách mời không có tài khoản"} · {d.auth_user_id?"Đã cấp tài khoản":"Chưa cấp tài khoản"}</p>
      <div className="mobile-record-actions"><button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>void openCard(d)}>
       <ScanBarcode size={17}/> Xem QR / Barcode</button></div>
     </article>)}
@@ -195,7 +275,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    <div role="dialog" aria-modal="true" aria-label="Thẻ đại biểu điện tử" className="card mobile-sheet max-w-lg w-full p-5 sm:p-7 md:p-8 my-4 relative delegate-card-print"
     onClick={e=>e.stopPropagation()}>
     <button className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-xl bg-[#eef5f6] text-[#2a6177] hover:bg-[#e0f0f0] print:hidden" aria-label="Đóng thẻ đại biểu" onClick={()=>setShowCard(null)}><X/></button>
-    <p className="text-xs tracking-widest font-semibold text-[#139aa0]">THẺ ĐẠI BIỂU ĐIỆN TỬ</p>
+    <p className="text-xs tracking-widest font-semibold text-[#007eae]">THẺ ĐẠI BIỂU ĐIỆN TỬ</p>
     <p className="helper mt-2">Đại hội: <strong>{congressCode.toUpperCase()}</strong></p>
     <h3 className="text-xl font-semibold mt-3">{showCard.name}</h3>
     <p className="text-[#4d6880] text-sm mt-1">Mã định danh đại biểu: <strong>{showCard.code}</strong></p>

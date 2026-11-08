@@ -354,7 +354,7 @@ export function SeatingClient({congressId,canManage}:Props){
           </div>
           <div className="overflow-x-auto overflow-y-auto bg-[#f4f8fb] p-3 sm:p-4" style={{maxHeight:"690px"}} tabIndex={0} aria-label="Cuộn để xem các khu vực ghế">
             <div className="seat-map-board relative overflow-hidden rounded-xl border border-[#d9e5ec] bg-white shadow-sm" style={{width:boardWidth*zoom,height:boardHeight*zoom}}>
-              <div className="seat-map-stage absolute left-[18%] top-[22px] w-[64%] rounded-b-[8px] border border-[#3b5576] bg-[#263b58] px-3 py-4 text-center font-semibold tracking-[.14em] text-white"
+              <div className="seat-map-stage absolute left-[18%] top-[22px] w-[64%] rounded-b-[8px] border border-[#3b5576] bg-[#105879] px-3 py-4 text-center font-semibold tracking-[.14em] text-white"
                    style={{fontSize:Math.max(11,15*zoom),top:22*zoom}}>
                 {stageLabel||"SÂN KHẤU"}
               </div>
@@ -399,7 +399,7 @@ export function SeatingClient({congressId,canManage}:Props){
 
         <aside className="min-w-0 space-y-4">
           {canManage&&mode==="edit"&&<section className="card space-y-3 p-4 sm:p-5">
-            <div className="flex items-center gap-2"><Grid3X3 size={20} className="text-[#2456c9]"/><h2 className="text-base font-semibold">Tạo khu vực ghế</h2></div>
+            <div className="flex items-center gap-2"><Grid3X3 size={20} className="text-[#007eb8]"/><h2 className="text-base font-semibold">Tạo khu vực ghế</h2></div>
             <p className="helper">Nhập số hàng và ghế; hệ thống tự sinh mã. Có thể thêm nhiều khu vực cho một sơ đồ.</p>
             <div className="grid grid-cols-2 gap-3">
               <label><span className="label">Mã khu</span><input className="field" value={section.zone} maxLength={12} onChange={e=>setSection(v=>({...v,zone:e.target.value}))}/></label>
@@ -414,7 +414,7 @@ export function SeatingClient({congressId,canManage}:Props){
           </section>}
 
           <section className="card p-4 sm:p-5">
-            <div className="flex items-center gap-2"><Armchair size={20} className="text-[#2456c9]"/><h2 className="text-base font-semibold">Thông tin ghế</h2></div>
+            <div className="flex items-center gap-2"><Armchair size={20} className="text-[#007eb8]"/><h2 className="text-base font-semibold">Thông tin ghế</h2></div>
             {!selectedSeat?<p className="helper mt-3">Chọn một ghế trên sơ đồ để xem thông tin và chỉnh sửa phân công.</p>:<>
               <div className="mt-4 rounded-xl border border-[#dcebf1] bg-[#f4f9fb] p-3">
                 <div className="flex items-center justify-between gap-2"><p className="text-xl font-bold">{selectedSeat.code}</p><span className={"badge "+(selectedSeat.blocked?"badge-gray":selectedDelegate?"badge-green":"badge-yellow")}>

@@ -365,7 +365,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
     <p className="mb-3 px-1 text-xs font-bold text-[#678294]">Kết quả tra cứu ({results.length})</p>
     {results.map(d=><article key={d.id} className="mobile-record">
       <div className="flex items-start justify-between gap-2">
-       <div className="min-w-0 flex-1"><p className="text-[11px] font-semibold tracking-wider text-[#2456c9]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
+       <div className="min-w-0 flex-1"><p className="text-[11px] font-semibold tracking-wider text-[#007eb8]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
        <span className={`badge shrink-0 ${checkedIds.has(d.id)?"badge-green":"badge-yellow"}`}>{checkedIds.has(d.id)?"Đã đến":"Chưa đến"}</span>
       </div>
       <p className="mobile-record-meta mt-1">{d.unit||"Chưa cập nhật đơn vị"}</p>
