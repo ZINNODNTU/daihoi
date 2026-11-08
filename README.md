@@ -166,3 +166,15 @@ Nếu trang đăng nhập báo **Chưa kết nối cơ sở dữ liệu**, hệ 
 Tương thích: app chấp nhận `NEXT_PUBLIC_SUPABASE_ANON_KEY` và `SUPABASE_SERVICE_ROLE_KEY` (khóa legacy) khi chưa có khóa mới. Các khóa secret chỉ được dùng trong Node.js server/API; tuyệt đối không đặt tiền tố `NEXT_PUBLIC_` cho Secret Key.
 
 **Nếu thiếu quyền xem API Keys**, cần đăng nhập đúng tài khoản có quyền với project đó hoặc cấp quyền qua Supabase; công cụ không được tự tạo khóa cho project không thuộc quyền truy cập. Tài khoản admin và migration v5 chưa được tạo/áp dụng chỉ nhờ sửa mã nguồn.
+
+## Khởi tạo tài khoản Super Admin khi Authentication > Users trống
+
+Nếu Supabase Dashboard của project `pnxdxdagpeyqarucdphk` chưa có tài khoản nào, có thể khởi tạo qua giao diện Supabase mà không đưa mật khẩu vào lệnh hoặc mã nguồn:
+
+1. Mở **Authentication > Users > Add user > Create new user** trên **đúng project**.
+2. Nhập email Auth nội bộ `admin@accounts.daihoi.invalid`, nhập mật khẩu mạnh tại trình duyệt và bật **Auto confirm user**. Email `.invalid` là định danh nội bộ, không phải hộp thư để nhận thư khôi phục.
+3. Sau khi tài khoản đã xuất hiện trong bảng Users, chạy `npm run admin:promote` trên máy local có `.env.local` chứa server Secret Key.
+4. Xác nhận script báo `profiles.platform_role = super_admin`, rồi đăng nhập tại `http://localhost:3000/login` bằng tên hiển thị `admin@dntu.edu.vn` với mật khẩu vừa tự đặt.
+5. Thay đổi mật khẩu trong mục tài khoản sau lần đăng nhập đầu tiên; không chia sẻ Secret Key hoặc mật khẩu qua chat, Git, commit hoặc tệp công khai.
+
+`admin:promote` được giới hạn vào đúng project, đúng email nội bộ và từ chối tự động tạo Super Admin thứ hai nếu đã có tài khoản khác có quyền đó. Khởi tạo từ script với mật khẩu được cung cấp qua môi trường cũng có thể dùng `npm run bootstrap:admin` nhưng không nên đặt mật khẩu tĩnh trong source code.
