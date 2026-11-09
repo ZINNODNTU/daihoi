@@ -83,3 +83,24 @@ test("Readiness nhận cả Apps Script V18 và OAuth dự phòng, không in sec
  assert.match(script,/const driveReady=scriptReady\|\|oauthReady/);
  assert.doesNotMatch(script,/console\.log\(env\.GOOGLE_APPS_SCRIPT_SECRET\)/);
 });
+
+test("README gốc là trang giới thiệu ngắn, chi tiết lịch sử được lưu riêng",()=>{
+ const archive=join(docs,"lich-su","README-GOC-2026-11-09.md");
+ assert.ok(existsSync(archive),"Chưa lưu bản README dài để tra cứu lịch sử");
+ const original=readFileSync(archive,"utf8");
+ assert.match(original,/LỊCH SỬ \/ KHÔNG PHẢI HƯỚNG DẪN HIỆN HÀNH/);
+ assert.ok(original.split(/\r?\n/).length>200,"Bản lưu không có đủ thông tin lịch sử");
+ assert.ok(rootReadme.split(/\r?\n/).length<=110,
+  "README gốc nên là trang giới thiệu ngắn, thông tin quá chi tiết cần chuyển về docs/");
+ assert.match(rootReadme,/docs\/lich-su\/README-GOC-2026-11-09\.md/);
+ assert.match(historyIndex,/README-GOC-2026-11-09\.md/);
+ const npm=JSON.parse(readFileSync(join(root,"package.json"),"utf8"));
+ assert.equal(npm.scripts["docs:check"],"node --test tests/docs-structure.test.mjs");
+});
+test("Biến môi trường mẫu chỉ trỏ tới tài liệu Google Drive hiện hành hoặc lưu trữ",()=>{
+ const env=readFileSync(join(root,".env.example"),"utf8");
+ assert.match(env,/docs\/lich-su\/tai-lieu\/GOOGLE-DRIVE-V17\.md/);
+ assert.ok(!env.includes("docs/GOOGLE-DRIVE-V17.md"));
+ assert.match(env,/GOOGLE_APPS_SCRIPT_URL/);
+ assert.match(env,/GOOGLE_APPS_SCRIPT_SECRET/);
+});

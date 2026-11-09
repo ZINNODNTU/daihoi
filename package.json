@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "docs:check": "node --test tests/docs-structure.test.mjs",
     "readiness": "node scripts/readiness.mjs",
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
     "admin:promote": "node scripts/grant-super-admin.mjs",

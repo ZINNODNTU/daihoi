@@ -2,6 +2,10 @@
 
 > **Chỉ phục vụ tra cứu thiết kế và các bản nâng cấp trước đây.** Nội dung trong thư mục này phản ánh thời điểm viết, có thể không đúng với mã nguồn hoặc trạng thái cơ sở dữ liệu/Vercel hiện tại. Hãy quay về [mục lục tài liệu chính thức](../README.md) trước khi triển khai.
 
+## Các bản ghi dự án tổng hợp
+
+- [README gốc ngày 09/11/2026 — snapshot lịch sử](README-GOC-2026-11-09.md). Nội dung được giữ để tra cứu tiến độ cũ; **không dùng làm hướng dẫn cài đặt hiện tại**.
+
 ## Cổng đại biểu
 
 - [V11 — phân quyền, barcode, camera](dai-bieu/CONG-DAI-BIEU-V11.md)

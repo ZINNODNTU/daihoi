@@ -31,6 +31,7 @@
 ```bash
 npm run lint
 npm run build
+npm run docs:check
 node --test tests/*.test.mjs
 git diff --check
 ```
