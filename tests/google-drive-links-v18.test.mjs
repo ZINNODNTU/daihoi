@@ -2,6 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {googleDriveFileUrl} from "../src/lib/drive-links.ts";
+import {serializeSignedPayload} from "../src/lib/drive-signature.ts";
 const read=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 
 test("Đường dẫn Google Drive chỉ sinh từ ID file hợp lệ, không cho redirect tùy ý",()=>{
@@ -105,4 +106,29 @@ test("Có lệnh kiểm tra Drive live chỉ đọc, không ghi dữ liệu ho�
  assert.match(live,/console\.log\("\[OK\] Apps Script Web App/);
  assert.doesNotMatch(live,/action:"upload"|action:"sharing"|action:"delete"/);
  assert.doesNotMatch(live,/console\.log\(.*secret|console\.log\(.*signature/);
+});
+
+test("HMAC Apps Script sử dụng JSON ASCII-only, giữ nguyên tên file Unicode",()=>{
+ const original={
+  action:"upload",
+  congressId:"00000000-0000-4000-8000-000000000001",
+  name:"Báo cáo Đại hội – Đoàn TNCS 🧑‍💼.pdf",
+  mimeType:"application/pdf",
+  base64:"JVBERi0xLjQK"
+ };
+ const payload=serializeSignedPayload(original);
+ assert.match(payload,/\\u00e1/);
+ assert.match(payload,/\\u0110/);
+ assert.ok([...payload].every(char=>char.charCodeAt(0)<128),"Payload ký phải chỉ chứa ASCII");
+ assert.deepEqual(JSON.parse(payload),original,"Filename Unicode phải giữ nguyên sau JSON.parse");
+ const ascii={name:"BC_DKCNTT_T10_2026.pdf",mimeType:"application/pdf"};
+ assert.equal(serializeSignedPayload(ascii),JSON.stringify(ascii),"Không thay đổi payload ASCII hiện có");
+ const transport=JSON.stringify({payload,signature:"example"});
+ assert.equal(JSON.parse(transport).payload,payload,"Payload gửi qua HTTP giữ nguyên từng byte ký");
+});
+test("Ứng dụng dùng hàm serializeSignedPayload khi tạo chữ ký HMAC",()=>{
+ const server=read("../src/lib/google-apps-script.ts");
+ assert.match(server,/import \{serializeSignedPayload\} from "@\/lib\/drive-signature"/);
+ assert.match(server,/const payload=serializeSignedPayload\(request\)/);
+ assert.match(server,/createHmac\("sha256",secret\)\.update\(time\+"\."\+nonce\+"\."\+payload,"utf8"\)/);
 });

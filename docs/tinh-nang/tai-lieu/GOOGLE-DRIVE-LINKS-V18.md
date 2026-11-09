@@ -53,6 +53,12 @@ Khi tắt công bố, hệ thống thu hồi quyền xem qua link trên Google D
 5. Tài khoản đại biểu/khách mời không có quyền gọi API upload/công bố.
 6. 200 người chỉ truy cập danh sách file sẽ không gây 200 request Google Drive; chỉ khi bấm mở file trình duyệt mới truy cập Google.
 
+## Khắc phục lỗi chữ ký khi upload tài liệu
+
+- **Triệu chứng:** Trạng thái kho Drive báo *Sẵn sàng*, nhưng upload báo `Chữ ký không hợp lệ`. Nguyên nhân đã tái hiện: tên file chứa dấu tiếng Việt/Unicode làm lệch chữ ký HMAC khi Apps Script xử lý chuỗi.
+- **Khắc phục:** Next.js chuyển JSON gửi để ký HMAC thành biểu diễn **ASCII-only** (`\\uXXXX` cho ký tự Unicode), trong khi `JSON.parse` ở Apps Script vẫn phục hồi **nguyên tên file có dấu**. Chỉ cần cập nhật code website; **không cần đổi khóa, không cần cấp quyền Google lại hay triển khai lại Apps Script**.
+- **Chẩn đoán chủ động:** `npm run check:drive` chỉ kiểm tra kết nối/đọc tên thư mục; lệnh `npm run diagnose:drive-upload` thử upload file PDF giả lập với tên ASCII, tên tiếng Việt và kích thước đến 4,1 MB, **rồi tự động chuyển file thử vào thùng rác**. Chỉ chạy lệnh chẩn đoán upload khi muốn kiểm tra thao tác ghi thực tế và tài khoản Drive đã được cho phép. Sau đó thử lại tài liệu PDF thật trong giao diện BTC.
+
 ## Trạng thái kiểm chứng — 09/11/2026
 
 - **Đã xác minh trực tiếp:** Apps Script `daihoi` được triển khai dưới dạng Web App, thực thi bởi tài khoản Google trường sở hữu thư mục `DAI_HOI_SO`. Script Properties `ROOT_FOLDER_ID` và `BRIDGE_SECRET` đã thiết lập; URL `/exec` và khóa máy chủ đã lưu trong `.env.local` **không theo dõi bởi Git**. Không lưu ID triển khai hoặc khóa thật trong tài liệu công khai.

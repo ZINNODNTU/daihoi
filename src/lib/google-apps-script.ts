@@ -2,6 +2,7 @@ import "server-only";
 import {createHmac,randomUUID} from "node:crypto";
 import {DriveStorageError} from "@/lib/drive";
 import {GOOGLE_FILE_ID} from "@/lib/drive-links";
+import {serializeSignedPayload} from "@/lib/drive-signature";
 
 type ScriptAction =
  |{action:"status";congressId:string}
@@ -42,8 +43,9 @@ async function callScript(request:ScriptAction):Promise<ScriptResponse>{
   throw new DriveStorageError("Mã file Google Drive không hợp lệ.","invalid_file_id",400);
  const time=Date.now();
  const nonce=randomUUID();
- const payload=JSON.stringify(request);
- const signature=createHmac("sha256",secret).update(time+"."+nonce+"."+payload).digest("base64url");
+ // Canonical ASCII JSON prevents Unicode filename HMAC mismatches in Apps Script.
+ const payload=serializeSignedPayload(request);
+ const signature=createHmac("sha256",secret).update(time+"."+nonce+"."+payload,"utf8").digest("base64url");
  let response:Response;
  try{
   response=await fetch(endpoint.toString(),{
