@@ -12,7 +12,7 @@ Hồ sơ đại biểu có hai trường mới **Giới tính** (`male`, `female
 
 ## Trang riêng cho BTC: Phân tích chất lượng đại biểu
 
-Truy cập `/congresses/[id]/delegates/quality` từ sidebar **Phân tích chất lượng** hoặc tab cùng tên ở **Quản lý đại biểu**.
+Truy cập **phân hệ độc lập** `/congresses/[id]/quality` từ sidebar **Phân tích chất lượng** hoặc ô chức năng trên bảng điều hành. Phân tích không còn là tab con của **Quản lý đại biểu**; đường dẫn cũ `/congresses/[id]/delegates/quality` tự chuyển hướng, giữ tham số `sessionId`.
 
 - Chỉ staff `viewer` (admin, checkin, secretary; hoặc super_admin) được truy cập. Đại biểu/khách mời không được phép.
 - **Mặc định** phân tích phiên điểm danh gần nhất; có thể chọn từng phiên hoặc **Toàn Đại hội**.
@@ -23,11 +23,11 @@ Truy cập `/congresses/[id]/delegates/quality` từ sidebar **Phân tích chấ
 
 ## Cấu hình Supabase cần triển khai
 
-**Chưa áp dụng schema lên database production**. Chạy trong SQL Editor của đúng Supabase project:
+**Đã áp dụng migration V15 trên project Supabase `pnxdxdagpeyqarucdphk` ngày 09/11/2026**, xác minh bằng truy vấn Data API: `delegates.gender` và `delegates.birth_date` đều tồn tại. Khi chuyển sang dự án Supabase khác vẫn cần chạy migration trong SQL Editor của chính dự án đó:
 
 `supabase/upgrade-delegate-demographics-v15.sql`
 
-Chạy sau `supabase/schema.sql` + `supabase/upgrade-delegate-accounts-v5.sql`. Migration chỉ thêm cột nullable và ràng buộc kiểm tra, không làm mất hồ sơ cũ. Tiếp tục áp dụng v11 (RLS hạn chế delegate) và v14 nếu còn thiếu, trước khi đưa hệ thống vào vận hành thực tế. Nếu không áp dụng v15, trang phân tích sẽ hiển thị thông báo lỗi và chức năng ghi giới tính/ngày sinh sẽ không sử dụng được.
+Chạy sau `supabase/schema.sql` + `supabase/upgrade-delegate-accounts-v5.sql`. Migration chỉ thêm cột nullable và ràng buộc kiểm tra, không làm mất hồ sơ cũ. Tiếp tục áp dụng v11 (RLS hạn chế delegate) và v14 nếu còn thiếu, trước khi đưa hệ thống vào vận hành thực tế. Nếu thiếu V15, trang phân tích hiển thị lỗi thiếu schema cụ thể; các lỗi kết nối và vượt ngưỡng được báo riêng. Chạy `node scripts/diagnose-quality-v15.mjs` để kiểm tra chính xác cột và quyền đọc bằng server key mà không in thông tin đại biểu.
 
 ## Kiểm thử
 

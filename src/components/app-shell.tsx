@@ -31,7 +31,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false,
   const congressItems:NavItem[]=congressId?[
     {name:"Bảng điều hành",href:"/congresses/"+congressId,icon:BarChart3},
     {name:"Đại biểu",href:"/congresses/"+congressId+"/delegates",icon:Users},
-    {name:"Phân tích chất lượng",href:"/congresses/"+congressId+"/delegates/quality",icon:ChartColumnIncreasing},
+    {name:"Phân tích chất lượng",href:"/congresses/"+congressId+"/quality",icon:ChartColumnIncreasing},
     {name:"Sơ đồ ghế",href:"/congresses/"+congressId+"/seating",icon:Armchair},
     ...(canViewBch?[{name:"Trích ngang nhân sự BCH",href:"/congresses/"+congressId+"/bch-candidates",icon:ClipboardList}]:[]),
     ...(canCheckin?[

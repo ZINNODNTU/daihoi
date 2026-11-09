@@ -1,13 +1,14 @@
 import Link from "next/link";
 import {notFound} from "next/navigation";
 import {
-  Armchair,ArrowRight,ArrowUpRight,BarChart3,CalendarDays,ChevronRight,
+  Armchair,ArrowRight,ArrowUpRight,BarChart3,CalendarDays,ChartColumnIncreasing,ChevronRight,
   ClipboardList,FileText,MapPin,QrCode,Users,UserRoundCheck
 } from "lucide-react";
 import {createClient} from "@/lib/supabase/server";
 
 const areas=[
   {href:"delegates",icon:Users,title:"Quản lý đại biểu",description:"Hồ sơ đại biểu, danh sách Excel và thẻ QR / Barcode."},
+  {href:"quality",icon:ChartColumnIncreasing,title:"Phân tích chất lượng",description:"Cơ cấu giới tính, độ tuổi và thống kê đại biểu đã tham dự theo từng phiên."},
   {href:"attendance",icon:QrCode,title:"Điểm danh Đại hội",description:"Quét QR, barcode, thủ công và vận hành từng phiên."},
   {href:"seating",icon:Armchair,title:"Sơ đồ chỗ ngồi",description:"Tạo sơ đồ hội trường và phân ghế theo đại biểu."},
   {href:"reports",icon:ClipboardList,title:"Báo cáo & thống kê",description:"Tỷ lệ tham dự và tổng hợp kết quả theo phiên."},

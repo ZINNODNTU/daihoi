@@ -68,15 +68,15 @@ test("Chỉ phân tích người đã điểm danh; nhiều phiên cùng ngườ
  assert.ok(!first.people.some(x=>x.id==="c"));
 });
 test("Phân tích chỉ mở cho BTC, kết hợp quyền với đúng phạm vi Đại hội",()=>{
- const page=read("../src/app/congresses/[id]/delegates/quality/page.tsx");
+ const page=read("../src/app/congresses/[id]/quality/page.tsx");
  assert.match(page,/hasRole\(supabase,user\.id,id,"viewer"\)/);
  assert.match(page,/\.eq\("congress_id",id\)/);
- assert.match(page,/\.eq\("session_id",selectedSessionId\)/);
+ assert.match(page,/loadQualitySource\(db,id,selectedSessionId\)/);
  assert.match(page,/calculateDelegateQuality/);
  assert.match(page,/mỗi người điểm danh tính một lần/);
  const tabs=read("../src/components/delegate-admin-tabs.tsx");
- assert.match(tabs,/Phân tích chất lượng đại biểu/);
- assert.match(tabs,/delegates\/quality/);
+ assert.doesNotMatch(tabs,/Phân tích chất lượng đại biểu/);
+ assert.doesNotMatch(tabs,/delegates\/quality/);
 });
 test("Hồ sơ và Excel lưu giới tính, ngày sinh; chỉnh sửa do admin thực hiện",()=>{
  const ui=read("../src/components/delegates-client.tsx");
@@ -94,4 +94,23 @@ test("Hồ sơ và Excel lưu giới tính, ngày sinh; chỉnh sửa do admin t
  assert.match(migration,/ADD COLUMN IF NOT EXISTS gender text/);
  assert.match(migration,/ADD COLUMN IF NOT EXISTS birth_date date/);
  assert.match(migration,/gender IN \('male','female','other'\)/);
+});
+test("Phân tích là phân hệ độc lập; dữ liệu được phân trang, có lỗi rõ ràng",()=>{
+ const page=read("../src/app/congresses/[id]/quality/page.tsx");
+ const source=read("../src/lib/delegate-quality-source.ts");
+ const shell=read("../src/components/app-shell.tsx");
+ const home=read("../src/app/congresses/[id]/page.tsx");
+ const old=read("../src/app/congresses/[id]/delegates/quality/page.tsx");
+ assert.match(shell,/name:"Phân tích chất lượng",href:"\/congresses\/"\+congressId\+"\/quality"/);
+ assert.match(home,/href:"quality",icon:ChartColumnIncreasing/);
+ assert.match(old,/redirect\("\/congresses\/"\+id\+"\/quality"\+query\)/);
+ assert.match(page,/loadQualitySource\(db,id,selectedSessionId\)/);
+ assert.doesNotMatch(page,/DelegateAdminTabs/);
+ assert.match(source,/\.range\(offset,offset\+PAGE_SIZE-1\)/);
+ assert.match(source,/PAGE_SIZE=500/);
+ assert.match(source,/MAX_DELEGATES=1200/);
+ assert.match(source,/MAX_CHECKINS=10000/);
+ assert.match(source,/\.eq\("session_id",sessionId\)/);
+ assert.match(page,/issue==="migration_missing"/);
+ assert.match(page,/issue==="data_limit"/);
 });
