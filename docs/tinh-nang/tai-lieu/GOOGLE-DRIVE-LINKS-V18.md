@@ -19,7 +19,7 @@
    GOOGLE_APPS_SCRIPT_URL=https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
    GOOGLE_APPS_SCRIPT_SECRET=THE_SAME_BRIDGE_SECRET_FROM_SCRIPT_PROPERTIES
    ```
-6. Redeploy Vercel / khởi động lại máy local. Admin → **Tài liệu Đại hội → Kho lưu trữ Google Drive → Kiểm tra lại** phải báo **Sẵn sàng**. Thử upload PDF nhỏ, bật **Công bố tài liệu cho đại biểu**, đăng nhập đại biểu và bấm mở link.
+6. Chạy `npm run check:drive` trên máy chủ đã cấu hình để xác minh **kết nối thật** (chỉ đọc tên thư mục gốc, ký HMAC; không upload). Redeploy Vercel / khởi động lại máy local. Admin → **Tài liệu Đại hội → Kho lưu trữ Google Drive → Kiểm tra lại** phải báo **Sẵn sàng**. Thử upload PDF nhỏ, bật **Công bố tài liệu cho đại biểu**, đăng nhập đại biểu và bấm mở link.
 
 Không cần `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` hoặc `GOOGLE_REFRESH_TOKEN` ở phương án này. Website **tự chọn Apps Script khi phát hiện cấu hình URL/SECRET**. Nếu không có, hệ thống vẫn hỗ trợ OAuth Drive API dự phòng (xem [hướng dẫn OAuth V17 — tài liệu lịch sử](../../lich-su/tai-lieu/GOOGLE-DRIVE-V17.md)).
 
@@ -53,4 +53,9 @@ Khi tắt công bố, hệ thống thu hồi quyền xem qua link trên Google D
 5. Tài khoản đại biểu/khách mời không có quyền gọi API upload/công bố.
 6. 200 người chỉ truy cập danh sách file sẽ không gây 200 request Google Drive; chỉ khi bấm mở file trình duyệt mới truy cập Google.
 
-**Trạng thái triển khai:** Mã nguồn chuẩn bị cho cả Apps Script và OAuth đã sẵn. Cần Web App Apps Script được triển khai thành công, lưu URL + khóa trên server và kiểm tra upload thực tế trước khi tuyên bố kết nối đã hoạt động.
+## Trạng thái kiểm chứng — 09/11/2026
+
+- **Đã xác minh trực tiếp:** Apps Script `daihoi` được triển khai dưới dạng Web App, thực thi bởi tài khoản Google trường sở hữu thư mục `DAI_HOI_SO`. Script Properties `ROOT_FOLDER_ID` và `BRIDGE_SECRET` đã thiết lập; URL `/exec` và khóa máy chủ đã lưu trong `.env.local` **không theo dõi bởi Git**. Không lưu ID triển khai hoặc khóa thật trong tài liệu công khai.
+- **Kiểm thử live thành công:** yêu cầu `status` trả đúng thư mục `DAI_HOI_SO`; dùng yêu cầu HMAC thử `upload` → `sharing:true` → `sharing:false` → `delete`, mọi thao tác trả `ok:true`. File kiểm tra đã chuyển vào thùng rác; một thư mục kiểm tra riêng có thể còn tồn tại.
+- **Chưa xác minh:** chức năng upload theo phiên đăng nhập BTC trên website, Supabase metadata thực, quyền tài khoản đại biểu, và cấu hình môi trường **Vercel Production**. Tài khoản Vercel đang kết nối **chưa có project `daihoi`** để thiết lập biến môi trường; sau khi có đúng project, cần thêm **hai biến Apps Script** tại Project → Settings → Environment Variables rồi redeploy.
+- **Lưu ý:** thư mục `DAI_HOI_SO` được tạo mới trong Google Drive **của tài khoản trường chạy Apps Script**; thư mục trùng tên trên Google cá nhân là kho khác, không được tự động đồng bộ.

@@ -46,7 +46,7 @@ docs/
 
 | Lĩnh vực | Tài liệu ưu tiên | Lưu ý |
 | --- | --- | --- |
-| Google Drive | **V18** | Chỉ hiển thị tên/icon/link; upload qua Apps Script (ưu tiên) hoặc OAuth dự phòng. **Chưa xác nhận Apps Script Web App/URL và upload thực tế.** |
+| Google Drive | **V18** | **Đã triển khai và thử kết nối + upload/chia sẻ/thu hồi/xóa qua Apps Script trên local (09/11/2026)**. Chưa kiểm chứng trang BTC/cổng đại biểu với dữ liệu thật và **chưa cấu hình Vercel Production**. Xem hướng dẫn V18. |
 | Màn hình điểm danh | **V16** | Chào mừng đại biểu ở trên; QR và sơ đồ ghế bên dưới. |
 | Thống kê đại biểu | **V15** | Chỉ phân tích người đã điểm danh; cần migration V15 trên Supabase. |
 | Cổng đại biểu | V14 cùng V15 | Đọc thêm trong `lich-su/dai-bieu/` để hiểu các quyết định lịch sử, không lấy đó làm trạng thái production. |

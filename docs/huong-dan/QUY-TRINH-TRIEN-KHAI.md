@@ -35,7 +35,9 @@ Kiến trúc: BTC upload tài liệu → server gọi Google Drive, tự lưu `d
 - Upload qua Vercel Function hiện giới hạn **4 MiB/tệp**. Muốn tăng giới hạn cần thiết kế upload khác.
 - Tài liệu được chia sẻ kiểu `Anyone with the link` có thể truy cập bằng link được chuyển tiếp, nên **chỉ công bố tệp được phép chia sẻ**.
 
-**Điều kiện nghiệm thu Drive:** Admin → Tài liệu Đại hội → trạng thái kết nối **Sẵn sàng** → upload file thử thật → công bố → đại biểu nhấn mở Google Drive → tắt công bố và xác nhận link hết quyền xem. Chưa hoàn tất bài thử này thì chưa được gọi là kết nối thành công.
+**Kiểm tra kết nối trực tiếp:** Chạy `npm run check:drive`; kết quả `OK` xác nhận Web App đã xác thực HMAC và truy cập được thư mục gốc, **không thay thế kiểm tra giao diện website**. Trên máy local đã kiểm tra thành công status, upload, công bố, thu hồi và xóa tệp thử qua Apps Script (09/11/2026); Vercel Production vẫn cần cấu hình biến môi trường.
+
+**Điều kiện nghiệm thu trên website:** Admin → Tài liệu Đại hội → trạng thái kết nối **Sẵn sàng** → upload file thử thật → công bố → đại biểu nhấn mở Google Drive → tắt công bố và xác nhận link hết quyền xem. Chưa hoàn tất bài thử giao diện này thì chưa được gọi là nghiệm thu toàn hệ thống.
 
 ## 4. Triển khai trên Vercel
 

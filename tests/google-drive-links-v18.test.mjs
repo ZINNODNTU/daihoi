@@ -96,3 +96,13 @@ test("Status phân biệt Apps Script / OAuth và file hướng dẫn không ch�
  assert.match(env,/GOOGLE_REFRESH_TOKEN/);
  assert.match(read("../docs/tinh-nang/tai-lieu/GOOGLE-DRIVE-LINKS-V18.md"),/Không cần/);
 });
+test("Có lệnh kiểm tra Drive live chỉ đọc, không ghi dữ liệu hoặc in khóa",()=>{
+ const live=read("../scripts/check-drive.mjs");
+ const pkg=JSON.parse(read("../package.json"));
+ assert.equal(pkg.scripts["check:drive"],"node scripts/check-drive.mjs");
+ assert.match(live,/createHmac\("sha256",secret\)/);
+ assert.match(live,/action:"status"/);
+ assert.match(live,/console\.log\("\[OK\] Apps Script Web App/);
+ assert.doesNotMatch(live,/action:"upload"|action:"sharing"|action:"delete"/);
+ assert.doesNotMatch(live,/console\.log\(.*secret|console\.log\(.*signature/);
+});
