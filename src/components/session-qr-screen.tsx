@@ -222,10 +222,11 @@ export function SessionQrScreen({congressId,sessions,initialSessionId,congressNa
       style={{width:(summary?.percentage??0)+"%"}}/>
     </div>
    </div>
-   <div className="relative mx-3 mt-4 min-w-0 sm:mx-6 sm:mt-5 xl:mx-7" data-projection-section="latest-delegate">
-     <ProjectionWelcome data={liveData} congressName={congressName}/>
-    </div>
-    <div className="relative grid min-w-0 items-stretch gap-4 p-3 pt-4 sm:gap-5 sm:p-6 lg:grid-cols-[minmax(310px,0.78fr)_minmax(0,1.22fr)] xl:p-7" data-projection-section="attendance-operations">
+    <div className="projection-operations relative min-w-0 items-stretch gap-4 p-3 sm:gap-5 sm:p-5 xl:p-6" data-projection-section="attendance-operations" data-projection-layout="welcome-qr-left-seating-right">
+     <div className="flex min-w-0 flex-col gap-4 sm:gap-5" data-projection-column="welcome-and-qr">
+      <div className="min-w-0" data-projection-section="latest-delegate">
+       <ProjectionWelcome data={liveData} congressName={congressName} compact/>
+      </div>
     <div className="flex min-w-0 flex-col gap-4" data-projection-section="session-qr">
      <div className="flex h-full flex-col overflow-hidden rounded-[20px] border border-white/15 bg-[#1b3048] p-4 shadow-[0_12px_34px_rgba(2,13,27,.13)] sm:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-4">
@@ -239,7 +240,7 @@ export function SessionQrScreen({congressId,sessions,initialSessionId,congressNa
        <button type="button" disabled={!visible} onClick={()=>setDownloadOpen(true)}
         title="Nhấn mã QR để tải ảnh PNG hoặc SVG"
         aria-label="Mở tùy chọn tải xuống mã QR của phiên"
-        className="group flex h-[min(72vw,290px)] w-[min(72vw,290px)] shrink-0 items-center justify-center rounded-[18px] border-[7px] border-[#f1eee7] bg-white p-2.5 shadow-[0_16px_40px_rgba(0,0,0,.22)] outline-offset-4 transition-transform duration-200 hover:-translate-y-0.5 disabled:cursor-default disabled:hover:translate-y-0 sm:h-[290px] sm:w-[290px] 2xl:h-[310px] 2xl:w-[310px]">
+        className="projection-qr-clickable group flex aspect-square w-[min(72vw,290px)] shrink-0 items-center justify-center rounded-[18px] border-[7px] border-[#f1eee7] bg-white p-2.5 shadow-[0_16px_40px_rgba(0,0,0,.22)] outline-offset-4 transition-transform duration-200 hover:-translate-y-0.5 disabled:cursor-default disabled:hover:translate-y-0 sm:w-[290px]">
         {visible&&ticket?
          <QRCodeSVG ref={qrSvg} value={ticket.url} size={256} level="M" marginSize={2}
           className="h-full w-full" title={"QR điểm danh "+session?.name}/>:
@@ -272,6 +273,7 @@ export function SessionQrScreen({congressId,sessions,initialSessionId,congressNa
       Liên kết QR đang dùng localhost. Hãy mở trang bằng IP LAN hoặc cấu hình SESSION_QR_BASE_URL trước khi phát mã cho đại biểu.
      </p>}
     </div>
+     </div>
     <div className="min-w-0" data-projection-section="seat-map">
      <ProjectionSeatingMap data={liveData} congressId={congressId} compact/>
      {liveError&&<p role="status" className="mt-3 rounded-lg border border-white/10 bg-white/10 px-4 py-3 text-xs text-[#f9e2be]">Sơ đồ chưa cập nhật: {liveError}</p>}

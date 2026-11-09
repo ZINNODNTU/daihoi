@@ -15,7 +15,7 @@
   blocked:"border-[#536e7a] bg-[#42606a] text-[#a8c2cb]"
  };
 
- export function ProjectionWelcome({data,congressName}:{data:LiveDashboardData|null;congressName:string}){
+ export function ProjectionWelcome({data,congressName,compact=false}:{data:LiveDashboardData|null;congressName:string;compact?:boolean}){
  const latest=data?.checkins[0];
  const person=latest?data?.delegates.find(x=>x.id===latest.delegate_id):null;
  const seat=person?data?.seats.find(s=>
@@ -23,7 +23,7 @@
  const role=person?.delegate_type==="official"?"ĐẠI BIỂU CHÍNH THỨC":
   person?.delegate_type==="alternate"?"ĐẠI BIỂU DỰ KHUYẾT":"KHÁCH MỜI";
  return <section aria-label="Đại biểu vừa điểm danh"
-  className="projection-welcome relative isolate min-w-0 overflow-hidden rounded-[22px] border border-[#416184] bg-[#152943] text-white shadow-[0_18px_48px_rgba(0,11,27,.22)]">
+  className={"projection-welcome relative isolate min-w-0 overflow-hidden rounded-[22px] border border-[#416184] bg-[#152943] text-white shadow-[0_18px_48px_rgba(0,11,27,.22)]"+(compact?" projection-welcome--compact":"")}>
   <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_90%_10%,rgba(57,110,144,.34),transparent_42%),radial-gradient(ellipse_at_10%_98%,rgba(223,184,107,.11),transparent_45%)]"/>
   <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-32 h-[360px] w-[360px] rounded-full border-[44px] border-white/[.035]"/>
   <div aria-hidden="true" className="pointer-events-none absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#a87b37] via-[#e7cc89] to-[#318aaa]"/>
@@ -51,7 +51,7 @@
     </p>
    </div>:
    <div key={latest.id} className="projection-arrival relative grid min-h-[255px] items-center gap-5 px-5 py-5 sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-7 sm:px-7 sm:py-6 xl:grid-cols-[172px_minmax(0,1fr)] xl:gap-9">
-    <div className="relative mx-auto w-[132px] sm:w-[150px] xl:w-[172px]">
+    <div className="projection-portrait relative mx-auto w-[132px] sm:w-[150px] xl:w-[172px]">
      <div aria-hidden="true" className="absolute -inset-2 rounded-[22px] border border-[#dfbc7b]/30"/>
      <div className="relative aspect-[3/4] overflow-hidden rounded-[16px] border-[4px] border-[#e9d49f] bg-[#e8f1f5] shadow-[0_18px_32px_rgba(0,0,0,.25)]">
       {person.photo_path?<Image unoptimized
@@ -67,7 +67,7 @@
      <div className="mb-2 inline-flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.18em] text-[#e6bf7b]">
       <span className="h-px w-6 bg-[#d9b47c]"/> {role}
      </div>
-     <h3 className="break-words text-[clamp(26px,3.9vw,55px)] font-black leading-[1.11] tracking-[-.045em] text-white [text-wrap:balance]">
+     <h3 className="projection-delegate-name break-words text-[clamp(26px,3.9vw,55px)] font-black leading-[1.11] tracking-[-.045em] text-white [text-wrap:balance]">
       {person.full_name}
      </h3>
      <p className="mt-2 text-[12px] font-semibold leading-6 text-[#bcd3e1] sm:text-[14px]">
@@ -118,7 +118,7 @@ export function ProjectionSeatingMap({data,congressId,compact=false}:{
   const people=new Map((data?.delegates||[]).map(d=>[d.id,d]));
   const gridSeatIds=new Set([...cells.values()].map(s=>s.id));
    const outside=(data?.seats||[]).filter(s=>!gridSeatIds.has(s.id));
-  return <section className="h-full min-w-0 overflow-hidden rounded-[20px] border border-white/15 bg-[#1b3048] shadow-[0_12px_34px_rgba(2,13,27,.13)]">
+  return <section className="projection-seating-map flex h-full min-w-0 flex-col overflow-hidden rounded-[20px] border border-white/15 bg-[#1b3048] shadow-[0_12px_34px_rgba(2,13,27,.13)]">
    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-6">
     <div>
      <h3 className="flex items-center gap-2 text-[16px] font-extrabold text-white"><LayoutGrid size={18} className="text-[#e4c58c]"/> SƠ ĐỒ HỘI TRƯỜNG</h3>
@@ -147,15 +147,15 @@ export function ProjectionSeatingMap({data,congressId,compact=false}:{
     <Link className="rounded-lg bg-white px-4 py-2 text-xs font-bold text-[#15516a]"
      href={"/congresses/"+congressId+"/attendance"}>Gắn sơ đồ trong Quản lý phiên →</Link>
    </div>:!valid?<p className="px-6 py-7 text-sm text-[#fad4b8]">Kích thước sơ đồ không hợp lệ. Kiểm tra trong mục Sơ đồ ghế.</p>:
-   <div className="overflow-x-auto px-3 pb-5 sm:px-6" tabIndex={0}
+   <div className="flex min-h-0 flex-1 flex-col justify-center overflow-x-auto px-3 pb-5 sm:px-6" tabIndex={0}
     aria-label="Lưới sơ đồ ghế theo lượt điểm danh">
     <div className="mx-auto rounded-[16px] border border-[#c9d8e2] bg-[#f7fafc] p-3 shadow-[0_8px_24px_rgba(0,0,0,.12)] sm:p-5"
-     style={{width:"max-content",minWidth:Math.min(410,size.columns*(compact?26:34)+66)}}>
+     style={{width:"max-content",minWidth:"100%"}}>
      <p className="mx-auto mb-4 max-w-[300px] rounded-b-xl border-x border-b border-[#bfd3df] bg-[#dceaf1] px-5 py-2 text-center text-[11px] font-extrabold tracking-widest text-[#436e81]">
       {layout.stage_label||"SÂN KHẤU"}
      </p>
      <div className={compact?"grid gap-[3px]":"grid gap-1"} style={{
-      gridTemplateColumns:"28px repeat("+size.columns+", "+(compact?"24px":"minmax(26px,34px)")+")"
+      gridTemplateColumns:"28px repeat("+size.columns+", minmax("+(compact?"20px":"26px")+", 1fr))"
      }}>
       <span/>
       {Array.from({length:size.columns},(_,c)=><span key={"column"+c}
@@ -164,13 +164,13 @@ export function ProjectionSeatingMap({data,congressId,compact=false}:{
        <span className="self-center text-center text-[10px] font-bold text-[#7192a2]">{rowLabelAt("A",r)}</span>
        {Array.from({length:size.columns},(_,c)=>{
         const seat=cells.get(r*size.columns+c);
-        if(!seat)return <span key={c} className={(compact?"h-6":"h-7")+" rounded-[4px] bg-[#ecf1f4]"} aria-label="Lối đi"/>;
+        if(!seat)return <span key={c} className={(compact?"h-6 xl:h-7 2xl:h-8":"h-7 2xl:h-8")+" rounded-[4px] bg-[#ecf1f4]"} aria-label="Lối đi"/>;
         const d=people.get(assigned.get(seat.id)||"");
         const state=classifySeat(seat,assigned.get(seat.id),checked);
         return <span key={c} title={seat.code+" · "+(d?.full_name||"Chưa phân")+
          " · "+(state==="present"?"Đã điểm danh":"Chưa điểm danh")}
          className={"flex items-center justify-center rounded-[4px] border font-extrabold "+
-           (compact?"h-6 text-[8px] ":"h-7 text-[9px] ")+
+           (compact?"h-6 xl:h-7 2xl:h-8 text-[8px] xl:text-[9px] ":"h-7 2xl:h-8 text-[9px] ")+
           colors[state]+(seat.seat_type==="guest"?" ring-1 ring-inset ring-[#9066b8]":"")+
              (latestSeatId===seat.id?" relative z-[2] ring-[2px] ring-[#d39c37] shadow-[0_0_0_3px_rgba(222,165,74,.45)]":"")}>
          {seat.blocked?"×":seat.seat_number}

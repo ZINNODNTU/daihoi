@@ -3,21 +3,30 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 const text=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 
-test("Màn hình trình chiếu ưu tiên đại biểu vừa điểm danh ở trên, QR và sơ đồ ở hàng dưới",()=>{
+test("Desktop: flashcard và QR cùng cột trái, sơ đồ hội trường bên phải; mobile xếp dọc",()=>{
  const source=text("../src/components/session-qr-screen.tsx");
+ const layout=source.indexOf('data-projection-layout="welcome-qr-left-seating-right"');
+ const left=source.indexOf('data-projection-column="welcome-and-qr"');
  const hero=source.indexOf('data-projection-section="latest-delegate"');
- const bottom=source.indexOf('data-projection-section="attendance-operations"');
  const qr=source.indexOf('data-projection-section="session-qr"');
  const seat=source.indexOf('data-projection-section="seat-map"');
- assert.ok(hero>0 && bottom>hero && qr>bottom && seat>qr,
-  "Cấu trúc phải theo thứ tự: welcome -> QR dưới -> ghế bên cạnh");
+ assert.ok(layout>0&&left>layout&&hero>left&&qr>hero&&seat>qr,
+  "Chung grid: cột trái chứa flashcard rồi QR, cột phải chứa sơ đồ");
  assert.equal((source.match(/<ProjectionWelcome /g)||[]).length,1,
-  "Không trùng flashcard đại biểu trên màn hình");
- assert.match(source,/lg:grid-cols-\[minmax\(310px,0\.78fr\)_minmax\(0,1\.22fr\)\]/);
+  "Không trùng flashcard khi điểm danh liên tiếp");
+ assert.equal((source.match(/<ProjectionSeatingMap /g)||[]).length,1);
+ assert.match(source,/ProjectionWelcome data=\{liveData\} congressName=\{congressName\} compact/);
+ assert.match(source,/projection-qr-clickable/);
  assert.match(source,/fullscreen:h-dvh/);
  assert.match(source,/BrandMark/);
+ const css=text("../src/app/globals.css");
+ assert.match(css,/\.projection-stage\{container-type:inline-size;/);
+ assert.match(css,/\.projection-operations\{display:grid;grid-template-columns:minmax\(0,1fr\)/);
+ assert.match(css,/@container \(min-width:900px\)/);
+ assert.match(css,/grid-template-columns:minmax\(320px,\.72fr\) minmax\(0,1\.28fr\)/);
+ assert.match(css,/\.projection-qr-clickable\{width:clamp\(190px,20\.8cqw,275px\)/);
 });
-test("Không làm mất cơ chế QR cố định, xuất PNG/SVG, chuyển phiên, cập nhật trực tiếp",()=>{
+test("Không làm mất QR cố định, PNG/SVG, chuyển phiên và cập nhật trực tiếp",()=>{
  const source=text("../src/components/session-qr-screen.tsx");
  assert.match(source,/QRCodeSVG ref=\{qrSvg\} value=\{ticket\.url\}/);
  assert.match(source,/downloadQr\("png"\)/);
@@ -29,7 +38,7 @@ test("Không làm mất cơ chế QR cố định, xuất PNG/SVG, chuyển phi�
  assert.match(source,/getWindowStatus\(session,new Date\(clock\)\)/);
  assert.match(source,/role="progressbar"/);
 });
-test("Flashcard có ảnh, tên, đơn vị, vị trí ghế và thời gian; cập nhật theo lượt mới",()=>{
+test("Flashcard có ảnh, tên, đơn vị, ghế; sơ đồ tận dụng chiều rộng màn hình",()=>{
  const source=text("../src/components/attendance-projection.tsx");
  assert.match(source,/projection-arrival/);
  assert.match(source,/key=\{latest\.id\}/);
@@ -40,6 +49,11 @@ test("Flashcard có ảnh, tên, đơn vị, vị trí ghế và thời gian; c�
  assert.match(source,/latest\.checked_in_at/);
  assert.match(source,/latestSeatId===seat\.id/);
  assert.match(source,/ring-\[2px\] ring-\[#d39c37\]/);
+ assert.match(source,/projection-welcome--compact/);
+ assert.match(source,/projection-delegate-name/);
+ assert.match(source,/projection-seating-map flex h-full/);
+ assert.match(source,/minWidth:"100%"/);
+ assert.match(source,/minmax\("\+\(compact\?"20px":"26px"\)\+", 1fr\)/);
  const css=text("../src/app/globals.css");
  assert.match(css,/@keyframes projection-arrival-enter/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);

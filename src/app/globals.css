@@ -782,3 +782,24 @@
 @media(prefers-reduced-motion:reduce){
  .projection-arrival{animation:none!important}
 }
+
+/* Live projection workstation layout */
+.projection-stage{container-type:inline-size;}
+.projection-operations{display:grid;grid-template-columns:minmax(0,1fr);}
+/* A container query follows actual projector space, including the sidebar and fullscreen. */
+@container (min-width:900px){
+ .projection-operations{grid-template-columns:minmax(320px,.72fr) minmax(0,1.28fr);}
+ .projection-welcome--compact .projection-arrival{
+  display:grid;grid-template-columns:clamp(90px,9.2cqw,116px) minmax(0,1fr);
+  gap:clamp(12px,1.3cqw,22px);min-height:0;
+  padding:clamp(14px,1.4cqw,20px);
+ }
+ .projection-welcome--compact .projection-portrait{width:clamp(90px,9.2cqw,116px);}
+ .projection-welcome--compact .projection-delegate-name{font-size:clamp(22px,2.25cqw,36px);}
+ .projection-qr-clickable{width:clamp(190px,20.8cqw,275px);}
+}
+@container (min-width:1350px){
+ .projection-operations{grid-template-columns:minmax(470px,.72fr) minmax(0,1.28fr);}
+ .projection-welcome--compact .projection-arrival{grid-template-columns:130px minmax(0,1fr);}
+ .projection-welcome--compact .projection-portrait{width:130px;}
+}
