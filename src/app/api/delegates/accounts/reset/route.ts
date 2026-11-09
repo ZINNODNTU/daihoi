@@ -1,4 +1,3 @@
-import {randomBytes} from "node:crypto";
 import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
@@ -6,6 +5,7 @@ import {createAdminClient} from "@/lib/supabase/admin";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DEFAULT_DELEGATE_PASSWORD="Abc@123456";
 const fail=(error:string,status:number)=>NextResponse.json({error},{
  status,headers:{"Cache-Control":"private, no-store","Pragma":"no-cache"}
 });
@@ -26,9 +26,8 @@ export async function POST(request:Request){
   if(!UUID.test(congressId)||!UUID.test(delegateId))return fail("Dữ liệu không hợp lệ.",400);
   if(!(await hasRole(supabase,user.id,congressId,"admin")))
    return fail("Chỉ quản trị Đại hội được cấp lại mật khẩu.",403);
-  const custom=body?.password;
-  if(custom!==undefined&&(typeof custom!=="string"||custom.length<12||custom.length>128))
-   return fail("Mật khẩu phải từ 12 đến 128 ký tự.",400);
+  if(body?.password!==undefined)
+   return fail("Chức năng reset chỉ hỗ trợ mật khẩu mặc định của hệ thống.",400);
   const db=createAdminClient();
   const {data:delegate,error:lookupError}=await db.from("delegates")
    .select("id,full_name,login_email,auth_user_id,is_active")
@@ -45,12 +44,13 @@ export async function POST(request:Request){
   if(profile.error||staff.error)return fail("Không xác minh được phân quyền tài khoản.",503);
   if(profile.data?.platform_role==="super_admin"||(staff.data?.length||0)>0)
    return fail("Tài khoản thuộc BTC/quản trị; không được đặt lại tại khu vực đại biểu.",403);
-  const password=custom??randomBytes(18).toString("base64url");
+  // Always reset to the official default, regardless of the congress.
+  const password=DEFAULT_DELEGATE_PASSWORD;
   const {error}=await db.auth.admin.updateUserById(delegate.auth_user_id,{password});
   if(error)return fail("Dịch vụ xác thực chưa đặt lại được mật khẩu.",502);
   const {error:auditError}=await db.from("audit_logs").insert({
    congress_id:congressId,actor_id:user.id,action:"delegate.password_reset",
-   target_id:delegateId,details:{userId:delegate.auth_user_id,custom:custom!==undefined}
+   target_id:delegateId,details:{userId:delegate.auth_user_id,policy:"default"}
   });
   if(auditError)console.error("delegate password reset audit failure",auditError.code);
   return NextResponse.json({

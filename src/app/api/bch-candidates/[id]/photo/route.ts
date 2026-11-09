@@ -30,7 +30,7 @@ async function authorize(id:string,write:boolean){
     .eq("auth_user_id",user.id).eq("is_active",true).limit(1)
   ]);
   if(member.error||delegate.error||
-   member.data?.role!=="secretary"&&!delegate.data?.length)
+   !["secretary","delegate","guest"].includes(member.data?.role||"")&&!delegate.data?.length)
    return {error:fail("Bạn không có quyền xem ảnh nhân sự BCH.",403)} as const;
  }
  return {candidate,supabase} as const;
@@ -39,7 +39,7 @@ function expectedPath(congressId:string,candidateId:string){
  return congressId+"/bch/"+candidateId+".jpg";
 }
 
-export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){
+export async function GET(request:Request,{params}:{params:Promise<{id:string}>}){
  try{
   const {id}=await params;
   const auth=await authorize(id,false);
@@ -47,9 +47,24 @@ export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){
   const expected=expectedPath(auth.candidate.congress_id,id);
   // Never trust client-writable photo_path to load an arbitrary private file.
   if(auth.candidate.photo_path!==expected)return fail("Nhân sự chưa có ảnh chân dung.",404);
-  const {data,error}=await createAdminClient().storage.from(BUCKET).download(expected);
-  if(error||!data)return fail("Không tải được ảnh nhân sự.",404);
-  return new Response(await data.arrayBuffer(),{
+  const size=new URL(request.url).searchParams.get("w");
+  const width=size==="96"?96:size==="160"?160:600;
+  const storage=createAdminClient().storage.from(BUCKET);
+  const variant=width===600?expected:expected.replace(/\.jpg$/i,"-"+width+".jpg");
+  const saved=await storage.download(variant);
+  let bytes:Uint8Array;
+  if(saved.data)bytes=new Uint8Array(await saved.data.arrayBuffer());
+  else{
+   // Fallback for BCH portraits uploaded before the precomputed thumbnails.
+   const {data,error}=await storage.download(expected);
+   if(error||!data)return fail("Không tải được ảnh nhân sự.",404);
+   const original=Buffer.from(await data.arrayBuffer());
+   bytes=width===600?new Uint8Array(original):
+    new Uint8Array(await sharp(original,{limitInputPixels:5_000_000})
+     .resize(width,Math.round(width*4/3),{fit:"cover"})
+     .jpeg({quality:78,mozjpeg:true}).toBuffer());
+  }
+  return new Response(new Uint8Array(bytes),{
    headers:{
     "Content-Type":"image/jpeg","Cache-Control":"private, no-store",
     "X-Content-Type-Options":"nosniff","Content-Disposition":"inline",
@@ -87,6 +102,17 @@ export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}
    .eq("id",id).eq("congress_id",auth.candidate.congress_id)
    .select("photo_path,updated_at").maybeSingle();
   if(updateError||!updated)return fail("Ảnh đã tải lên nhưng chưa liên kết được với hồ sơ BCH.",500);
+  const thumbs=await Promise.allSettled([96,160].map(async width=>{
+   const thumbnail=await sharp(encoded,{limitInputPixels:5_000_000})
+    .resize(width,Math.round(width*4/3),{fit:"cover"})
+    .jpeg({quality:78,mozjpeg:true}).toBuffer();
+   return createAdminClient().storage.from(BUCKET)
+    .upload(path.replace(/\.jpg$/i,"-"+width+".jpg"),thumbnail,{
+     contentType:"image/jpeg",cacheControl:"0",upsert:true
+    });
+  }));
+  if(thumbs.some(item=>item.status==="rejected"||
+   (item.status==="fulfilled"&&Boolean(item.value.error))))console.warn("bch thumbnail fallback required");
   return NextResponse.json({ok:true,photo_path:updated.photo_path,updated_at:updated.updated_at},{
    headers:{"Cache-Control":"private, no-store"}
   });

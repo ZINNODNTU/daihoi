@@ -22,6 +22,21 @@ export async function GET(request:Request){
    return fail("Tài khoản không có quyền theo dõi điểm danh Đại hội.",403);
   // All privileged table reads happen only after the Congress role check.
   const db=createAdminClient();
+   // A tiny incremental feed: no repeated delegate, layout or seat snapshots.
+   if(q.get("mode")==="updates"){
+    const raw=q.get("after")||"";
+    const since=Date.parse(raw);
+    if(!Number.isFinite(since)||since>Date.now()+60000||since<Date.now()-86400000)
+     return fail("Mốc đồng bộ điểm danh không hợp lệ.",400);
+    const {data,error}=await db.from("checkins")
+     .select("id,delegate_id,checked_in_at,method,qr_scope")
+     .eq("congress_id",congressId).eq("session_id",sessionId)
+     .gte("checked_in_at",new Date(since).toISOString())
+     .order("checked_in_at",{ascending:true}).order("id",{ascending:true}).limit(500);
+    if(error)return fail("Không đọc được lượt điểm danh mới.",500);
+    return NextResponse.json({checkins:data||[],refreshedAt:new Date().toISOString()},
+     {headers:{"Cache-Control":"private, no-store"}});
+   }
   const [sessionResult,delegatesResult,layoutsResult,checkinsResult]=await Promise.all([
    db.from("attendance_sessions")
     .select("id,congress_id,name,status,starts_at,ends_at,qr_policy,seating_layout_id")

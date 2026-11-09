@@ -4,10 +4,10 @@ import {ArrowRight,IdCard,ShieldAlert,type LucideIcon} from "lucide-react";
 export function DelegatePageHeading({eyebrow,title,description,icon:Icon}:{
  eyebrow:string;title:string;description:string;icon:LucideIcon
 }){
- return <div className="mb-6 flex items-start justify-between gap-4 sm:mb-8">
+ return <div className="mb-4 flex items-start justify-between gap-4 sm:mb-8">
   <div className="min-w-0">
    <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#357eaa]">{eyebrow}</p>
-   <h1 className="mt-2 text-[clamp(27px,4vw,35px)] font-extrabold leading-tight tracking-[-.045em] text-[#193c50]">{title}</h1>
+   <h1 className="mt-2 text-[clamp(25px,4vw,35px)] font-extrabold leading-[1.3] tracking-[-.018em] text-[#193c50]">{title}</h1>
    <p className="mt-2 max-w-[650px] text-[13px] leading-6 text-[#78919f]">{description}</p>
   </div>
   <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-[13px] border border-[#d0e4e5] bg-[#e9f2f9] text-[#0b80aa] sm:flex">

@@ -3,8 +3,9 @@
  import Image from "next/image";
  import Link from "next/link";
  import {Armchair,CheckCircle2,Clock3,MapPin,Users,UserRound,LayoutGrid} from "lucide-react";
- import {classifySeat,computeLiveSummary,type LiveDashboardData,type LiveSeat,type LiveSeatState} from "@/lib/attendance-live";
- import {rowLabelAt,seatGridCellIndex,seatGridSizeValid} from "@/lib/seating";
+ import {classifySeat,computeLiveSummary,type LiveDashboardData,type LiveCheckin,type LiveSeatState} from "@/lib/attendance-live";
+ import {rowLabelAt,seatGridSizeValid} from "@/lib/seating";
+import {projectAttendanceSeats,projectedSeatCode} from "@/lib/attendance-seat-projection";
  import {displayTime} from "@/lib/attendance-report";
  import {useMemo} from "react";
 
@@ -15,12 +16,12 @@
   blocked:"border-[#536e7a] bg-[#42606a] text-[#a8c2cb]"
  };
 
- export function ProjectionWelcome({data,congressName,compact=false}:{data:LiveDashboardData|null;congressName:string;compact?:boolean}){
- const latest=data?.checkins[0];
- const person=latest?data?.delegates.find(x=>x.id===latest.delegate_id):null;
+export function ProjectionWelcome({data,congressName,compact=false,featured}:{data:LiveDashboardData|null;congressName:string;compact?:boolean;featured?:LiveCheckin|null}){
+  const latest=featured||data?.checkins[0]; const person=latest?data?.delegates.find(x=>x.id===latest.delegate_id):null;
  const seat=person?data?.seats.find(s=>
   data.assignments.some(a=>a.seat_id===s.id&&a.delegate_id===person.id)):null;
- const role=person?.delegate_type==="official"?"ĐẠI BIỂU CHÍNH THỨC":
+ const projectedNumbers=projectAttendanceSeats(data?.layout,data?.seats||[]).seatNumbers;
+  const role=person?.delegate_type==="official"?"ĐẠI BIỂU CHÍNH THỨC":
   person?.delegate_type==="alternate"?"ĐẠI BIỂU DỰ KHUYẾT":"KHÁCH MỜI";
  return <section aria-label="Đại biểu vừa điểm danh"
   className={"projection-welcome relative isolate min-w-0 overflow-hidden rounded-[22px] border border-[#416184] bg-[#152943] text-white shadow-[0_18px_48px_rgba(0,11,27,.22)]"+(compact?" projection-welcome--compact":"")}>
@@ -79,7 +80,7 @@
        <span className="min-w-0 break-words">{person.unit||"Chưa cập nhật đơn vị"}</span>
       </span>
       <span className="inline-flex items-center gap-2 rounded-xl border border-[#e0b96e]/35 bg-[#d1a65e]/15 px-3.5 py-2.5 text-[12px] font-extrabold text-[#f0d493]">
-       <MapPin size={16}/> Ghế {seat?seat.code:"chưa phân"}
+       <MapPin size={16}/> Ghế {seat?projectedSeatCode(seat,projectedNumbers):"chưa phân"}
       </span>
      </div>
      <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-[#aecad7] sm:justify-start">
@@ -91,33 +92,52 @@
  </section>;
 }
 
-export function ProjectionSeatingMap({data,congressId,compact=false}:{
-  data:LiveDashboardData|null;congressId:string;compact?:boolean
- }){
-  const summary=data?computeLiveSummary(data):null;
+// FIFO queue is visible even while the projector is greeting an earlier arrival.
+export function ProjectionArrivalQueue({data,waiting}:{
+ data:LiveDashboardData|null;waiting:LiveCheckin[]
+}){
+ const delegates=new Map((data?.delegates||[]).map(person=>[person.id,person]));
+ const assigned=new Map((data?.assignments||[]).map(row=>[row.delegate_id,row.seat_id]));
+ const projectedNumbers=projectAttendanceSeats(data?.layout,data?.seats||[]).seatNumbers;
+ const seats=new Map((data?.seats||[]).map(seat=>[seat.id,projectedSeatCode(seat,projectedNumbers)]));
+ return <section aria-label="Hàng chờ chào mừng đại biểu" className="rounded-[18px] border border-[#416184] bg-[#1b3048] px-4 py-3 text-white sm:px-5" aria-live="polite">
+  <div className="flex items-center justify-between gap-3">
+   <h3 className="text-[13px] font-extrabold text-[#f0d493]">HÀNG CHỜ ĐẠI BIỂU VỪA ĐẾN</h3>
+   <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-extrabold">{waiting.length} đang chờ</span>
+  </div>
+  {!waiting.length?<p className="mt-2 text-[11px] text-[#b6cbd8]">Lượt điểm danh mới sẽ được chào lần lượt, không bỏ sót khi nhiều đại biểu quét cùng lúc.</p>:
+   <div className="mt-3 grid gap-2">
+    {waiting.slice(0,3).map((checkin,i)=>{
+     const person=delegates.get(checkin.delegate_id);
+     const seat=seats.get(assigned.get(checkin.delegate_id)||"")||"Chưa phân";
+     return <div key={checkin.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.06] p-2.5">
+      <span className="w-5 shrink-0 text-center text-[12px] font-black text-[#eed29c]">{i+1}</span>
+      {person?.photo_path?<Image unoptimized loading="lazy" src={"/api/delegates/"+person.id+"/photo?w=96"} width={48} height={64} alt={"Ảnh "+person.full_name} className="h-14 w-11 shrink-0 rounded-lg border border-white/15 object-cover"/>:
+       <span className="flex h-14 w-11 shrink-0 items-center justify-center rounded-lg bg-white/10"><UserRound size={21}/></span>}
+      <div className="min-w-0 flex-1">
+       <p className="break-words text-[13px] font-extrabold leading-5 text-white">{person?.full_name||"Đại biểu"}</p>
+       <p className="mt-0.5 break-words text-[11px] leading-4 text-[#c6dbe5]">{person?.unit||"Chưa cập nhật đơn vị"}</p>
+       <p className="mt-1 text-[10px] font-bold text-[#e6c98e]">{person?.delegate_type==="guest"?"Khách mời":person?.delegate_type==="alternate"?"Dự khuyết":"Chính thức"} · Ghế {seat} · {displayTime(checkin.checked_in_at)}</p>
+      </div>
+     </div>;
+    })}
+    {waiting.length>3&&<p className="text-center text-[11px] font-semibold text-[#e6c98e]">Còn {waiting.length-3} đại biểu tiếp theo trong hàng chờ</p>}
+   </div>}
+ </section>;
+}
+
+export function ProjectionSeatingMap({data,congressId,compact=false,featuredDelegateId}:{
+   data:LiveDashboardData|null;congressId:string;compact?:boolean;featuredDelegateId?:string
+  }){  const summary=data?computeLiveSummary(data):null;
   const layout=data?.layout;
-  const size={rows:layout?.grid_rows||0,columns:layout?.grid_columns||0};
+  const projected=useMemo(()=>projectAttendanceSeats(layout,data?.seats||[]),[layout,data?.seats]);
+  const {size,cells,seatNumbers}=projected;
   const valid=seatGridSizeValid(size);
-  const cells=useMemo(()=>{
-   const m=new Map<number,LiveSeat>();
-   if(!data?.layout||!seatGridSizeValid({
-    rows:data.layout.grid_rows,columns:data.layout.grid_columns
-   }))return m;
-   for(const seat of data.seats){
-    const i=seatGridCellIndex(seat,{
-     rows:data.layout.grid_rows,columns:data.layout.grid_columns
-    });
-    if(i!==null)m.set(i,seat);
-   }
-   return m;
-  },[data]);
   const assigned=new Map((data?.assignments||[]).map(a=>[a.seat_id,a.delegate_id]));
   const checked=new Set((data?.checkins||[]).map(c=>c.delegate_id));
-  const lastDelegateId=data?.checkins[0]?.delegate_id||"";
+  const lastDelegateId=featuredDelegateId||data?.checkins[0]?.delegate_id||"";
   const latestSeatId=data?.assignments.find(a=>a.delegate_id===lastDelegateId)?.seat_id||"";
   const people=new Map((data?.delegates||[]).map(d=>[d.id,d]));
-  const gridSeatIds=new Set([...cells.values()].map(s=>s.id));
-   const outside=(data?.seats||[]).filter(s=>!gridSeatIds.has(s.id));
   return <section className="projection-seating-map flex h-full min-w-0 flex-col overflow-hidden rounded-[20px] border border-white/15 bg-[#1b3048] shadow-[0_12px_34px_rgba(2,13,27,.13)]">
    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-6">
     <div>
@@ -157,9 +177,7 @@ export function ProjectionSeatingMap({data,congressId,compact=false}:{
      <div className={compact?"grid gap-[3px]":"grid gap-1"} style={{
       gridTemplateColumns:"28px repeat("+size.columns+", minmax("+(compact?"20px":"26px")+", 1fr))"
      }}>
-      <span/>
-      {Array.from({length:size.columns},(_,c)=><span key={"column"+c}
-       className="text-center text-[9px] font-bold text-[#93a7b2]">{c+1}</span>)}
+
       {Array.from({length:size.rows},(_,r)=><div key={"row"+r} className="contents">
        <span className="self-center text-center text-[10px] font-bold text-[#7192a2]">{rowLabelAt("A",r)}</span>
        {Array.from({length:size.columns},(_,c)=>{
@@ -167,26 +185,18 @@ export function ProjectionSeatingMap({data,congressId,compact=false}:{
         if(!seat)return <span key={c} className={(compact?"h-6 xl:h-7 2xl:h-8":"h-7 2xl:h-8")+" rounded-[4px] bg-[#ecf1f4]"} aria-label="Lối đi"/>;
         const d=people.get(assigned.get(seat.id)||"");
         const state=classifySeat(seat,assigned.get(seat.id),checked);
-        return <span key={c} title={seat.code+" · "+(d?.full_name||"Chưa phân")+
+        return <span key={c} title={"Hàng "+rowLabelAt("A",r)+" · Ghế "+seatNumbers.get(seat.id)+" · "+(d?.full_name||"Chưa phân")+
          " · "+(state==="present"?"Đã điểm danh":"Chưa điểm danh")}
          className={"flex items-center justify-center rounded-[4px] border font-extrabold "+
            (compact?"h-6 xl:h-7 2xl:h-8 text-[8px] xl:text-[9px] ":"h-7 2xl:h-8 text-[9px] ")+
           colors[state]+(seat.seat_type==="guest"?" ring-1 ring-inset ring-[#9066b8]":"")+
              (latestSeatId===seat.id?" relative z-[2] ring-[2px] ring-[#d39c37] shadow-[0_0_0_3px_rgba(222,165,74,.45)]":"")}>
-         {seat.blocked?"×":seat.seat_number}
+         {seat.blocked?"×":seatNumbers.get(seat.id)}
         </span>;
        })}
       </div>)}
      </div>
     </div>
-    {outside.length>0&&<div className="mt-3 flex flex-wrap gap-2">
-     {outside.map(seat=>{
-      const state=classifySeat(seat,assigned.get(seat.id),checked);
-      return <span key={seat.id} className={"rounded-md border px-2 py-1 text-[10px] font-bold "+colors[state]+
-         (latestSeatId===seat.id?" ring-2 ring-[#d39c37]":"")}
-       title={people.get(assigned.get(seat.id)||"")?.full_name||"Chưa phân"}>{seat.code}</span>;
-     })}
-    </div>}
    </div>}
    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 px-5 py-3 text-[11px] font-semibold text-[#d3e5ea] sm:px-7">
     <span className="text-[#99ebc5]">Đã đến: {summary?.seats.present||0} ghế</span>

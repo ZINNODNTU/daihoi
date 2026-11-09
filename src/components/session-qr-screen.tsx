@@ -1,27 +1,27 @@
 "use client";
 
-import {useCallback,useEffect,useRef,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import Link from "next/link";
 import {QRCodeSVG} from "qrcode.react";
-import {BrandMark} from "@/components/brand-mark";
+import {BrandMark,type CongressKind} from "@/components/brand-mark";
 import {
  ArrowLeft,Check,Clock3,Copy,Download,ExternalLink,Maximize2,Minimize2,
  UserRoundCheck,QrCode,ShieldCheck,Smartphone,X
 } from "lucide-react";
 import type {AttendanceSession} from "@/lib/types";
-import {computeLiveSummary,type LiveDashboardData} from "@/lib/attendance-live";
-import {ProjectionWelcome,ProjectionSeatingMap} from "@/components/attendance-projection";
+import {computeLiveSummary} from "@/lib/attendance-live";
+import {ProjectionWelcome,ProjectionSeatingMap,ProjectionArrivalQueue} from "@/components/attendance-projection";
+import {useAttendanceLive} from "@/components/use-attendance-live";
 import {displayTime} from "@/lib/attendance-report";
 import {getWindowStatus,getWindowLabel} from "@/lib/attendance-window";
 
-type Props={congressId:string;sessions:AttendanceSession[];initialSessionId:string;congressName:string};
+type Props={congressId:string;sessions:AttendanceSession[];initialSessionId:string;congressName:string;congressKind?:CongressKind};
 type Ticket={url:string;sessionName:string;refreshedAt:string};
 
-export function SessionQrScreen({congressId,sessions,initialSessionId,congressName}:Props){
+export function SessionQrScreen({congressId,sessions,initialSessionId,congressName,congressKind="doan"}:Props){
  const [sessionId,setSessionId]=useState(initialSessionId);
  const [ticket,setTicket]=useState<Ticket|null>(null);
- const [liveData,setLiveData]=useState<LiveDashboardData|null>(null);
- const [liveError,setLiveError]=useState("");
+ const {data:liveData,featured,waiting,error:liveError,connection}=useAttendanceLive(congressId,sessionId);
  const [error,setError]=useState("");
  const [clock,setClock]=useState(Date.now);
  const [full,setFull]=useState(false);
@@ -36,7 +36,16 @@ export function SessionQrScreen({congressId,sessions,initialSessionId,congressNa
  const allowed=Boolean(session&&(session.qr_policy==="both"||session.qr_policy==="session"));
  const visible=Boolean(ticket&&allowed);
  const canScan=visible&&status==="open";
- const summary=liveData?computeLiveSummary(liveData):null;
+ const summary=useMemo(()=>liveData?computeLiveSummary(liveData):null,[liveData]);
+ // Clock ticks must not rerender a 500-seat map or reload the greeting portrait.
+ const welcomeView=useMemo(()=>
+  <ProjectionWelcome data={liveData} congressName={congressName} compact featured={featured}/>,
+  [liveData,congressName,featured]);
+ const queueView=useMemo(()=><ProjectionArrivalQueue data={liveData} waiting={waiting}/>,
+  [liveData,waiting]);
+ const seatingView=useMemo(()=>
+  <ProjectionSeatingMap data={liveData} congressId={congressId} compact featuredDelegateId={featured?.delegate_id}/>,
+  [liveData,congressId,featured?.delegate_id]);
  const localQr=Boolean(ticket&&/https?:\/\/(?:localhost|127\.0\.0\.1)(?::|\/)/.test(ticket.url));
 
  const loadTicket=useCallback(async()=>{
@@ -56,31 +65,6 @@ export function SessionQrScreen({congressId,sessions,initialSessionId,congressNa
   }
  },[congressId,sessionId]);
  useEffect(()=>{queueMicrotask(()=>void loadTicket());},[loadTicket]);
- useEffect(()=>{
-  let mounted=true,pending=false;
-  async function syncLive(){
-   if(!sessionId||pending||document.visibilityState==="hidden")return;
-   pending=true;
-   try{
-    const q=new URLSearchParams({congressId,sessionId});
-    const response=await fetch("/api/attendance/live?"+q.toString(),{
-     credentials:"same-origin",cache:"no-store"
-    });
-    const body=await response.json();
-    if(!response.ok)throw new Error(body.error||"Không tải được sơ đồ điểm danh.");
-    if(mounted){setLiveData(body as LiveDashboardData);setLiveError("");}
-   }catch(e){
-    if(mounted)setLiveError(e instanceof Error?e.message:"Không đồng bộ được sơ đồ.");
-   }finally{pending=false;}
-  }
-  void syncLive();
-  // Giảm độ trễ hiển thị flashcard sau khi đại biểu vừa quét mã.
-  const timer=setInterval(()=>void syncLive(),3000);
-  const onVisible=()=>{if(document.visibilityState==="visible")void syncLive();};
-  document.addEventListener("visibilitychange",onVisible);
-  return()=>{mounted=false;clearInterval(timer);
-   document.removeEventListener("visibilitychange",onVisible);};
- },[congressId,sessionId]);
  useEffect(()=>{
   const interval=setInterval(()=>setClock(Date.now()),1000);
   return()=>clearInterval(interval);
@@ -171,7 +155,7 @@ export function SessionQrScreen({congressId,sessions,initialSessionId,congressNa
     <label className="block text-xs font-bold text-[#516f81]" htmlFor="projection-session">Phiên điểm danh đang trình chiếu</label>
     <select id="projection-session" className="field mt-2 w-full" value={sessionId}
      onChange={e=>{selectedRef.current=e.target.value;setSessionId(e.target.value);
-      setTicket(null);setLiveData(null);setLiveError("");setError("");setDownloadOpen(false);}}>
+      setTicket(null);setError("");setDownloadOpen(false);}}>
      {!sessions.length&&<option value="">Chưa có phiên điểm danh</option>}
      {sessions.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
     </select>
@@ -189,7 +173,7 @@ export function SessionQrScreen({congressId,sessions,initialSessionId,congressNa
    <div aria-hidden="true" className="pointer-events-none absolute left-0 top-0 h-[3px] w-full bg-gradient-to-r from-[#a87334] via-[#ecd49e] to-[#3193bb]"/>
    <header className="relative flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-7 xl:px-9">
     <div className="flex min-w-0 items-center gap-3">
-     <BrandMark className="!h-[50px] !w-[50px] !flex-[0_0_50px] !border-white/15 !bg-white !p-1"/>
+     <BrandMark kind={congressKind} className="!h-[50px] !w-[50px] !flex-[0_0_50px] !border-white/15 !bg-white !p-1"/>
      <div className="min-w-0">
       <p className="truncate text-[10px] font-extrabold uppercase tracking-[.13em] text-[#e0c78f]">{congressName}</p>
       <h2 className="mt-1 break-words text-[clamp(16px,1.7vw,22px)] font-extrabold tracking-tight text-white">{session?.name||"Chưa chọn phiên điểm danh"}</h2>
@@ -225,7 +209,10 @@ export function SessionQrScreen({congressId,sessions,initialSessionId,congressNa
     <div className="projection-operations relative min-w-0 items-stretch gap-4 p-3 sm:gap-5 sm:p-5 xl:p-6" data-projection-section="attendance-operations" data-projection-layout="welcome-qr-left-seating-right">
      <div className="flex min-w-0 flex-col gap-4 sm:gap-5" data-projection-column="welcome-and-qr">
       <div className="min-w-0" data-projection-section="latest-delegate">
-       <ProjectionWelcome data={liveData} congressName={congressName} compact/>
+       {welcomeView}
+      </div>
+      <div data-projection-section="arrival-queue">
+       {queueView}
       </div>
     <div className="flex min-w-0 flex-col gap-4" data-projection-section="session-qr">
      <div className="flex h-full flex-col overflow-hidden rounded-[20px] border border-white/15 bg-[#1b3048] p-4 shadow-[0_12px_34px_rgba(2,13,27,.13)] sm:p-5">
@@ -275,14 +262,14 @@ export function SessionQrScreen({congressId,sessions,initialSessionId,congressNa
     </div>
      </div>
     <div className="min-w-0" data-projection-section="seat-map">
-     <ProjectionSeatingMap data={liveData} congressId={congressId} compact/>
+     {seatingView}
      {liveError&&<p role="status" className="mt-3 rounded-lg border border-white/10 bg-white/10 px-4 py-3 text-xs text-[#f9e2be]">Sơ đồ chưa cập nhật: {liveError}</p>}
     </div>
    </div>
    <footer className="relative flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-white/10 px-5 py-3 text-center text-[11px] text-[#afd4dc]">
     <span className="inline-flex items-center gap-1.5"><Smartphone size={14}/> Đại biểu quét bằng điện thoại và đăng nhập tài khoản cá nhân</span>
     <span>·</span>
-    <span>Sơ đồ ghế và thông tin đại biểu tự đồng bộ mỗi 3 giây</span>
+    <span>{connection==="realtime"?"Realtime đang kết nối · cập nhật tức thời":"Đang tự đồng bộ dự phòng"} · lượt mới được đưa vào hàng chờ theo thứ tự</span>
    </footer>
 
    {downloadOpen&&visible&&<div role="presentation" onMouseDown={e=>{

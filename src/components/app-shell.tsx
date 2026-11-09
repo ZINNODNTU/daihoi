@@ -7,7 +7,7 @@ import {
   Armchair,ArrowRight,BarChart3,ChartColumnIncreasing,ChevronDown,ChevronRight,ClipboardList,FileText,
   LayoutGrid,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X,IdCard,CircleUserRound
 } from "lucide-react";
-import {BrandMark} from "@/components/brand-mark";
+import {BrandMark,type CongressKind} from "@/components/brand-mark";
 
 
 type NavItem={name:string;href:string;icon:typeof LayoutGrid};
@@ -16,12 +16,13 @@ type Props={
   name:string;
   congressId?:string;
   congressName?:string;
+  congressKind?:CongressKind;
   canManage?:boolean;
   canViewBch?:boolean;
   canCheckin?:boolean;
 };
 
-export function AppShell({children,name,congressId,congressName,canManage=false,canViewBch=false,canCheckin=false}:Props){
+export function AppShell({children,name,congressId,congressName,congressKind="doan",canManage=false,canViewBch=false,canCheckin=false}:Props){
   const [mobile,setMobile]=useState(false);
   const path=usePathname();
   const [logoutError,setLogoutError]=useState("");
@@ -92,7 +93,7 @@ export function AppShell({children,name,congressId,congressName,canManage=false,
       <div className="flex h-[83px] items-center justify-between border-b border-white/10 px-5">
         <Link href="/dashboard" onClick={()=>setMobile(false)}
           aria-label="Đại hội số — Tổng quan" className="flex min-w-0 items-center gap-3">
-          <BrandMark/>
+          <BrandMark kind={congressKind}/>
           <span className="min-w-0 leading-tight">
             <span className="block text-[16px] font-bold tracking-[-.035em] text-white">Đại hội số<span className="ml-1.5 text-[#ffd052]">.</span></span>
             <span className="mt-1 block text-[9px] font-medium uppercase tracking-[.17em] text-[#91a0ba]">NỀN TẢNG ĐẠI HỘI</span>

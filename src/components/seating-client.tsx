@@ -9,7 +9,7 @@ import {
   Users,ZoomIn,ZoomOut
 } from "lucide-react";
 import {
-  generateSection,parseSeatImport,validateImport,validateSeatDrafts,
+  generateSection,parseSeatImport,validateImport,validateSeatDrafts,renumberGridSeats,
   seatGridCellIndex,seatGridPattern,seatGridSizeValid,setSeatGridCells,
   type SeatDraft,type SeatAssignment,type SeatingDelegate,type SeatingLayout,
   type SeatingSession,type ImportEntry,type ImportIssue,type SeatGridPreset,type SeatType,type SeatGridSize
@@ -22,6 +22,10 @@ type SeatingResponse={
   selectedSessionId:string;checkedInDelegateIds:string[];
 };
 type SeatMove={id:string;startX:number;startY:number;seatX:number;seatY:number;moved:boolean};
+type ReusableCongressLayout={id:string;congressId:string;congressName:string;title:string;gridRows:number;gridColumns:number};
+type SeatingTemplate={id:string;title:string;stage_label:string;grid_rows:number;grid_columns:number;
+  seat_count:number;visibility:"private"|"organization";organization_id:string;created_by:string;
+  created_at:string;updated_at:string};
 type Props={congressId:string;canManage:boolean};
 function cleanSearch(s:string){return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d");}
 function header(s:string){return cleanSearch(s).trim().replace(/\s+/g," ");}
@@ -42,6 +46,18 @@ export function SeatingClient({congressId,canManage}:Props){
   const [working,setWorking]=useState(false);
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
+  const [templates,setTemplates]=useState<SeatingTemplate[]>([]);
+  const [templateLoading,setTemplateLoading]=useState(false);
+  const [templateBusy,setTemplateBusy]=useState(false);
+  const [templateError,setTemplateError]=useState("");
+  const [templateReady,setTemplateReady]=useState(true);
+  const [templateId,setTemplateId]=useState("");
+  const [templateName,setTemplateName]=useState("");
+  const [reuseLayouts,setReuseLayouts]=useState<ReusableCongressLayout[]>([]);
+  const [reuseLayoutId,setReuseLayoutId]=useState("");
+  const [reuseBusy,setReuseBusy]=useState(false);
+  const [reuseError,setReuseError]=useState("");
+  const [templateVisibility,setTemplateVisibility]=useState<"private"|"organization">("organization");
   const [layoutId,setLayoutId]=useState("");
   const [title,setTitle]=useState("");
   const [stageLabel,setStageLabel]=useState("SÂN KHẤU");
@@ -80,13 +96,58 @@ export function SeatingClient({congressId,canManage}:Props){
       const nextSize={rows:next.layout?.grid_rows??10,columns:next.layout?.grid_columns??20};
       setGridRows(seatGridSizeValid(nextSize)?nextSize.rows:10);
       setGridColumns(seatGridSizeValid(nextSize)?nextSize.columns:20);
-      seatsSnapshot.current=next.seats;setSeats(next.seats);setSessionId(next.selectedSessionId||"");
+      // Upgrade legacy grid numbering in the editor without changing seat IDs.
+      const isGridMap=next.seats.some(s=>s.zone==="G"&&seatGridCellIndex(s,nextSize)!==null);
+      const fixed=canManage&&isGridMap&&seatGridSizeValid(nextSize)
+        ?renumberGridSeats(next.seats,nextSize):next.seats;
+      const needsSave=fixed.some((seat,index)=>
+        seat.code!==next.seats[index].code||seat.seatNumber!==next.seats[index].seatNumber);
+      seatsSnapshot.current=fixed;setSeats(fixed);setSessionId(next.selectedSessionId||"");
       setDesignSurface(!next.seats.length||next.seats.some(s=>seatGridCellIndex(s,nextSize)!==null)?"grid":"free");
-      setDirty(false);setImportEntries([]);setImportIssues([]);
+      setDirty(needsSave);setImportEntries([]);setImportIssues([]);
+      if(needsSave)setNotice("Đã đánh số liên tục từ trái sang phải cho ghế đại biểu và khách mời. Nhấn Lưu sơ đồ để đồng bộ sang đại biểu và Excel.");
     }catch(reason){setError(reason instanceof Error?reason.message:"Không thể tải sơ đồ.");}
     finally{setLoading(false);}
-  },[congressId]);
+  },[congressId,canManage]);
   useEffect(()=>{void Promise.resolve().then(()=>load());},[load]);
+
+  const loadTemplates=useCallback(async()=>{
+    if(!canManage)return;
+    setTemplateLoading(true);setTemplateError("");
+    try{
+      const response=await fetch("/api/seating/templates?"+new URLSearchParams({congressId}),{cache:"no-store"});
+      const next=await response.json() as {templates?:SeatingTemplate[];error?:string};
+      if(!response.ok){
+        if(next.error?.includes("upgrade-seating-reusable-templates-v26.sql")){
+          setTemplateReady(false);setTemplates([]);setTemplateId("");return;
+        }
+        throw new Error(next.error||"Không tải được thư viện mẫu sơ đồ.");
+      }
+      setTemplateReady(true);
+      const options=next.templates||[];
+      setTemplates(options);
+      setTemplateId(previous=>options.some(item=>item.id===previous)?previous:options[0]?.id||"");
+    }catch(reason){setTemplateError(reason instanceof Error?reason.message:"Không tải được thư viện.");}
+    finally{setTemplateLoading(false);}
+  },[congressId,canManage]);
+  useEffect(()=>{void Promise.resolve().then(()=>loadTemplates());},[loadTemplates]);
+
+  const loadReusableLayouts=useCallback(async()=>{
+    if(!canManage)return;
+    setReuseError("");
+    try{
+      const params=new URLSearchParams({congressId});
+      const response=await fetch("/api/seating/reuse?"+params,{cache:"no-store"});
+      const result=await response.json() as {layouts?:ReusableCongressLayout[];error?:string};
+      if(!response.ok)throw new Error(result.error||"Không thể tải sơ đồ Đại hội khác.");
+      const next=result.layouts||[];
+      setReuseLayouts(next);
+      setReuseLayoutId(prev=>next.some(item=>item.id===prev)?prev:next[0]?.id||"");
+    }catch(reason){
+      setReuseError(reason instanceof Error?reason.message:"Không thể tải sơ đồ nguồn.");
+    }
+  },[congressId,canManage]);
+  useEffect(()=>{void Promise.resolve().then(()=>loadReusableLayouts());},[loadReusableLayouts]);
 
   const activeAssignments=useMemo(()=>data?.layout?.id===layoutId?data.assignments:[],[data,layoutId]);
   const assignments=useMemo(()=>new Map(activeAssignments.map(a=>[a.seat_id,a.delegate_id])),[activeAssignments]);
@@ -189,25 +250,136 @@ export function SeatingClient({congressId,canManage}:Props){
   function resizeGrid(size:SeatGridSize){
     if(!seatGridSizeValid(size)){setError("Canvas tối đa 500 ô, 25 hàng và 30 cột.");return;}
     if(gridRows===size.rows&&gridColumns===size.columns)return;
+    const renumbered=renumberGridSeats(seatsSnapshot.current,size);
+    seatsSnapshot.current=renumbered;setSeats(renumbered);
     setGridRows(size.rows);setGridColumns(size.columns);setDirty(true);
     setSelectedSeatId("");setError("");setImportEntries([]);
     setNotice("Đã đổi canvas thành "+size.rows+" hàng × "+size.columns+" cột. Ghế ngoài vùng mới được giữ lại.");
   }
   async function saveLayout(){
-    const problem=validateSeatDrafts(seats);
+    const seatsToSave=designSurface==="grid"?renumberGridSeats(seats,gridSize):seats;
+    const problem=validateSeatDrafts(seatsToSave);
     if(problem){setError(problem);return;}
-    if(!seats.length){setError("Hãy tạo ít nhất một ghế trước khi lưu.");return;}
+    if(!seatsToSave.length){setError("Hãy tạo ít nhất một ghế trước khi lưu.");return;}
+    const previousCodes=new Map((data?.seats||[]).map(seat=>[seat.id,seat.code]));
+    const renumberedAssigned=seatsToSave.filter(seat=>
+      assignedSeatIds.has(seat.id)&&previousCodes.has(seat.id)&&
+      previousCodes.get(seat.id)!==seat.code);
+    if(renumberedAssigned.length&&!window.confirm(
+      "Có "+renumberedAssigned.length+" ghế đã phân công được đổi số/mã. "+
+      "Vị trí người ngồi và ID ghế được giữ nguyên, nhưng mã hiển thị trên thẻ và Excel sẽ thay đổi. Tiếp tục lưu?"
+    ))return;
     setWorking(true);setError("");setNotice("");
     try{
       await postSeat({action:"save-layout",congressId,layoutId,
         expectedVersion:data?.layout?.id===layoutId?data.layout.version:0,
         title,stageLabel,gridRows,gridColumns,
-        seats:seats.map(s=>({...s,seatType:s.seatType||"delegate"}))});
+        seats:seatsToSave.map(s=>({...s,seatType:s.seatType||"delegate"}))});
       await load(layoutId,sessionId);
       setNotice("Đã lưu sơ đồ và vị trí ghế thành công.");
     }catch(reason){setError(reason instanceof Error?reason.message:"Không lưu được sơ đồ.");}
     finally{setWorking(false);}
   }
+  async function saveToLibrary(){
+    if(!canManage||templateBusy||working||loading)return;
+    if(dirty||!data?.layout||data.layout.id!==layoutId){
+      setError("Hãy lưu sơ đồ ghế hiện tại trước khi đưa vào thư viện mẫu.");return;
+    }
+    const name=templateName.trim()||data.layout.title;
+    if(!name||name.length>120){setTemplateError("Tên mẫu phải từ 1 đến 120 ký tự.");return;}
+    setTemplateBusy(true);setTemplateError("");setError("");setNotice("");
+    try{
+      const response=await fetch("/api/seating/templates",{
+        method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",
+        body:JSON.stringify({action:"save-template",congressId,
+          layoutId:data.layout.id,title:name,visibility:templateVisibility})
+      });
+      const result=await response.json() as {ok?:boolean;error?:string};
+      if(!response.ok||!result.ok)throw new Error(result.error||"Không thể lưu mẫu sơ đồ.");
+      await loadTemplates();
+      setTemplateName("");
+      setNotice("Đã lưu mẫu vào thư viện. Có thể tái sử dụng tại các Đại hội khác mà không sao chép phân ghế.");
+    }catch(reason){setTemplateError(reason instanceof Error?reason.message:"Không lưu được mẫu sơ đồ.");}
+    finally{setTemplateBusy(false);}
+  }
+
+  async function reuseFromAnotherCongress(){
+    if(!canManage||working||loading||reuseBusy)return;
+    if(!ensureCanChange())return;
+    const source=reuseLayouts.find(item=>item.id===reuseLayoutId);
+    if(!source){setReuseError("Hãy chọn một sơ đồ nguồn.");return;}
+    if(!window.confirm("Tạo sơ đồ mới từ \""+source.title+"\" của "+source.congressName+
+      "? Chỉ sao chép vị trí ghế; không sao chép phân công đại biểu."))return;
+    setReuseBusy(true);setReuseError("");setError("");setNotice("");
+    try{
+      const response=await fetch("/api/seating/reuse",{
+        method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",
+        body:JSON.stringify({congressId,sourceCongressId:source.congressId,sourceLayoutId:source.id})
+      });
+      const result=await response.json() as {ok?:boolean;error?:string;layoutId?:string;seatCount?:number};
+      if(!response.ok||!result.ok||!result.layoutId)
+        throw new Error(result.error||"Không thể dùng lại sơ đồ nguồn.");
+      await load(result.layoutId,sessionId);
+      setMode("assign");setSelectedSeatId("");
+      setNotice("Đã sao chép "+result.seatCount+" ghế từ "+source.congressName+
+        ". Đây là sơ đồ độc lập, hãy phân ghế cho đại biểu của Đại hội hiện tại.");
+    }catch(reason){setReuseError(reason instanceof Error?reason.message:"Không sao chép được sơ đồ.");}
+    finally{setReuseBusy(false);}
+  }
+
+  async function applyLibraryTemplate(){
+    if(!canManage||working||templateBusy||loading||!templateId)return;
+    if(!ensureCanChange())return;
+    const source=templates.find(item=>item.id===templateId);
+    if(!source)return;
+    if(!window.confirm("Tạo sơ đồ MỚI từ mẫu \""+source.title+"\" cho Đại hội này? Sơ đồ cũ và phân ghế hiện tại được giữ nguyên; đại biểu không được sao chép."))return;
+    setTemplateBusy(true);setTemplateError("");setError("");setNotice("");
+    try{
+      const response=await fetch("/api/seating/templates",{
+        method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",
+        body:JSON.stringify({action:"apply-template",congressId,templateId})
+      });
+      const result=await response.json() as {ok?:boolean;error?:string;layoutId?:string;seatCount?:number};
+      if(!response.ok||!result.ok||!result.layoutId)
+        throw new Error(result.error||"Không thể tạo sơ đồ từ mẫu.");
+      await load(result.layoutId,sessionId);
+      setMode("assign");setSelectedSeatId("");
+      setNotice("Đã tạo sơ đồ mới với "+result.seatCount+
+        " ghế từ thư viện. Hãy phân ghế cho đại biểu của Đại hội này.");
+    }catch(reason){setTemplateError(reason instanceof Error?reason.message:"Không áp dụng được mẫu.");}
+    finally{setTemplateBusy(false);}
+  }
+
+  function editSavedLayout(id:string){
+    if(working||!ensureCanChange())return;
+    setError("");setNotice("");
+    setMode("edit");setSelectedSeatId("");
+    void load(id,sessionId);
+  }
+  async function deleteSavedLayout(target:SeatingLayout){
+    if(!canManage||working||loading||!ensureCanChange())return;
+    if(!window.confirm("Xóa vĩnh viễn sơ đồ \""+target.title+"\"?\n"+
+      "Chỉ có thể xóa khi sơ đồ CHƯA gắn với phiên điểm danh và CHƯA phân ghế. "+
+      "Thao tác này không thể hoàn tác."))return;
+    setWorking(true);setError("");setNotice("");
+    try{
+      const response=await fetch("/api/seating",{
+        method:"DELETE",credentials:"same-origin",
+        headers:{"Content-Type":"application/json"},
+        cache:"no-store",
+        body:JSON.stringify({congressId,layoutId:target.id,expectedVersion:target.version})
+      });
+      const result=await response.json() as {ok?:boolean;error?:string};
+      if(!response.ok||!result.ok)throw new Error(result.error||"Không thể xóa sơ đồ.");
+      await load(undefined,sessionId);
+      setSelectedSeatId("");
+      setNotice("Đã xóa sơ đồ \""+target.title+"\". Các Đại hội khác không bị ảnh hưởng.");
+      await loadReusableLayouts();
+    }catch(reason){
+      setError(reason instanceof Error?reason.message:"Không thể xóa sơ đồ.");
+    }finally{setWorking(false);}
+  }
+
   async function applyAssignments(items:{seatId:string;delegateId:string|null}[],assignMode:"merge"|"replace"="merge"){
     if(dirty||!data?.layout||data.layout.id!==layoutId){
       setError("Hãy lưu sơ đồ trước khi chọn người ngồi.");return;
@@ -330,7 +502,7 @@ export function SeatingClient({congressId,canManage}:Props){
       <div>
         <p className="eyebrow">Quản lý chỗ ngồi đại biểu</p>
         <h1 className="page-title mt-1">Sơ đồ hội trường</h1>
-        <p className="page-description">Thiết kế từng hội trường từ lưới 200 ô vuông; chọn vị trí ghế, chừa lối đi, gán đại biểu hoặc nhập Excel. Mỗi Đại hội lưu nhiều sơ đồ.</p>
+        <p className="page-description">Quản lý sơ đồ đã tạo, chỉnh sửa hoặc xóa sơ đồ chưa sử dụng; thiết kế tối đa 500 ghế, tái sử dụng giữa nhiều Đại hội và phân ghế riêng bằng Excel.</p>
       </div>
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn btn-secondary" disabled={working||loading} onClick={()=>{if(ensureCanChange())void load(layoutId||undefined,sessionId);}}>
@@ -365,6 +537,148 @@ export function SeatingClient({congressId,canManage}:Props){
     </div>}
 
     {!loading&&<>
+      {canManage&&<section aria-label="Quản lý sơ đồ đã tạo" className="rounded-2xl border border-[#d4e3eb] bg-white p-4 shadow-sm sm:p-6">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="eyebrow">QUẢN LÝ SƠ ĐỒ / ĐẠI HỘI HIỆN TẠI</p>
+            <h2 className="mt-1 text-[19px] font-extrabold leading-[1.4] text-[#1d4057]">Sơ đồ đã tạo</h2>
+            <p className="mt-1 text-[12px] leading-6 text-[#738a9d]">
+              Chọn <strong>Sửa</strong> để chỉnh hàng ghế, tên hoặc sân khấu. Chỉ được xóa sơ đồ chưa gắn phiên và chưa phân ghế.
+            </p>
+          </div>
+          <span className="rounded-full bg-[#eaf3f9] px-3 py-1.5 text-[12px] font-bold text-[#196b92]">{data?.layouts.length||0} sơ đồ</span>
+        </div>
+        {!data?.layouts.length?<div className="rounded-xl border border-dashed border-[#cee0eb] bg-[#f7fafc] px-4 py-7 text-center">
+          <Armchair className="mx-auto text-[#88a9b9]" size={30}/>
+          <p className="mt-2 text-[13px] font-bold text-[#4d6e82]">Chưa tạo sơ đồ nào</p>
+          <p className="mt-1 text-[12px] text-[#8199a9]">Chọn Tạo sơ đồ ở phía trên hoặc sử dụng lại sơ đồ từ Đại hội khác.</p>
+        </div>:<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {data.layouts.map(item=><article key={item.id}
+            className={"min-w-0 rounded-xl border p-4 transition "+
+              (layoutId===item.id&&!dirty?"border-[#7ab6d5] bg-[#f2f9fd]":"border-[#e1e9ef] bg-white")}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="break-words text-[14px] font-extrabold leading-6 text-[#254964]">{item.title}</h3>
+                <p className="mt-1 text-[11px] leading-5 text-[#8096a8]">
+                  {item.grid_rows} hàng × {item.grid_columns} cột · Phiên bản {item.version}
+                </p>
+              </div>
+              {layoutId===item.id&&!dirty&&<span className="shrink-0 rounded-lg bg-[#dceef8] px-2 py-1 text-[10px] font-extrabold text-[#1675a0]">Đang xem</span>}
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button type="button" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#bdd8e6] bg-[#eff7fc] px-3 text-[12px] font-bold text-[#176d94] hover:bg-[#deeff9] disabled:opacity-50"
+                disabled={working} onClick={()=>editSavedLayout(item.id)}>
+                <Move size={16}/> Sửa sơ đồ
+              </button>
+              <button type="button" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#f0cdcd] bg-[#fff7f6] px-3 text-[12px] font-bold text-[#a93d3d] hover:bg-[#ffeae7] disabled:opacity-50"
+                disabled={working} onClick={()=>void deleteSavedLayout(item)}>
+                <Trash2 size={16}/> Xóa
+              </button>
+            </div>
+          </article>)}
+        </div>}
+      </section>}
+      {canManage&&<section aria-label="Sao chép sơ đồ từ Đại hội khác"
+        className="rounded-2xl border border-[#cce2ed] bg-white p-4 shadow-sm sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#e8f3fb] text-[#177cab]">
+            <Copy size={22}/>
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="eyebrow">Dùng lại sơ đồ không cần tạo từ đầu</p>
+            <h2 className="mt-1 text-[19px] font-bold text-[#234963]">Sao chép từ Đại hội khác</h2>
+            <p className="mt-1 text-[12px] leading-6 text-[#638198]">Lấy bố cục ghế từ Đại hội bạn quản trị, tạo sơ đồ mới tại Đại hội này. Mã ghế hiển thị được giữ, ID ghế được tạo mới; đại biểu và phân công không đi theo.</p>
+          </div>
+        </div>
+        {reuseError&&<p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-[12px] text-red-800">{reuseError}</p>}
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="min-w-0 flex-1">
+            <span className="label">Chọn sơ đồ nguồn ở Đại hội khác</span>
+            <select className="field !min-h-12" value={reuseLayoutId}
+              disabled={working||reuseBusy||!reuseLayouts.length}
+              onChange={e=>setReuseLayoutId(e.target.value)}>
+              {!reuseLayouts.length&&<option value="">Chưa có sơ đồ từ Đại hội khác được quản trị</option>}
+              {reuseLayouts.map(item=><option key={item.id} value={item.id}>{item.congressName} · {item.title}</option>)}
+            </select>
+          </label>
+          <div className="flex gap-2">
+            <button type="button" className="btn btn-secondary !min-h-12"
+              aria-label="Làm mới danh sách sơ đồ nguồn" disabled={reuseBusy}
+              onClick={()=>void loadReusableLayouts()}><RefreshCw size={17}/></button>
+            <button type="button" className="btn btn-primary !min-h-12 flex-1 sm:flex-none"
+              disabled={!reuseLayoutId||working||reuseBusy}
+              onClick={()=>void reuseFromAnotherCongress()}>
+              {reuseBusy?<LoaderCircle size={17} className="animate-spin"/>:<Copy size={17}/>}
+              Dùng sơ đồ này
+            </button>
+          </div>
+        </div>
+        <p className="mt-3 text-[11px] leading-5 text-[#708a9b]">
+          Không cần migration mới để sao chép sơ đồ đang có. Mỗi bản sao được chỉnh sửa và phân ghế riêng, không ảnh hưởng Đại hội nguồn.
+          {!templateReady&&<span className="mt-1 block text-[#a46834]">Thư viện mẫu nâng cao chưa được kích hoạt trên Supabase; chức năng sao chép từ Đại hội khác vẫn dùng bình thường.</span>}
+        </p>
+      </section>}
+      {canManage&&templateReady&&<section aria-label="Thư viện mẫu sơ đồ dùng chung" className="rounded-2xl border border-[#c9dce9] bg-white p-4 shadow-sm sm:p-6">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="eyebrow">Tạo một lần · dùng nhiều Đại hội</p>
+            <h2 className="mt-1 text-[19px] font-bold text-[#21445c]">Thư viện mẫu sơ đồ ghế</h2>
+            <p className="mt-1 max-w-[750px] text-[12px] leading-6 text-[#648094]">
+              Tái sử dụng hàng ghế, lối đi và bố cục. Không sao chép người ngồi, mã định danh ghế hay lượt điểm danh.
+            </p>
+          </div>
+          <button type="button" className="btn btn-secondary" disabled={templateBusy||templateLoading}
+            onClick={()=>void loadTemplates()}><RefreshCw size={17}/> Làm mới mẫu</button>
+        </div>
+        {templateError&&<div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-[12px] font-semibold text-red-800">{templateError}</div>}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-xl border border-[#dfe8ef] bg-[#f9fbfd] p-4">
+            <h3 className="flex items-center gap-2 text-[14px] font-bold text-[#29516d]"><Save size={18}/> Lưu sơ đồ hiện tại làm mẫu</h3>
+            <label className="mt-3 block"><span className="label">Tên mẫu dùng lại</span>
+              <input className="field !min-h-12" value={templateName} maxLength={120}
+                placeholder={data?.layout?.title||"Ví dụ: Hội trường lớn 200 ghế"}
+                onChange={e=>setTemplateName(e.target.value)} disabled={working||templateBusy}/>
+            </label>
+            <label className="mt-3 block"><span className="label">Chia sẻ mẫu</span>
+              <select className="field !min-h-12" value={templateVisibility}
+                onChange={e=>setTemplateVisibility(e.target.value as "private"|"organization")}
+                disabled={working||templateBusy}>
+                <option value="organization">Quản trị viên các Đại hội cùng đơn vị</option>
+                <option value="private">Chỉ tài khoản tôi (mọi Đại hội quản lý)</option>
+              </select>
+            </label>
+            <button type="button" className="btn btn-primary mt-3 w-full"
+              onClick={()=>void saveToLibrary()}
+              disabled={working||templateBusy||dirty||!data?.layout||data.layout.id!==layoutId}>
+              {templateBusy?<LoaderCircle size={17} className="animate-spin"/>:<Save size={17}/>}
+              Lưu vào thư viện
+            </button>
+            {dirty&&<p className="mt-2 text-[11px] font-bold text-amber-700">Hãy lưu sơ đồ hiện tại trước khi tạo mẫu.</p>}
+          </div>
+          <div className="rounded-xl border border-[#cce2ef] bg-[#f0f8fc] p-4">
+            <h3 className="flex items-center gap-2 text-[14px] font-bold text-[#29516d]"><Copy size={18}/> Dùng mẫu ở Đại hội này</h3>
+            <p className="mt-2 text-[12px] leading-5 text-[#5a7b90]">Tạo sơ đồ mới độc lập, sau đó phân ghế theo danh sách của Đại hội.</p>
+            <label className="mt-3 block"><span className="label">Mẫu có thể sử dụng</span>
+              <select className="field !min-h-12" value={templateId}
+                onChange={e=>setTemplateId(e.target.value)}
+                disabled={working||templateBusy||templateLoading||!templates.length}>
+                {!templates.length&&<option value="">Chưa có mẫu trong thư viện</option>}
+                {templates.map(item=><option key={item.id} value={item.id}>
+                  {item.title} · {item.seat_count} ghế {item.visibility==="private"?"(cá nhân)":"(đơn vị)"}
+                </option>)}
+              </select>
+            </label>
+            <button type="button" className="btn btn-primary mt-3 w-full"
+              disabled={working||templateBusy||templateLoading||!templateId}
+              onClick={()=>void applyLibraryTemplate()}>
+              {templateBusy?<LoaderCircle size={17} className="animate-spin"/>:<Copy size={17}/>}
+              Tạo sơ đồ mới từ mẫu
+            </button>
+            <p className="mt-2 text-[11px] leading-5 text-[#648095]">Sơ đồ và phân công ghế đã có sẽ được giữ nguyên.</p>
+          </div>
+        </div>
+      </section>}
+
       <section className="card space-y-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-[190px] flex-1">
@@ -474,7 +788,7 @@ export function SeatingClient({congressId,canManage}:Props){
                     "border-[#cad8e1] bg-white text-[#527087] hover:border-[#0e8c8c] hover:bg-[#e6f7f3] ")+
                     (mode==="edit"&&canManage?"cursor-grab active:cursor-grabbing touch-none":"")}
                   style={{left:s.x*zoom,top:s.y*zoom,width:47*zoom,height:42*zoom,fontSize:Math.max(9,11*zoom)}}>
-                  {s.blocked?<LockKeyhole size={15*zoom}/>:s.code.split("-").slice(-1)[0]}
+                  {s.blocked?<LockKeyhole size={15*zoom}/>:String(s.seatNumber).padStart(2,"0")}
                 </button>;
               })}
               {!seats.length&&<div className="absolute inset-x-0 top-[44%] px-6 text-center text-sm font-semibold text-[#728b9f]">
@@ -501,7 +815,7 @@ export function SeatingClient({congressId,canManage}:Props){
             <section className="rounded-xl border border-[#cfe6f2] bg-[#f0f8fc] p-4">
               <p className="text-[13px] font-bold text-[#175878]">Bố trí theo từng hội trường</p>
               <p className="mt-2 text-[12px] leading-6 text-[#57778e]">
-                Chọn ô trống để tạo ghế hoặc bỏ ô để chừa lối đi. Chuyển sang công cụ
+                Chọn ô trống để tạo ghế hoặc bỏ ô để chừa lối đi. Số ghế tự chạy 01, 02... theo từng hàng và bỏ qua ô trống; cả ghế đại biểu lẫn khách mời cùng một dãy số. Chuyển sang công cụ
                 <strong> Chi tiết ghế</strong> rồi nhấn ghế để chỉnh sửa mã, khóa ghế.
                 Dùng <strong>Canvas tự do</strong> nếu cần kéo ghế tới vị trí khác.
               </p>
@@ -573,7 +887,8 @@ export function SeatingClient({congressId,canManage}:Props){
                   <button type="button" className="btn btn-danger" disabled={!!selectedDelegate} onClick={()=>{
                     if(!window.confirm("Xóa ghế "+selectedSeat.code+"?"))return;
                     const remaining=seatsSnapshot.current.filter(s=>s.id!==selectedSeat.id);
-                     seatsSnapshot.current=remaining;setSeats(remaining);setSelectedSeatId("");setDirty(true);
+                     const fixed=designSurface==="grid"?renumberGridSeats(remaining,gridSize):remaining;
+                     seatsSnapshot.current=fixed;setSeats(fixed);setSelectedSeatId("");setDirty(true);
                   }}><Trash2 size={17}/> Xóa</button>
                 </div>
                 {selectedDelegate&&<p className="helper">Muốn khóa hoặc xóa ghế, hãy bỏ phân công đại biểu trước.</p>}

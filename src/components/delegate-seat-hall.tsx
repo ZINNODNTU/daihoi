@@ -85,21 +85,21 @@ export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choic
     <div className="min-w-0">
      <p className="text-[10px] font-extrabold uppercase tracking-[.15em] text-[#469087]">BẢN ĐỒ HỘI TRƯỜNG</p>
      <h2 className="mt-1 truncate text-[17px] font-extrabold tracking-tight text-[#214759]">{layout.title}</h2>
-     <p className="mt-1 text-[11px] text-[#89a0aa]">{seats.length} vị trí · Kéo ngang để xem toàn bộ sơ đồ</p>
+     <p className="mt-1 text-[11px] text-[#89a0aa]">{seats.length} vị trí · Vuốt ngang và dọc để xem sơ đồ</p>
     </div>
     <div className="flex items-center gap-1.5">
      <button type="button" title="Thu nhỏ" aria-label="Thu nhỏ sơ đồ"
       onClick={()=>setZoom(z=>Math.max(0.48,Number((z-0.12).toFixed(2))))}
       disabled={zoom<=0.48}
-      className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d6e5e9] bg-white text-[#3c6676] disabled:opacity-40"><Minus size={17}/></button>
+      className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#d6e5e9] bg-white text-[#3c6676] disabled:opacity-40"><Minus size={17}/></button>
      <span className="w-12 text-center text-[11px] font-extrabold tabular-nums text-[#6b8695]">{Math.round(zoom*100)}%</span>
      <button type="button" title="Phóng to" aria-label="Phóng to sơ đồ"
       onClick={()=>setZoom(z=>Math.min(1.32,Number((z+0.12).toFixed(2))))}
       disabled={zoom>=1.32}
-      className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d6e5e9] bg-white text-[#3c6676] disabled:opacity-40"><Plus size={17}/></button>
+      className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#d6e5e9] bg-white text-[#3c6676] disabled:opacity-40"><Plus size={17}/></button>
      <button type="button" title="Định vị ghế của tôi" aria-label="Đưa ghế của tôi vào giữa màn hình"
       onClick={()=>focusMySeat()} disabled={!found}
-      className="ml-1 flex h-10 items-center gap-2 rounded-lg bg-[#007fae] px-3 text-xs font-extrabold text-white disabled:bg-[#b5c8cd]"><Focus size={18}/><span className="hidden sm:inline">Tìm ghế</span></button>
+      className="ml-1 flex min-h-11 items-center gap-2 rounded-lg bg-[#007fae] px-3 text-xs font-extrabold text-white disabled:bg-[#b5c8cd]"><Focus size={18}/><span>Tìm ghế</span></button>
     </div>
    </div>
    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-[#e8eef1] px-4 py-3 text-[11px] font-semibold text-[#69838e] sm:px-6">
@@ -109,7 +109,7 @@ export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choic
    </div>
    <div className="bg-[#eaf0f2] px-2 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4">
     <div ref={scroller} tabIndex={0} aria-label="Sơ đồ hội trường đầy đủ; cuộn ngang hoặc dọc để xem vị trí ghế"
-     className="max-h-[610px] min-h-[310px] overflow-auto overscroll-contain rounded-[13px] border border-[#d2e1e6] bg-white p-2 shadow-inner sm:p-4">
+     className="h-[min(55dvh,530px)] min-h-[290px] max-h-[610px] overflow-auto overscroll-contain rounded-[13px] border border-[#d2e1e6] bg-white p-2 shadow-inner sm:p-4">
      <div className="relative mx-auto" style={{width:mapWidth,height:mapHeight,minWidth:mapWidth}}>
       <div className="absolute left-1/2 top-4 flex h-12 w-[min(45%,300px)] -translate-x-1/2 items-center justify-center rounded-b-2xl border-x border-b border-[#bed4df] bg-[#deecf2] px-5 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#38687c] shadow-sm">
        {layout.stage_label||"SÂN KHẤU"}

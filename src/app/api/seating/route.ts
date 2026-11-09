@@ -87,6 +87,66 @@ export async function GET(request:Request){
     return fail("Chưa kết nối được Supabase. Vui lòng kiểm tra cấu hình máy chủ.",500);
   }
 }
+/**
+ * Delete unused layouts only. Never delete assigned seats or a map referenced
+ * by any attendance session; optimistic version check protects stale edits.
+ */
+export async function DELETE(request:Request){
+ try{
+  const origin=request.headers.get("origin");
+  if(origin){
+   try{if(new URL(origin).host!==request.headers.get("host"))
+     return fail("Nguồn yêu cầu không hợp lệ.",403);}
+   catch{return fail("Nguồn yêu cầu không hợp lệ.",403);}
+  }
+  if(Number(request.headers.get("content-length")||0)>4096)
+   return fail("Dữ liệu xóa quá lớn.",413);
+  let body:Record<string,unknown>;
+  try{
+   const value:unknown=await request.json();
+   if(!value||typeof value!=="object"||Array.isArray(value))
+    return fail("Dữ liệu yêu cầu xóa không hợp lệ.",400);
+   body=value as Record<string,unknown>;
+  }catch{return fail("Không đọc được dữ liệu xóa.",400);}
+  const congressId=typeof body.congressId==="string"?body.congressId:"";
+  const layoutId=typeof body.layoutId==="string"?body.layoutId:"";
+  const version=body.expectedVersion;
+  const authorized=await authorize(congressId,true);
+  if("error" in authorized)return authorized.error;
+  if(!uuid.test(layoutId)||typeof version!=="number"||!Number.isSafeInteger(version)||version<1)
+   return fail("Mã hoặc phiên bản sơ đồ không hợp lệ.",400);
+  const db=createAdminClient();
+  const {data:layout,error:layoutError}=await db.from("seating_layouts")
+   .select("id,version,title").eq("id",layoutId).eq("congress_id",congressId).maybeSingle();
+  if(layoutError)return databaseProblem(layoutError);
+  if(!layout)return fail("Không tìm thấy sơ đồ trong Đại hội này.",404);
+  if(layout.version!==version)return fail("Sơ đồ đã thay đổi, hãy tải lại trước khi xóa.",409);
+  const [assigned,used]=await Promise.all([
+   db.from("seat_assignments").select("seat_id",{count:"exact",head:true})
+    .eq("layout_id",layoutId).eq("congress_id",congressId),
+   db.from("attendance_sessions").select("id",{count:"exact",head:true})
+    .eq("seating_layout_id",layoutId).eq("congress_id",congressId)
+  ]);
+  if(assigned.error||used.error)return fail("Không xác minh được liên kết ghế và phiên; chưa xóa để bảo vệ dữ liệu.",503);
+  if((assigned.count??0)>0)return fail(
+   "Sơ đồ đang có đại biểu được phân ghế. Hãy bỏ phân công trước khi xóa.",409);
+  if((used.count??0)>0)return fail(
+   "Sơ đồ đang được sử dụng trong phiên điểm danh. Hãy đổi sơ đồ tại tất cả phiên liên quan trước khi xóa.",409);
+  const {data:deleted,error:deleteError}=await db.from("seating_layouts")
+   .delete().eq("id",layoutId).eq("congress_id",congressId)
+   .eq("version",version).select("id").maybeSingle();
+  if(deleteError)return databaseProblem(deleteError);
+  if(!deleted)return fail("Không thể xóa do sơ đồ đã thay đổi. Vui lòng tải lại.",409);
+  const {error:auditError}=await db.from("audit_logs").insert({
+   congress_id:congressId,actor_id:authorized.user.id,
+   action:"seating.layout_deleted",target_id:layoutId,
+   details:{title:layout.title,version}
+  });
+  if(auditError)console.error("seating delete audit",auditError.code||"unknown");
+  return NextResponse.json({ok:true,deletedLayoutId:layoutId},{headers:noCache});
+ }catch{return fail("Không thể xóa sơ đồ. Vui lòng thử lại.",503);}
+}
+
 export async function POST(request:Request){
   try{
     if(Number(request.headers.get("content-length")||0)>130000)

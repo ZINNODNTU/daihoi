@@ -1,7 +1,7 @@
 "use client";
 import {Fragment,useMemo,useRef,useState,useEffect} from "react";
 import {
- Armchair,Check,Grid2X2,LockKeyhole,MousePointer2,Paintbrush,
+ Check,Grid2X2,LockKeyhole,MousePointer2,Paintbrush,
  RotateCcw,Route,Rows3,ScanEye,Users,UserRound
 } from "lucide-react";
 import {
@@ -86,8 +86,8 @@ export function SeatGridCanvas({
            </span>
          </div>
          <p className="mt-2 text-xs leading-6 text-[#687f91]">
-           Nhập số hàng, số cột theo mặt bằng thực tế; chọn ô để đặt ghế,
-           bỏ ô để tạo lối đi. Ô trống không được tính là ghế.
+           Ghế đại biểu và khách mời được đánh số liên tục từ trái sang phải theo mỗi hàng,
+           bỏ qua lối đi và ô trống. Ký hiệu C1, C2... phía trên chỉ là cột lưới, không phải số ghế.
          </p>
        </div>
        <div className="flex gap-2">
@@ -168,7 +168,7 @@ export function SeatGridCanvas({
          <span aria-hidden="true"/>
          {Array.from({length:columns},(_,column)=><span key={"header-"+column} aria-hidden="true"
            className="flex h-6 items-center justify-center text-[10px] font-semibold tabular-nums text-[#8599aa]">
-             {String(column+1).padStart(2,"0")}
+             {"C"+(column+1)}
          </span>)}
          {Array.from({length:rows},(_,row)=><Fragment key={row}>
            <span className="flex h-[37px] items-center justify-center text-[11px] font-extrabold text-[#59768b]">
@@ -179,8 +179,9 @@ export function SeatGridCanvas({
              const occupied=!!seat&&assignedSeatIds.has(seat.id);
              const selected=!!seat&&selectedSeatId===seat.id;
              const guest=seat?.seatType==="guest";
-             const label="Hàng "+rowLabelAt("A",row)+", ô "+(column+1)+": "+
-               (!seat?"trống":seat.blocked?"ghế đã khóa":guest?"ghế khách mời":"ghế đại biểu")+
+             const label="Hàng "+rowLabelAt("A",row)+", "+
+               (!seat?"cột lưới "+(column+1)+", lối đi/ô trống":
+                 "ghế số "+seat.seatNumber+" ("+(guest?"khách mời":"đại biểu")+") ở cột lưới "+(column+1)+(seat.blocked?", đã khóa":""))+
                (occupied?", đã phân công":"");
              return <button key={index} type="button" title={label} aria-label={label}
                aria-pressed={!!seat} data-grid-cell={index}
@@ -208,10 +209,13 @@ export function SeatGridCanvas({
                   seat?"border-[#448caf] bg-[#d9edf9] text-[#155a80] ":
                   "border-dashed border-[#c6d3de] bg-[#f5f8fa] text-[#b9cad5] hover:border-[#6399b8] hover:bg-[#e8f4fb] ")+
                  (editable?"cursor-crosshair":"cursor-pointer")}>
-               {seat?.blocked?<LockKeyhole size={13}/>:
-                occupied?<Check size={13} strokeWidth={3}/>:
-                guest?<UserRound size={16} strokeWidth={2.3}/>:
-                seat?<Armchair size={16} strokeWidth={2.3}/>:
+               {seat?<>
+                  <span className="text-[11px] font-extrabold tabular-nums tracking-tight">{String(seat.seatNumber).padStart(2,"0")}</span>
+                  {seat.blocked?<LockKeyhole size={10} className="absolute -right-1 -top-1 rounded bg-[#dce4eb] p-px text-[#606c7b]"/>:
+                occupied?<Check size={10} className="absolute -right-1 -top-1 rounded bg-[#c9eee2] p-px text-[#135c4b]"/>:null}
+                 </>:
+
+
                 <span className="text-[14px] font-normal">·</span>}
              </button>;
            })}

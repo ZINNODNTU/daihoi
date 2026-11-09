@@ -20,15 +20,23 @@ async function thumbnail(path:string,width:number){
  const key=path+"@"+width;
  const existing=cached.get(key);
  if(existing&&existing.expires>Date.now())return existing.body;
- const {data,error}=await createAdminClient().storage.from(bucket).download(path);
- if(error||!data)return null;
- const original=Buffer.from(await data.arrayBuffer());
- const body=width===600?original:await sharp(original,{limitInputPixels:5_000_000})
-  .resize(width,Math.round(width*4/3),{fit:"cover"})
-  .jpeg({quality:78,mozjpeg:true}).toBuffer();
- cached.delete(key);
+ const storage=createAdminClient().storage.from(bucket);
+ const sizePath=width===600?path:path.replace(/\.jpg$/i,"-"+width+".jpg");
+ const optimized=width===600?null:await storage.download(sizePath);
+ let body:Buffer;
+ if(optimized?.data){
+  body=Buffer.from(await optimized.data.arrayBuffer());
+ }else{
+  // Older portraits still work even before thumbnails have been generated.
+  const {data,error}=await storage.download(path);
+  if(error||!data)return null;
+  const original=Buffer.from(await data.arrayBuffer());
+  body=width===600?original:await sharp(original,{limitInputPixels:5_000_000})
+   .resize(width,Math.round(width*4/3),{fit:"cover"})
+   .jpeg({quality:78,mozjpeg:true}).toBuffer();
+ } cached.delete(key);
  cached.set(key,{body,expires:Date.now()+5*60_000});
- if(cached.size>128)cached.delete(cached.keys().next().value!);
+ if(cached.size>256)cached.delete(cached.keys().next().value!);
  return body;
 }
 async function authorize(delegateId:string,level:"viewer"|"admin"){
@@ -36,12 +44,12 @@ async function authorize(delegateId:string,level:"viewer"|"admin"){
  const {supabase,user}=await getAuth();
  if(!user)return {error:fail("Cần đăng nhập.",401)} as const;
  const {data:delegate,error}=await createAdminClient().from("delegates")
-  .select("id,congress_id,photo_path,auth_user_id").eq("id",delegateId).maybeSingle();
+  .select("id,congress_id,photo_path,auth_user_id,is_active").eq("id",delegateId).maybeSingle();
  if(error||!delegate)return {error:fail("Không tìm thấy đại biểu.",404)} as const;
- if(!(level==="viewer"&&delegate.auth_user_id===user.id)&&
+ if(!((delegate.auth_user_id===user.id&&delegate.is_active))&&
   !(await hasRole(supabase,user.id,delegate.congress_id,level)))
   return {error:fail("Bạn không có quyền truy cập ảnh này.",403)} as const;
- return {delegate} as const;
+ return {delegate,user} as const;
 }
 export async function GET(request:Request,{params}:{params:Promise<{id:string}>}){
  try{
@@ -62,7 +70,10 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
 export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}){
  try{
   const {id}=await params;
-  const checked=await authorize(id,"admin");
+  const origin=request.headers.get("origin");
+   if(origin&&new URL(origin).host!==request.headers.get("host"))
+    return fail("Nguồn tải ảnh không hợp lệ.",403);
+   const checked=await authorize(id,"admin");
   if("error" in checked)return checked.error;
   const data=await request.formData();
   const file=data.get("photo");
@@ -74,16 +85,30 @@ export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}
    return fail("Ảnh phải có kích thước 600 × 800 px (tỷ lệ 3:4).",400);
   const output=await sharp(raw,{limitInputPixels:5000000})
    .flatten({background:"#ffffff"}).jpeg({quality:85,mozjpeg:true}).toBuffer();
-  const path=checked.delegate.congress_id+"/"+id+".jpg";
+  const sharedPortrait=checked.delegate.auth_user_id===checked.user.id&&checked.delegate.is_active;
+   const path=sharedPortrait?"people/"+checked.user.id+".jpg":checked.delegate.congress_id+"/"+id+".jpg";
   const admin=createAdminClient();
   const {error:uploadError}=await admin.storage.from(bucket).upload(path,output,{
    contentType:"image/jpeg",cacheControl:"0",upsert:true
   });
   if(uploadError)return fail("Không tải ảnh lên được kho lưu trữ. Kiểm tra bucket delegate-photos.",502);
-  const {error:dbError}=await admin.from("delegates").update({photo_path:path}).eq("id",id)
-   .eq("congress_id",checked.delegate.congress_id);
+   const update=admin.from("delegates").update({photo_path:path});
+   const {error:dbError}=await (sharedPortrait?
+    update.eq("auth_user_id",checked.user.id):
+    update.eq("id",id).eq("congress_id",checked.delegate.congress_id));
   if(dbError)return fail("Ảnh đã tải lên nhưng chưa liên kết với hồ sơ.",500);
+  // Precompute tiny private variants when BTC uploads, not for every viewer.
+  const variants=await Promise.allSettled([96,160].map(async width=>{
+   const resized=await sharp(output,{limitInputPixels:5_000_000})
+    .resize(width,Math.round(width*4/3),{fit:"cover"})
+    .jpeg({quality:78,mozjpeg:true}).toBuffer();
+   return admin.storage.from(bucket).upload(path.replace(/\.jpg$/i,"-"+width+".jpg"),resized,{
+    contentType:"image/jpeg",cacheControl:"180",upsert:true
+   });
+  }));
+  if(variants.some(result=>result.status==="rejected"||(result.status==="fulfilled"&&Boolean(result.value.error))))
+   console.warn("delegate thumbnail fallback required");
   invalidate(path);
-  return NextResponse.json({ok:true},{headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({ok:true,path,shared:sharedPortrait},{headers:{"Cache-Control":"no-store"}});
  }catch{return fail("Ảnh không hợp lệ hoặc máy chủ không xử lý được.",400);}
 }

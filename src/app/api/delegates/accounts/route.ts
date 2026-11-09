@@ -1,4 +1,5 @@
 import {randomBytes} from "node:crypto";
+import {isSameDelegateIdentity} from "@/lib/delegate-identity";
 import {NextResponse} from "next/server";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {getAuth,hasRole} from "@/lib/auth";
@@ -30,7 +31,7 @@ export async function POST(request:Request){
   let db:ReturnType<typeof createAdminClient>;
   try{db=createAdminClient();}catch{return fail("Máy chủ chưa cấu hình SUPABASE_SECRET_KEY để cấp tài khoản.",503);}
   const {data:delegates,error}=await db.from("delegates")
-   .select("id,full_name,student_id,login_email,auth_user_id,delegate_type")
+   .select("id,full_name,student_id,login_email,auth_user_id,delegate_type,birth_date")
    .eq("congress_id",congressId).eq("is_active",true).in("id",ids);
   if(error)return fail("Không tải được hồ sơ đại biểu. Cần cập nhật schema v5.",500);
   const created:Created[]=[];
@@ -76,7 +77,19 @@ export async function POST(request:Request){
      isNew=true;
     }
 
-    const memberRole=d.delegate_type==="guest"?"guest":"delegate";
+    // Verify the existing account belongs to the same person before linking.
+     // Matching email/MSSV alone is not sufficient to merge identities.
+     const priorResult=await db.from("delegates")
+      .select("full_name,student_id,unit,position,gender,birth_date,photo_path")
+      .eq("auth_user_id",targetId).eq("is_active",true).limit(20);
+     if(priorResult.error)throw new Error("Không thể xác minh danh tính tài khoản cũ.");
+     const previous=priorResult.data||[];
+     if(previous.some(item=>
+      (item.student_id&&String(item.student_id).toLowerCase()!==String(d.student_id).toLowerCase())||
+      !isSameDelegateIdentity(String(item.full_name||""),name)||
+      (item.birth_date&&d.birth_date&&item.birth_date!==d.birth_date)))
+      throw new Error("MSSV, họ tên hoặc ngày sinh khác hồ sơ đã liên kết. BTC cần xác minh đúng người trước khi ghép tài khoản.");
+     const memberRole=d.delegate_type==="guest"?"guest":"delegate";
     const {error:membershipError}=await db.from("congress_members").insert({
      congress_id:congressId,user_id:targetId,role:memberRole
     });
@@ -85,7 +98,11 @@ export async function POST(request:Request){
     if(membershipError&&!membershipPreexisting)throw new Error("Không thể gán quyền truy cập Đại hội.");
 
     const {data:linked,error:linkError}=await db.from("delegates")
-     .update({auth_user_id:targetId})
+     .update({auth_user_id:targetId,...(previous.length?{
+      full_name:previous[0].full_name,unit:previous[0].unit,
+      position:previous[0].position,gender:previous[0].gender,
+      birth_date:previous[0].birth_date,photo_path:previous[0].photo_path
+     }:{})})
      .eq("id",d.id).eq("congress_id",congressId)
      .is("auth_user_id",null).select("id").maybeSingle();
     if(linkError||!linked){

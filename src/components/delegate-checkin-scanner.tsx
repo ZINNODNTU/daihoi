@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useRef,useState,type ChangeEvent} from "react";
 import {useRouter} from "next/navigation";
-import {BrowserQRCodeReader} from "@zxing/browser";
+import Link from "next/link";
 import {Camera,CameraOff,CheckCircle2,ClipboardPaste,ImagePlus,LoaderCircle,RefreshCw,ShieldCheck,ScanLine,AlertCircle} from "lucide-react";
 import {parseSessionCheckinCode,type ParsedSessionCode} from "@/lib/delegate-session-scanner";
 
@@ -62,6 +62,7 @@ export function DelegateCheckinScanner(){
   setDecodingPhoto(true);
   const photoUrl=URL.createObjectURL(file);
   try{
+   const {BrowserQRCodeReader}=await import("@zxing/browser");
    const reader=new BrowserQRCodeReader();
    const decoded=await reader.decodeFromImageUrl(photoUrl);
    receive(decoded.getText());
@@ -73,6 +74,7 @@ export function DelegateCheckinScanner(){
   if(!navigator.mediaDevices?.enumerateDevices)return;
   setListingCameras(true);
   try{
+   const {BrowserQRCodeReader}=await import("@zxing/browser");
    const inputs=await BrowserQRCodeReader.listVideoInputDevices();
    setDevices(inputs.filter(d=>d.deviceId).map((d,i)=>({
     deviceId:d.deviceId,label:d.label||"Camera "+(i+1)
@@ -102,7 +104,8 @@ export function DelegateCheckinScanner(){
    try{
     const video=videoRef.current;
     if(!video)throw new Error("Không tìm thấy vùng xem camera.");
-    const reader=new BrowserQRCodeReader();
+    const {BrowserQRCodeReader}=await import("@zxing/browser");
+   const reader=new BrowserQRCodeReader();
     const onDecode=(value:{getText():string}|undefined|null)=>{
      if(!value||locked.current)return;
      const code=parseSessionCheckinCode(value.getText());
@@ -141,7 +144,9 @@ export function DelegateCheckinScanner(){
    <p className="mt-2 text-[13px] leading-6 text-[#657e8e]">Dùng camera điện thoại quét QR cố định của phiên tại hội trường. Hệ thống tự nhận diện đúng đại biểu từ tài khoản đã đăng nhập.</p>
   </div>
   <div className="p-4 sm:p-6">
-   <div className="mb-4 flex flex-wrap items-end gap-2 rounded-xl border border-[#d8e8ea] bg-[#f6fafb] p-3 sm:p-4">
+   <details className="mb-4 rounded-xl border border-[#d8e8ea] bg-[#f6fafb]">
+     <summary className="flex min-h-12 cursor-pointer items-center px-4 text-[12px] font-bold text-[#496e80]">Tùy chọn camera (nếu cần)</summary>
+     <div className="flex flex-wrap items-end gap-2 border-t border-[#d8e8ea] p-3 sm:p-4">
     <div className="min-w-0 flex-1">
      <label htmlFor="delegate-camera-select" className="flex items-center gap-2 text-[12px] font-extrabold text-[#335d6e]">
       <Camera size={16}/> Chọn camera điểm danh
@@ -164,9 +169,10 @@ export function DelegateCheckinScanner(){
      Mở camera và cấp quyền truy cập để hiển thị các camera khả dụng của điện thoại hoặc máy tính.
     </p>}
    </div>
-   {camera&&<div className="relative mx-auto mb-4 max-w-[560px] overflow-hidden rounded-2xl border border-[#254d60] bg-[#102b3b]">
+   </details>
+    {camera&&<div className="relative mx-auto mb-4 max-w-[560px] overflow-hidden rounded-2xl border border-[#254d60] bg-[#102b3b]">
     <video ref={videoRef} autoPlay muted playsInline aria-label="Camera quét mã QR điểm danh"
-     className="aspect-[4/3] w-full max-h-[60dvh] bg-[#102b3b] object-cover"/>
+     className="aspect-[4/3] w-full max-h-[48dvh] sm:max-h-[60dvh] bg-[#102b3b] object-cover"/>
     <div aria-hidden="true" className="pointer-events-none absolute inset-[13%] rounded-2xl border-2 border-[#e1bf7b]/75 shadow-[0_0_0_100px_rgba(5,27,40,.15)]"/>
     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#09293c] to-transparent px-4 pb-4 pt-10 text-center text-xs font-semibold text-white">
      Đưa mã QR của phiên vào khung hình
@@ -175,7 +181,8 @@ export function DelegateCheckinScanner(){
    {result&&<div role="status" className="mb-4 rounded-xl border border-[#c4dfe9] bg-[#edf6fa] px-4 py-4 text-[#176f9a]">
     <p className="flex items-center gap-2 text-sm font-extrabold"><CheckCircle2 size={19}/>{result.already?"Bạn đã điểm danh phiên này":"Điểm danh thành công!"}</p>
     <p className="mt-2 text-xs leading-6">{result.sessionName} · {result.delegate.full_name}</p>
-    <p className="mt-1 text-[11px]">Lượt tham dự đã được lưu. Xem chi tiết trong màn hình Lịch sử điểm danh.</p>
+    <p className="mt-1 text-[12px] leading-5">Lượt tham dự đã được lưu.</p>
+     <Link href="/my-card/history" className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-[#a5d0e4] bg-white px-4 text-[12px] font-bold text-[#176f9a]">Xem lịch sử điểm danh</Link>
    </div>}
    {error&&<p role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-[#f0ddc8] bg-[#fff8ef] px-4 py-3 text-xs leading-6 text-[#925b25]"><AlertCircle size={17} className="mt-0.5 shrink-0"/>{error}</p>}
    {cameraError&&<p role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-[#f0ddc8] bg-[#fff8ef] px-4 py-3 text-xs leading-6 text-[#925b25]"><AlertCircle size={17} className="mt-0.5 shrink-0"/>{cameraError}</p>}

@@ -10,9 +10,10 @@ import {
 } from "lucide-react";
 import {displayTime} from "@/lib/attendance-report";
 import {getWindowLabel,getWindowStatus} from "@/lib/attendance-window";
-import {seatGridCellIndex,rowLabelAt} from "@/lib/seating";
+import {rowLabelAt} from "@/lib/seating";
+import {projectAttendanceSeats} from "@/lib/attendance-seat-projection";
 import {classifySeat,computeLiveSummary,
- type LiveDashboardData,type LiveSeat,type LiveSeatState
+ type LiveDashboardData,type LiveSeatState
 } from "@/lib/attendance-live";
 import type {AttendanceSession} from "@/lib/types";
 
@@ -100,16 +101,9 @@ export function AttendanceLiveBoard({congressId,congressName,sessions,initialSes
   return {delegate,seatAssignment,checked};
  },[data]);
  const room=data?.layout;
- const cols=room?.grid_columns||20,rows=room?.grid_rows||10;
- const {cells,outside}=useMemo(()=>{
-  const cells=new Map<number,LiveSeat>(),outside:LiveSeat[]=[];
-  for(const seat of data?.seats||[]){
-   const index=seatGridCellIndex(seat,{rows,columns:cols});
-   if(index===null)outside.push(seat);
-   else cells.set(index,seat);
-  }
-  return {cells,outside};
- },[data?.seats,rows,cols]);
+ const projection=useMemo(()=>projectAttendanceSeats(room,data?.seats||[]),[room,data?.seats]);
+ const {cells,outside,seatNumbers,size}=projection;
+ const cols=size.columns,rows=size.rows;
  const selectedSeat=data?.seats.find(s=>s.id===selectedSeatId)||null;
  const selectedPerson=selectedSeat?map.delegate.get(map.seatAssignment.get(selectedSeat.id)||""):null;
  const selectedState=selectedSeat?classifySeat(selectedSeat,
@@ -232,7 +226,7 @@ export function AttendanceLiveBoard({congressId,congressName,sessions,initialSes
             className={"flex h-9 min-w-0 items-center justify-center rounded-[6px] border text-[11px] font-extrabold transition "+
              seatStyles[state]+(seat.seat_type==="guest"?" ring-1 ring-[#8b69b1] ring-inset":"")+
              (highlighted?" outline outline-2 outline-offset-1 outline-[#006e9c]":"")}>
-            {seat.blocked?"×":seat.seat_number}
+            {seat.blocked?"×":seatNumbers.get(seat.id)}
            </button>;
           })}
          </div>)}

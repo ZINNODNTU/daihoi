@@ -6,6 +6,7 @@ import type {Delegate} from "@/lib/types";
 import {DelegateAdminTabs} from "@/components/delegate-admin-tabs";
 
 type Issued={id:string;name:string;email:string;password:string};
+const DEFAULT_PASSWORD="Abc@123456";
 const safe=(value:string)=>/^[=+@\-\t\r]/.test(value)?"'"+value:value;
 async function toExcel(name:string,headers:string[],rows:(string|number)[][]){
  const {default:writeExcelFile}=await import("write-excel-file/browser");
@@ -13,7 +14,7 @@ async function toExcel(name:string,headers:string[],rows:(string|number)[][]){
   headers.map(value=>({value,fontWeight:"bold" as const,backgroundColor:"#17263f",textColor:"#ffffff"})),
   ...rows.map(row=>row.map(v=>typeof v==="string"?safe(v):v))
  ];
- const widths=[8,26,18,29,34,26,22];
+ const widths=[8,26,18,29,34,26,22,28,50];
  await writeExcelFile([{sheet:"Tai khoan dai bieu",stickyRowsCount:1,showGridLines:false,
   columns:headers.map((_,index)=>({width:widths[index]||23})),data}]).toFile(name);
 }
@@ -28,9 +29,7 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
  const [notice,setNotice]=useState("");
  const [chosen,setChosen]=useState<string[]>([]);
  const [target,setTarget]=useState<Delegate|null>(null);
- const [mode,setMode]=useState<"random"|"custom">("random");
- const [custom,setCustom]=useState("");
- const [showCustom,setShowCustom]=useState(false);
+ const [showDefault,setShowDefault]=useState(false);
  const [issued,setIssued]=useState<Issued[]>([]);
  const filtered=useMemo(()=>delegates.filter(d=>[d.full_name,d.student_id,d.login_email,d.unit]
   .join(" ").toLocaleLowerCase("vi").includes(search.toLocaleLowerCase("vi"))),[delegates,search]);
@@ -40,25 +39,29 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
  const eligible=selectedIds.length?selectedIds.slice(0,100):unlinked.slice(0,100).map(d=>d.id);
 
  async function exportInventory(){
+  if(issued.length&&!window.confirm("Excel sẽ chứa mật khẩu mới cấp/reset trong phiên quản trị này. Hãy bảo quản và chuyển riêng cho đại biểu; tiếp tục xuất?"))return;
   setError("");setNotice("");
   try{
+   const known=new Map(issued.map(item=>[item.id,item.password]));
    await toExcel("danh-sach-tai-khoan-"+congressCode+".xlsx",
-    ["STT","Họ tên","MSSV","Đơn vị","Email đăng nhập","Trạng thái tài khoản","Vai trò"],
+    ["STT","Họ tên","MSSV","Đơn vị","Email đăng nhập","Trạng thái tài khoản","Vai trò","Mật khẩu vừa cấp/reset","Ghi chú mật khẩu"],
     delegates.map((d,i)=>[i+1,d.full_name,d.student_id||"",d.unit||"",
-     d.login_email||"",d.auth_user_id?"Đã cấp":"Chưa cấp",d.delegate_type]));
-   setNotice("Đã xuất file Excel danh sách tài khoản. Mật khẩu hiện tại không thể trích xuất từ hệ thống.");
+     d.login_email||"",d.auth_user_id?"Đã cấp":"Chưa cấp",d.delegate_type,
+     known.get(d.id)||"",!d.auth_user_id?"Chưa cấp tài khoản":known.has(d.id)?
+      "Đã cấp hoặc reset trong phiên này":"Không đọc được mật khẩu hiện tại; reset để cấp lại"]));
+   setNotice("Đã xuất Excel có cột mật khẩu. Chỉ mật khẩu vừa cấp/reset trong phiên này được điền; mật khẩu hiện tại của tài khoản cũ không thể đọc lại.");
   }catch{setError("Không xuất được tệp Excel.");}
  }
  async function exportIssued(values=issued){
   if(!values.length)return;
   await toExcel("mat-khau-cap-mot-lan-"+congressCode+".xlsx",
-   ["Họ tên","Email đăng nhập","Mật khẩu mới (chỉ hiển thị một lần)"],
+   ["Họ tên","Email đăng nhập","Mật khẩu vừa cấp/reset (một lần)"],
    values.map(d=>[d.name,d.email,d.password]));
  }
  async function provision(){
   if(!eligible.length)return;
   if(!window.confirm("Cấp tài khoản cho "+eligible.length+" đại biểu đã chọn? Mật khẩu được xuất một lần; cần lưu và chuyển riêng cho từng người."))return;
-  setBusy(true);setError("");setNotice("");setIssued([]);
+  setBusy(true);setError("");setNotice("");
   try{
    const response=await fetch("/api/delegates/accounts",{method:"POST",credentials:"same-origin",
     headers:{"Content-Type":"application/json"},body:JSON.stringify({congressId,delegateIds:eligible})});
@@ -66,7 +69,7 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
    if(!response.ok)throw new Error(body.error||"Không thể cấp tài khoản.");
    const created=(body.created||[]) as Issued[];
    if(created.length){
-    setIssued(created);
+    setIssued(previous=>[...new Map([...previous,...created].map(item=>[item.id,item])).values()]);
     await exportIssued(created);
    }
    setNotice("Tạo mới "+created.length+", liên kết tài khoản có sẵn "+Number(body.linkedExisting||0)+
@@ -78,21 +81,20 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
  }
  async function reset(){
   if(!target)return;
-  if(mode==="custom"&&custom.length<12){setError("Mật khẩu mới cần tối thiểu 12 ký tự.");return;}
-  if(!window.confirm("Bạn chắc chắn muốn "+(mode==="random"?"đặt lại":"đổi")+" mật khẩu của "+target.full_name+"? Mật khẩu cũ sẽ không còn sử dụng được."))return;
-  setBusy(true);setError("");setNotice("");setIssued([]);
+  if(!window.confirm("Reset mật khẩu của "+target.full_name+" về "+DEFAULT_PASSWORD+"?\nMật khẩu cũ sẽ hết hiệu lực ở TẤT CẢ Đại hội thuộc tài khoản này. Hãy báo đại biểu đổi mật khẩu sau khi đăng nhập."))return;
+  setBusy(true);setError("");setNotice("");
   try{
    const response=await fetch("/api/delegates/accounts/reset",{
     method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",
-    body:JSON.stringify({congressId,delegateId:target.id,...(mode==="custom"?{password:custom}:{})})
+    body:JSON.stringify({congressId,delegateId:target.id})
    });
    const body=await response.json();
    if(!response.ok)throw new Error(body.error||"Không thể đặt lại mật khẩu.");
    const details=[{id:body.id,name:body.name,email:body.email,password:body.password}] as Issued[];
-   setIssued(details);
-   setTarget(null);setCustom("");
+   setIssued(previous=>[...new Map([...previous,...details].map(item=>[item.id,item])).values()]);
+   setTarget(null);setShowDefault(false);
    await exportIssued(details);
-   setNotice("Đã cập nhật mật khẩu cho "+body.name+". Tệp Excel chứa mật khẩu mới đã được tải về một lần; chuyển riêng cho đại biểu.");
+   setNotice("Đã reset mật khẩu của "+body.name+" về mật khẩu mặc định. Excel chứa mật khẩu vừa cấp đã tải về; yêu cầu đại biểu đổi mật khẩu khi đăng nhập.");
   }catch(err){setError(err instanceof Error?err.message:"Không thể đặt lại mật khẩu.");}
   finally{setBusy(false);}
  }
@@ -103,10 +105,13 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
    <div>
     <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#408ca1]">BẢO MẬT · TÀI KHOẢN ĐẠI BIỂU</p>
     <h1 className="page-title mt-2">Quản lý tài khoản đại biểu</h1>
-    <p className="page-description mt-2">Cấp tài khoản, đặt lại mật khẩu và xuất danh sách Excel theo từng Đại hội.</p>
+    <p className="page-description mt-2">Cấp tài khoản, reset về mật khẩu mặc định và xuất Excel gồm thông tin tài khoản cùng mật khẩu vừa cấp.</p>
    </div>
-   <button type="button" disabled={busy} onClick={()=>void exportInventory()}
-    className="btn btn-secondary"><FileSpreadsheet size={18}/> Xuất danh sách Excel</button>
+   <div className="flex w-full flex-col items-start gap-1.5 sm:w-auto sm:items-end">
+    <button type="button" disabled={busy} onClick={()=>void exportInventory()}
+     className="btn btn-secondary !min-h-12 w-full justify-center sm:w-auto"><FileSpreadsheet size={18}/> Xuất Excel + mật khẩu</button>
+    <p className="text-[11px] leading-5 text-[#7b93a1]">Chỉ mật khẩu vừa cấp/reset; không thể xem lại mật khẩu cũ.</p>
+   </div>
   </header>
   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
    {[["Tổng hồ sơ",delegates.length],["Đã có tài khoản",linked.length],["Chưa cấp",unlinked.length]].map(([label,count])=>
@@ -123,7 +128,7 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
      {busy?"Đang xử lý...":"Cấp "+eligible.length+" tài khoản"}
     </button>
    </div>
-   <p className="mt-2 text-xs leading-6 text-[#8199a4]">Chọn đại biểu chưa có tài khoản trong danh sách. Nếu chưa chọn ai, hệ thống xử lý tối đa 100 hồ sơ đầu tiên. File Excel chứa mật khẩu mới chỉ được cung cấp một lần khi tạo.</p>
+   <p className="mt-2 text-xs leading-6 text-[#8199a4]">Chọn các đại biểu chưa có tài khoản (tối đa 100/lần). Excel cấp tài khoản mới có mật khẩu chính xác. Với tài khoản đã có, muốn biết mật khẩu để cấp lại thì dùng Reset về mặc định; hệ thống không thể đọc mật khẩu hiện tại.</p>
   </div>
   {notice&&<p role="status" className="rounded-xl border border-[#c9e7d8] bg-[#effaf5] px-4 py-3 text-[12px] font-semibold text-[#226e55]">{notice}</p>}
   {error&&<p role="alert" className="rounded-xl border border-[#f2d2c4] bg-[#fff5f0] px-4 py-3 text-[12px] font-semibold text-[#a04f38]">{error}</p>}
@@ -155,9 +160,9 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
       {d.auth_user_id?"Đã cấp":"Chưa cấp"}
      </span>
      {d.auth_user_id&&<button type="button" disabled={busy}
-      onClick={()=>{setTarget(d);setMode("random");setCustom("");setError("");}}
+      onClick={()=>{setTarget(d);setShowDefault(false);setError("");}}
       className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#d7e5e8] bg-[#f7fafb] px-3 text-[11px] font-bold text-[#3a6d7d] hover:bg-[#ecf5f7]">
-      <KeyRound size={15}/> Đổi / Reset mật khẩu
+      <KeyRound size={15}/> Reset về mặc định
      </button>}
     </div>)}
     {!filtered.length&&<p className="px-5 py-10 text-center text-xs text-[#8198a6]">Không tìm thấy đại biểu phù hợp.</p>}
@@ -165,30 +170,27 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
   </section>
   {target&&<div className="fixed inset-0 z-[100] grid place-items-center bg-[#122b38]/65 p-3 backdrop-blur-[2px]" role="presentation"
    onClick={e=>{if(e.target===e.currentTarget&&!busy)setTarget(null);}}>
-   <div role="dialog" aria-modal="true" aria-label={"Đổi mật khẩu cho "+target.full_name}
+   <div role="dialog" aria-modal="true" aria-label={"Reset mật khẩu cho "+target.full_name}
     className="w-full max-w-[480px] rounded-[18px] border border-[#dae6e9] bg-white p-5 shadow-2xl sm:p-7">
     <div className="flex items-center gap-3"><LockKeyhole size={23} className="text-[#147e7a]"/>
-     <div><h2 className="text-[18px] font-extrabold text-[#22475b]">Đổi / Reset mật khẩu</h2>
+     <div><h2 className="text-[18px] font-extrabold text-[#22475b]">Reset mật khẩu đại biểu</h2>
       <p className="mt-1 text-xs text-[#7c96a3]">{target.full_name}</p></div>
     </div>
-    <div className="mt-5 grid grid-cols-2 gap-2">
-     {[["random","Tạo mật khẩu mới"],["custom","Tự đặt mật khẩu"]].map(([value,label])=>
-      <button type="button" key={value} onClick={()=>setMode(value as "random"|"custom")}
-       className={"min-h-11 rounded-lg border px-2 text-[12px] font-bold "+(mode===value?"border-[#187c80] bg-[#e9f7f5] text-[#0b6869]":"border-[#dce8ed] text-[#658195]")}>{label}</button>)}
+    <div className="mt-5 rounded-xl border border-[#cce4ed] bg-[#f1f8fc] p-4">
+     <p className="text-[11px] font-bold uppercase tracking-[.08em] text-[#507d94]">Mật khẩu mặc định sau khi reset</p>
+     <div className="mt-2 flex items-center justify-between gap-2">
+      <code className="min-w-0 flex-1 select-all rounded-lg bg-white px-3 py-2.5 text-[16px] font-bold tracking-[.05em] text-[#24516b]">{showDefault?DEFAULT_PASSWORD:"••••••••••"}</code>
+      <button type="button" aria-label={showDefault?"Ẩn mật khẩu mặc định":"Hiện mật khẩu mặc định"}
+       onClick={()=>setShowDefault(!showDefault)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#cde1eb] bg-white text-[#37667f]">
+       {showDefault?<EyeOff size={19}/>:<Eye size={19}/>}</button>
+     </div>
     </div>
-    {mode==="custom"&&<label className="mt-4 block text-xs font-semibold text-[#466d7c]">
-     Mật khẩu mới (ít nhất 12 ký tự)
-     <div className="mt-2 flex gap-2"><input className="field" autoComplete="new-password" type={showCustom?"text":"password"}
-      minLength={12} maxLength={128} value={custom} onChange={e=>setCustom(e.target.value)}/>
-      <button aria-label="Hiện / Ẩn mật khẩu" type="button" onClick={()=>setShowCustom(!showCustom)}
-       className="rounded-lg border border-[#d9e5ea] px-3 text-[#5b8190]">{showCustom?<EyeOff size={17}/>:<Eye size={17}/>}</button></div>
-    </label>}
-    <p className="mt-4 text-[12px] leading-6 text-[#8095a1]">Mật khẩu cũ sẽ bị thay thế trên tài khoản này, kể cả khi tài khoản tham dự nhiều Đại hội. Mật khẩu mới được xuất Excel một lần, không có chức năng xem lại mật khẩu hiện tại.</p>
+    <p className="mt-4 text-[12px] leading-6 text-[#8095a1]">Mật khẩu cũ sẽ bị thay thế ở mọi Đại hội dùng chung tài khoản này. Nên yêu cầu đại biểu đổi mật khẩu mặc định ngay khi đăng nhập; không thể xem lại mật khẩu hiện tại.</p>
     {error&&<p role="alert" className="mt-3 rounded-lg border border-[#f2d2c4] bg-[#fff5ef] p-3 text-[12px] font-semibold leading-5 text-[#a04f38]">{error}</p>}
     <div className="mt-5 flex justify-end gap-2">
      <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>setTarget(null)}>Hủy</button>
-     <button type="button" className="btn btn-primary" disabled={busy||mode==="custom"&&custom.length<12}
-      onClick={()=>void reset()}><CheckCircle2 size={17}/>{busy?"Đang đổi...":"Xác nhận thay đổi"}</button>
+     <button type="button" className="btn btn-primary" disabled={busy}
+      onClick={()=>void reset()}><CheckCircle2 size={17}/>{busy?"Đang reset...":"Reset về mặc định"}</button>
     </div>
    </div>
   </div>}

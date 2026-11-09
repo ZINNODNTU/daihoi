@@ -1,6 +1,7 @@
 import {redirect} from "next/navigation";
 import {DelegateShell} from "@/components/delegate-shell";
 import {getAuth} from "@/lib/auth";
+import {getPortalCongressContext} from "@/lib/active-congress";
 import Link from "next/link";
 import {IdCard} from "lucide-react";
 
@@ -18,5 +19,8 @@ export default async function DelegatePortalLayout({children}:{children:React.Re
  const {supabase,user}=await getAuth();
  if(!user)redirect("/login");
  const {data:profile}=await supabase.from("profiles").select("full_name").eq("id",user.id).maybeSingle();
- return <DelegateShell name={profile?.full_name||user.email||"Đại biểu"}>{children}</DelegateShell>;
+ const access=await getPortalCongressContext(user.id).catch(()=>null);
+  const guestOnly=Boolean(access&&!access.delegateCongressIds.length&&access.guestCongressIds.length);
+  return <DelegateShell name={profile?.full_name||user.email||"Đại biểu"} guestOnly={guestOnly}
+    congresses={access?.options||[]} activeCongressId={access?.activeCongressId||null}>{children}</DelegateShell>;
 }

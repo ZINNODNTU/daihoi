@@ -15,7 +15,8 @@ test("Desktop: flashcard và QR cùng cột trái, sơ đồ hội trường bê
  assert.equal((source.match(/<ProjectionWelcome /g)||[]).length,1,
   "Không trùng flashcard khi điểm danh liên tiếp");
  assert.equal((source.match(/<ProjectionSeatingMap /g)||[]).length,1);
- assert.match(source,/ProjectionWelcome data=\{liveData\} congressName=\{congressName\} compact/);
+ assert.match(source,/ProjectionWelcome data=\{liveData\} congressName=\{congressName\} compact featured=\{featured\}/);
+ assert.match(source,/ProjectionArrivalQueue data=\{liveData\} waiting=\{waiting\}/);
  assert.match(source,/projection-qr-clickable/);
  assert.match(source,/fullscreen:h-dvh/);
  assert.match(source,/BrandMark/);
@@ -31,9 +32,9 @@ test("Không làm mất QR cố định, PNG/SVG, chuyển phiên và cập nh�
  assert.match(source,/QRCodeSVG ref=\{qrSvg\} value=\{ticket\.url\}/);
  assert.match(source,/downloadQr\("png"\)/);
  assert.match(source,/downloadQr\("svg"\)/);
- assert.match(source,/setInterval\(\(\)=>void syncLive\(\),3000\)/);
+ assert.match(source,/useAttendanceLive\(congressId,sessionId\)/);
  assert.match(source,/selectedRef\.current=e\.target\.value/);
- assert.match(source,/setLiveData\(null\)/);
+ assert.match(source,/setSessionId\(e.target.value\)/);
  assert.match(source,/requestFullscreen\(\)/);
  assert.match(source,/getWindowStatus\(session,new Date\(clock\)\)/);
  assert.match(source,/role="progressbar"/);
@@ -45,7 +46,7 @@ test("Flashcard có ảnh, tên, đơn vị, ghế; sơ đồ tận dụng chi�
  assert.match(source,/person\.photo_path/);
  assert.match(source,/person\.full_name/);
  assert.match(source,/person\.unit/);
- assert.match(source,/seat\?seat\.code/);
+ assert.match(source,/projectedSeatCode\(seat,projectedNumbers\)/);
  assert.match(source,/latest\.checked_in_at/);
  assert.match(source,/latestSeatId===seat\.id/);
  assert.match(source,/ring-\[2px\] ring-\[#d39c37\]/);

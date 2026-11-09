@@ -21,7 +21,14 @@ async function authorize(congressId:string,write:boolean){
   const {data,error}=await supabase.from("congress_members")
    .select("role").eq("congress_id",congressId).eq("user_id",user.id).maybeSingle();
   if(error)return {error:fail("Không xác minh được phân quyền nhân sự.",500)} as const;
-  canView=data?.role==="secretary";
+  canView=["secretary","delegate","guest"].includes(data?.role||"");
+   if(!canView){
+    const own=await createAdminClient().from("delegates").select("id")
+     .eq("congress_id",congressId).eq("auth_user_id",user.id)
+     .eq("is_active",true).limit(1);
+    if(own.error)return {error:fail("Không xác minh được hồ sơ đại biểu.",500)} as const;
+    canView=Boolean(own.data?.length);
+   }
  }
  if(write&&!canManage||!write&&!canView)
   return {error:fail("Không có quyền truy cập danh sách giới thiệu BCH.",403)} as const;
@@ -33,7 +40,7 @@ export async function GET(request:Request){
   const congressId=new URL(request.url).searchParams.get("congressId")||"";
   const auth=await authorize(congressId,false);
   if("error" in auth)return auth.error;
-  const {data,error}=await auth.supabase.from("bch_candidates").select(
+  const {data,error}=await createAdminClient().from("bch_candidates").select(
    "id,congress_id,full_name,birth_year,hometown,ethnicity,education_level,union_join_year,current_position,photo_path,display_order,created_at,updated_at"
   ).eq("congress_id",congressId).order("display_order",{ascending:true})
    .order("created_at",{ascending:true}).limit(500);
@@ -92,7 +99,7 @@ export async function DELETE(request:Request){
   const expected=congressId+"/bch/"+id+".jpg";
   if(data.photo_path===expected){
    const {error:cleanupError}=await createAdminClient().storage
-    .from("delegate-photos").remove([expected]);
+    .from("delegate-photos").remove([expected,expected.replace(/\.jpg$/i,"-96.jpg"),expected.replace(/\.jpg$/i,"-160.jpg")]);
    if(cleanupError)console.error("bch photo cleanup failed",cleanupError.name);
   }
   return NextResponse.json({ok:true},{headers:{"Cache-Control":"no-store"}});

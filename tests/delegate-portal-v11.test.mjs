@@ -35,7 +35,8 @@ test("Thẻ chuyên nghiệp tối giản chỉ có barcode, ảnh, thông tin �
  const card=content("../src/components/my-delegate-cards.tsx");
  assert.match(card,/<DelegateBarcode value=\{item\.barcodeCode\}/);
  assert.match(card,/seat\?\.code/);
- assert.match(card,/\/branding\/huy-hieu-doan.png/);
+ assert.match(card,/congressBranding\[item\.kind\]\.src/);
+ assert.match(readFileSync(new URL("../src/components/brand-mark.tsx",import.meta.url),"utf8"),/huy-hieu-hoi-sinh-vien\.png/);
  assert.doesNotMatch(card,/QRCodeSVG|my-qr-|Tải mã QR/);
  assert.doesNotMatch(card,/Thẻ đại biểu số/);
  assert.doesNotMatch(card,/DelegateCheckinScanner|const allHistory/);
@@ -68,7 +69,8 @@ test("Mỗi chức năng có một route riêng và thanh điều hướng đi�
  assert.match(content("../src/components/delegate-seat-hall.tsx"),/Tìm ghế/);
  const history=content("../src/app/my-card/history/page.tsx");
  assert.match(history,/Lịch sử điểm danh/);
- assert.match(history,/checkedInAt/);
+ assert.match(content("../src/lib/delegate-history.ts"),/checkedInAt/);
+ assert.match(history,/loadDelegateHistory/);
  const scanner=content("../src/components/delegate-checkin-scanner.tsx");
  assert.match(scanner,/BrowserQRCodeReader/);
  assert.match(scanner,/decodeFromVideoDevice/);

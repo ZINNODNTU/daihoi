@@ -87,7 +87,7 @@ test("BCH RLS limits reading to admin and secretary; write endpoints require adm
   api.indexOf("export async function DELETE"));
  assert.doesNotMatch(writes,/createAdminClient\(\)/);
  const deletion=api.slice(api.indexOf("export async function DELETE"));
- assert.match(deletion,/\.from\("delegate-photos"\)\.remove\(\[expected\]\)/);
+ assert.match(deletion,/\.from\("delegate-photos"\)\.remove\(\[expected,expected\.replace/);
 });
 test("BCH UI includes all seven fields and export columns; attendance shows photo and seat",()=>{
  const ui=file("../src/components/bch-candidates-client.tsx");

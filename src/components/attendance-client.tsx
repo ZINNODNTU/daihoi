@@ -1,7 +1,6 @@
 "use client";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import Link from "next/link";
-import {BrowserMultiFormatReader} from "@zxing/browser";
 import {
  Camera,CheckCheck,ClipboardCheck,History,Plus,RefreshCw,Search,Monitor,QrCode,ArrowLeft,
  ShieldAlert,Users,Wifi,ScanBarcode,Clock3,Settings2
@@ -180,6 +179,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
  async function refreshCameras(){
   if(!navigator.mediaDevices?.enumerateDevices)return;
   try{
+   const {BrowserMultiFormatReader}=await import("@zxing/browser");
    const devices=await BrowserMultiFormatReader.listVideoInputDevices();
    setCameraDevices(devices.filter(d=>d.deviceId).map((d,i)=>({
     deviceId:d.deviceId,label:d.label||"Camera "+(i+1)
@@ -193,6 +193,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
   try{
    await new Promise(resolve=>setTimeout(resolve,120));
    if(!videoRef.current)throw new Error("Camera chưa sẵn sàng.");
+   const {BrowserMultiFormatReader}=await import("@zxing/browser");
    const reader=new BrowserMultiFormatReader();
    const onDecode=(result:{getText():string}|undefined|null)=>{
     if(!result||scanLock.current)return;

@@ -12,17 +12,17 @@ test("BCH portrait migration adds private image metadata with tenant-specific pa
  assert.match(sql,/congress_id::text \|\| '\/bch\/' \|\| id::text \|\| '\.jpg'/);
  assert.doesNotMatch(sql,/GRANT .*storage\.objects/i);
 });
-test("BCH private photo endpoint permits administrators to upload but only admins and secretaries to view",()=>{
+test("BCH private photo endpoint permits administrators to upload and authorized guests to view",()=>{
  const api=file("../src/app/api/bch-candidates/[id]/photo/route.ts");
  assert.match(api,/export async function GET/);
  assert.match(api,/export async function PUT/);
  assert.match(api,/hasRole\(supabase,user\.id,candidate\.congress_id,"admin"\)/);
- assert.match(api,/member\.data\?\.role!=="secretary"/);
+ assert.match(api,/\["secretary","delegate","guest"\]\.includes/);
   assert.match(api,/\.eq\("auth_user_id",user\.id\)/);
  assert.match(api,/db\.from\("bch_candidates"\)/);
  assert.match(api,/candidate\.photo_path!==expected/);
  assert.match(api,/private, no-store/);
- assert.match(api,/storage\.from\(BUCKET\)\.download\(expected\)/);
+ assert.match(api,/storage\.download\(expected\)/);
  assert.match(api,/expectedPath\(auth\.candidate\.congress_id,id\)/);
 });
 test("BCH photo upload validates JPEG dimensions and uses safe server re-encoding",()=>{
@@ -42,7 +42,7 @@ test("BCH photo is present in response models and private storage cleaned on del
  assert.match(bch,/current_position,photo_path,display_order/);
  assert.match(page,/current_position,photo_path,display_order/);
  assert.match(types,/photo_path:string\|null/);
- assert.match(bch,/\.from\("delegate-photos"\)\.remove\(\[expected\]\)/);
+ assert.match(bch,/\.from\("delegate-photos"\)\.remove\(\[expected,expected\.replace/);
  assert.match(bch,/if\(data\.photo_path===expected\)/);
 });
 test("BCH form reuses delegate portrait editor with white background and 3:4 crop",()=>{

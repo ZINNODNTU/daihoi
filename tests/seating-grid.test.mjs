@@ -21,13 +21,13 @@ test("Chọn ô -> tạo ghế có mã, bỏ ô -> xóa ghế và giữ ô lối
   assert.equal(state.error,null);
   assert.equal(state.seats.length,3);
   assert.equal(state.seats[0].code,"G-A-01");
-  assert.equal(state.seats[1].code,"G-A-20");
-  assert.equal(state.seats[2].code,"G-J-20");
+  assert.equal(state.seats[1].code,"G-A-02");
+  assert.equal(state.seats[2].code,"G-J-01");
   assert.equal(seatGridCellIndex(state.seats[2]),199);
   assert.equal(validateSeatDrafts(state.seats),null);
   state=setSeatGridCells(state.seats,new Set([0,199]),new Set(),id);
   assert.equal(state.error,null);
-  assert.deepEqual(state.seats.map(s=>s.code),["G-A-01","G-J-20"]);
+  assert.deepEqual(state.seats.map(s=>s.code),["G-A-01","G-J-01"]);
 });
 test("Mẫu 200 ghế, lối đi giữa 180 ghế, lưới trắng 0 ghế",()=>{
   assert.equal(seatGridPattern("full").size,200);
@@ -40,7 +40,10 @@ test("Mẫu 200 ghế, lối đi giữa 180 ghế, lưới trắng 0 ghế",()=>
   const aisle=setSeatGridCells(full.seats,seatGridPattern("center-aisle"),new Set(),id);
   assert.equal(aisle.error,null);
   assert.equal(aisle.seats.length,180);
-  assert.ok(aisle.seats.every(s=>s.seatNumber!==10&&s.seatNumber!==11));
+  for(let row=0;row<10;row++){
+    const seats=aisle.seats.filter(s=>s.rowLabel===String.fromCharCode(65+row));
+    assert.deepEqual(seats.map(s=>s.seatNumber),Array.from({length:18},(_,i)=>i+1));
+  }
 });
 test("Cập nhật canvas giữ nguyên ID ghế để bảo toàn phân công",()=>{
   const current=setSeatGridCells([],new Set([0,1,2]),new Set(),id).seats;
@@ -49,7 +52,7 @@ test("Cập nhật canvas giữ nguyên ID ghế để bảo toàn phân công",
   const updated=setSeatGridCells(current,new Set([0,2,3]),new Set(),id);
   assert.equal(updated.error,null);
   assert.equal(updated.seats.find(s=>seatGridCellIndex(s)===0)?.id,keep.id);
-  assert.equal(updated.seats.find(s=>seatGridCellIndex(s)===3)?.code,"G-A-04");
+  assert.equal(updated.seats.find(s=>seatGridCellIndex(s)===3)?.code,"G-A-03");
 });
 test("Không xóa ghế đã gán đại biểu - cập nhật hàng loạt là nguyên tử",()=>{
   const current=setSeatGridCells([],new Set([0,1,2]),new Set(),id).seats;

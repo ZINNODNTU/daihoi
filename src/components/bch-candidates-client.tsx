@@ -44,7 +44,7 @@ const formatCandidate=(c:BchCandidate):FormDataState=>({
 });
 
 function bchPhotoUrl(candidate:BchCandidate){
- return "/api/bch-candidates/"+encodeURIComponent(candidate.id)+"/photo?v="+
+ return "/api/bch-candidates/"+encodeURIComponent(candidate.id)+"/photo?w=96&v="+
   encodeURIComponent(candidate.updated_at);
 }
 function BchPortrait({candidate,large=false}:{

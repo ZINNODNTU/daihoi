@@ -14,14 +14,16 @@ test("Đường dẫn Google Drive chỉ sinh từ ID file hợp lệ, không ch
 
 test("Đại biểu chỉ xem tên/icon/số file, nhấn sẽ chuyển sang Drive trong tab khác",()=>{
  const page=read("../src/app/my-card/documents/page.tsx");
- assert.match(page,/getMyDelegateData/);
+  const list=read("../src/components/delegate-documents-list.tsx");
+ assert.match(page,/getPortalCongressContext/);
+  assert.match(page,/\.eq\("congress_id",congressId\)/);
  assert.match(page,/\.eq\("delegate_visible",true\)/);
- assert.match(page,/docs\.length\} tệp/);
- assert.match(page,/doc\.file_name/);
- assert.match(page,/icon=|fileIcon\(doc\.mime_type\)/);
- assert.match(page,/href=\{"\/api\/documents\/"\+doc\.id\}/);
- assert.match(page,/target="_blank"/);
- assert.doesNotMatch(page,/Download|Tải về|inline=1/);
+ assert.match(list,/docs\.length\} tệp/);
+ assert.match(list,/doc\.file_name/);
+ assert.match(list,/icon=|fileIcon\(doc\.mime_type\)/);
+ assert.match(list,/href=\{"\/api\/documents\/"\+doc\.id\}/);
+ assert.match(list,/target="_blank"/);
+ assert.doesNotMatch(list,/Download|Tải về|inline=1/);
  const redirect=read("../src/app/api/documents/[id]/route.ts");
  assert.match(redirect,/NextResponse\.redirect\(destination,302\)/);
  assert.match(redirect,/googleDriveFileUrl\(doc\.drive_file_id\)/);

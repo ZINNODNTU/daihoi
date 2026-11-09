@@ -23,7 +23,13 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
   const {data:own,error:ownerError}=await db.from("delegates").select("id")
    .eq("congress_id",doc.congress_id).eq("auth_user_id",user.id)
    .eq("is_active",true).limit(1);
-  if(ownerError||!own?.length)return fail(403,"Không có quyền xem tài liệu này.");
+  if(ownerError)return fail(500,"Không xác minh được quyền xem tài liệu.");
+   if(!own?.length){
+    const {data:member,error:memberError}=await db.from("congress_members")
+     .select("role").eq("congress_id",doc.congress_id)
+     .eq("user_id",user.id).eq("role","guest").maybeSingle();
+    if(memberError||!member)return fail(403,"Không có quyền xem tài liệu này.");
+   }
  }
  try{
   const destination=googleDriveFileUrl(doc.drive_file_id);

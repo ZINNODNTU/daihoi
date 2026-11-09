@@ -9,12 +9,22 @@
 | Bạn cần làm gì? | Tài liệu chính |
 | --- | --- |
 | Cài đặt/chạy hệ thống và triển khai | [Quy trình triển khai](huong-dan/QUY-TRINH-TRIEN-KHAI.md) |
+| **Checklist phát hành Vercel + Supabase, trạng thái migration live (10/11/2026)** | [Chuẩn bị production V31](huong-dan/CHUAN-BI-PRODUCTION-VERCEL-SUPABASE-V31.md) |
 | Chuẩn bị cơ sở dữ liệu, phân quyền | [Checklist Supabase và các migration](huong-dan/SUPABASE-SETUP.md) |
 | Hiểu nghiệp vụ Đại hội và giới hạn sản phẩm | [Nghiệp vụ Đại hội số](nghiep-vu/NGHIEP-VU-DAI-HOI.md) |
 | **Lưu file trên Google Drive, đại biểu chỉ xem tên/link** | [Google Drive V18 — hướng dẫn hiện hành](tinh-nang/tai-lieu/GOOGLE-DRIVE-LINKS-V18.md) |
 | Điều hành điểm danh và mã QR | [QR theo phiên và barcode](tinh-nang/diem-danh/DIEM-DANH-QR-PHIEN-VA-BARCODE.md) |
-| Trình chiếu đại biểu vừa đến và sơ đồ ghế | [Màn hình điểm danh V16](tinh-nang/diem-danh/MAN-HINH-DIEM-DANH-V16.md) |
+| Trình chiếu realtime, hàng chờ, tối ưu ảnh và dữ liệu đại biểu | [Tối ưu realtime và hiệu năng V19](huong-dan/TOI-UU-HIEU-NANG-REALTIME-V19.md) |
+| **Một tài khoản nhiều Đại hội, tự đổi ảnh/hồ sơ và khách mời** | [Hướng dẫn tài khoản và khách mời V20](huong-dan/TAI-KHOAN-DA-DAI-HOI-KHACH-MOI-V20.md) |
+| **Trải nghiệm điện thoại cổng đại biểu và khách mời** | [Mobile UX V22](huong-dan/TOI-UU-MOBILE-CONG-DAI-BIEU-V22.md) |
+| **Sửa lỗi lưu thông tin hồ sơ đại biểu trên điện thoại** | [Khắc phục API hồ sơ V24](huong-dan/SUA-LOI-CAP-NHAT-HO-SO-V24.md) |
+| **Chọn Đại hội trước, hồ sơ cá nhân chung, lịch sử điểm danh toàn bộ** | [Hướng dẫn V25](huong-dan/MOT-NGUOI-NHIEU-DAI-HOI-V25.md) |
+| Thiết kế màn hình điểm danh V16 (bố cục gốc) | [Màn hình điểm danh V16](tinh-nang/diem-danh/MAN-HINH-DIEM-DANH-V16.md) |
 | Xây dựng sơ đồ ghế và nhập Excel | [Seating Grid Canvas](tinh-nang/cho-ngoi/SEATING-GRID-CANVAS.md) |
+| **Tạo sơ đồ ghế một lần, dùng lại ở nhiều Đại hội** | [Sao chép liên Đại hội và thư viện mẫu V26](huong-dan/TAI-SU-DUNG-SO-DO-GHE-V26.md) |
+| **Quản lý/xóa sơ đồ, Excel tài khoản, reset mặc định, chọn Đại hội mobile** | [Chuẩn hóa admin và mobile V27](huong-dan/CHUAN-HOA-ADMIN-DAI-BIEU-MOBILE-V27.md) |
+| **Đánh số ghế theo hàng, bỏ qua lối đi/ô trống** | [Hướng dẫn V28](huong-dan/DANH-SO-GHE-THEO-HANG-V28.md) |
+| **Đồng bộ sơ đồ điểm danh, bỏ mã ghế nổi và chọn logo Hội/Đoàn theo Đại hội** | [Hướng dẫn V29](huong-dan/SO-DO-DIEM-DANH-LOGO-V29.md) |
 | Quản lý thông tin, ảnh đại biểu | [Ảnh đại biểu](tinh-nang/dai-bieu/DAI-BIEU-ANH.md) |
 | Thống kê giới tính, ngày sinh của người điểm danh | [Phân tích chất lượng đại biểu V15](tinh-nang/dai-bieu/PHAN-TICH-CHAT-LUONG-DAI-BIEU-V15.md) |
 | Nhân sự BCH và ảnh hồ sơ | [Danh sách trích ngang BCH](tinh-nang/nhan-su/NHAN-SU-BCH.md) |
@@ -47,9 +57,9 @@ docs/
 | Lĩnh vực | Tài liệu ưu tiên | Lưu ý |
 | --- | --- | --- |
 | Google Drive | **V18** | **Đã triển khai và thử kết nối + upload/chia sẻ/thu hồi/xóa qua Apps Script trên local (09/11/2026)**. Chưa kiểm chứng trang BTC/cổng đại biểu với dữ liệu thật và **chưa cấu hình Vercel Production**. Xem hướng dẫn V18. |
-| Màn hình điểm danh | **V16** | Chào mừng đại biểu ở trên; QR và sơ đồ ghế bên dưới. |
+| Màn hình điểm danh | **V19** | Realtime theo lượt với hàng chờ FIFO; migration V19 và cấu hình production cần kiểm chứng trên Supabase. |
 | Thống kê đại biểu | **V15** | Chỉ phân tích người đã điểm danh; cần migration V15 trên Supabase. |
-| Cổng đại biểu | V14 cùng V15 | Đọc thêm trong `lich-su/dai-bieu/` để hiểu các quyết định lịch sử, không lấy đó làm trạng thái production. |
+| Cổng đại biểu / Khách mời | **V22** | Bổ sung tối ưu điện thoại trên V20: thao tác nhanh, lọc tài liệu/BCH/lịch sử theo Đại hội, quét QR và sơ đồ ghế. Đã build local, chưa thử thực tế trên điện thoại bằng tài khoản thật. |
 | Sơ đồ ghế | Canvas V6 + điểm danh V10 | Kiểm tra migration thực tế; sơ đồ v4 là tài liệu lịch sử. |
 
 **Phân biệt bắt buộc:** “Đã có trong mã nguồn” khác với “đã áp dụng migration trên database”, “đã cấp quyền Google Drive” và “đã triển khai Vercel”. Khi không có kiểm thử xác nhận trực tiếp, ghi **chưa xác minh**, không suy đoán là đã sẵn sàng.

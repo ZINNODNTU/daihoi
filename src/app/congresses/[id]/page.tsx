@@ -18,9 +18,9 @@ const areas=[
 export default async function CongressHome({params}:{params:Promise<{id:string}>}){
   const {id}=await params;
   const supabase=await createClient();
-  const [{data:congress},{data:delegates},{data:sessions},{data:checkins}]=await Promise.all([
+  const [{data:congress},{count:delegateCount},{data:sessions},{data:checkins}]=await Promise.all([
     supabase.from("congresses").select("id,name,term,venue,kind,status,slug").eq("id",id).maybeSingle(),
-    supabase.from("delegates").select("id").eq("congress_id",id).eq("is_active",true),
+    supabase.from("delegates").select("id",{count:"exact",head:true}).eq("congress_id",id).eq("is_active",true),
     supabase.from("attendance_sessions").select("id,name,status,starts_at,ends_at,created_at").eq("congress_id",id).order("created_at",{ascending:false}),
     supabase.from("checkins").select("id,session_id").eq("congress_id",id)
   ]);
@@ -28,7 +28,7 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
 
   const current=sessions?.[0];
   const arrived=checkins?.filter(row=>row.session_id===current?.id).length||0;
-  const total=delegates?.length||0;
+  const total=delegateCount||0;
   const percent=total?Math.min(100,Math.round(arrived/total*100)):0;
   const stats=[
     {label:"Hồ sơ đại biểu",value:total,icon:Users,foot:"Đại biểu hoạt động"},

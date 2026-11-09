@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import {congressBranding} from "@/components/brand-mark";
 import {useCallback,useEffect,useLayoutEffect,useRef,useState} from "react";
 import Link from "next/link";
 import {Armchair,ArrowUpRight,BookOpen,Camera,CheckCircle2,History,Maximize2,Minimize2,Printer,UserRound,Users,X} from "lucide-react";
@@ -31,7 +32,7 @@ function DelegatePass({item,priority}:{item:PortalDelegate;priority:boolean}){
    <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 -left-14 h-52 w-52 rounded-full border-[1px] border-white/15"/>
    <div className="relative flex items-center gap-3">
     <div className="flex h-[50px] w-[50px] shrink-0 sm:h-[56px] sm:w-[56px] items-center justify-center rounded-[10px] border border-white/15 bg-white p-1.5 shadow-[0_6px_18px_rgba(0,0,0,.12)]">
-     <Image src="/branding/huy-hieu-doan.png" alt="Huy hiệu Đoàn TNCS Hồ Chí Minh"
+     <Image src={congressBranding[item.kind].src} alt={congressBranding[item.kind].alt}
       width={43} height={47} unoptimized priority className="h-full w-full object-contain"/>
     </div>
     <div className="min-w-0 flex-1">
@@ -57,7 +58,7 @@ function DelegatePass({item,priority}:{item:PortalDelegate;priority:boolean}){
     <span className="inline-flex items-center gap-1.5 border-b border-[#d7b17a] pb-1.5 text-[10px] font-extrabold tracking-[.1em] text-[#b53730]">
      {roleLabel[item.delegateType]}
     </span>
-    <h3 className="mt-2.5 break-words text-[clamp(21px,6vw,27px)] font-extrabold leading-[1.15] tracking-[-.055em] text-[#192d49]">{item.fullName}</h3>
+    <h3 className="mt-2.5 break-words text-[clamp(21px,6vw,27px)] font-extrabold leading-[1.3] tracking-[-.018em] text-[#192d49]">{item.fullName}</h3>
     {item.position&&<p className="mt-2 text-[11px] font-bold leading-5 text-[#4c6474]">{item.position}</p>}
     <p className="mt-1 break-words text-[11px] leading-5 text-[#7b909a]">{item.unit||"Chưa cập nhật đơn vị"}</p>
    </div>
@@ -177,11 +178,43 @@ const actions=[
 
 export function MyDelegateCards({items}:{items:PortalDelegate[]}){
  const [viewer,setViewer]=useState<PortalDelegate|null>(null);
+  const [selectedId,setSelectedId]=useState(items[0]?.id||"");
+  const visible=items.filter(item=>item.id===selectedId);
  const closeViewer=useCallback(()=>setViewer(null),[]);
- const present=items.reduce((sum,item)=>sum+item.history.length,0);
+ const present=visible.reduce((sum,item)=>sum+item.history.length,0);
+  const currentDelegate=visible[0];
+  const currentSession=currentDelegate?activeSession(currentDelegate.sessions):undefined;
+  const selectedCongressId=currentDelegate?.congressId||"";
+  const selectedQuery="?congressId="+encodeURIComponent(selectedCongressId);
  return <div className="mx-auto grid w-full max-w-[970px] items-start gap-8 lg:grid-cols-[minmax(0,430px)_minmax(300px,1fr)] lg:gap-14">
   <div className="min-w-0 space-y-7">
-   {items.map((item,index)=><div key={item.id} className="min-w-0">
+    {items.length>1&&<label className="block rounded-xl border border-[#d7e4eb] bg-white p-4 shadow-sm">
+     <span className="mb-2 block text-[12px] font-extrabold text-[#386480]">Chọn Đại hội để xem thẻ</span>
+     <select className="field" value={selectedId} onChange={event=>setSelectedId(event.target.value)}>
+      {items.map(item=><option key={item.id} value={item.id}>{item.congressName}</option>)}
+     </select>
+    </label>}
+   {currentDelegate&&<section aria-label="Thao tác nhanh đại biểu" className="grid grid-cols-2 gap-2.5 lg:hidden print:hidden">
+     <Link href="/my-card/checkin" className="flex min-h-[72px] items-center gap-3 rounded-xl bg-[#087fae] px-3.5 text-white shadow-sm">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/15"><Camera size={21}/></span>
+      <span className="min-w-0"><span className="block text-[13px] font-bold">Điểm danh</span><span className="mt-0.5 block text-[11px] text-[#d9eef8]">Quét QR phiên</span></span>
+     </Link>
+     <Link href={"/my-card/seats"+(currentSession?"?sessionId="+encodeURIComponent(currentSession.id):"")}
+      className="flex min-h-[72px] items-center gap-3 rounded-xl border border-[#cbdfe9] bg-white px-3.5 text-[#235c77] shadow-sm">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#e9f3f9]"><Armchair size={21}/></span>
+      <span className="min-w-0"><span className="block text-[13px] font-bold">Ghế của tôi</span><span className="mt-0.5 block truncate text-[11px] text-[#6d8ea0]">{currentSession?.seat?.code||"Xem sơ đồ"}</span></span>
+     </Link>
+     <div className="col-span-2 grid grid-cols-3 gap-2 rounded-xl border border-[#dce7eb] bg-white p-2">
+      {([{href:"/my-card/documents"+selectedQuery,label:"Tài liệu",icon:BookOpen},
+        {href:"/my-card/bch"+selectedQuery,label:"Ứng viên BCH",icon:Users},
+        {href:"/my-card/history",label:"Lịch sử",icon:History}] as const)
+       .map(({href,label,icon:Icon})=><Link key={href} href={href}
+        className="flex min-h-[64px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg bg-[#f4f8fb] px-1 text-center text-[11px] font-bold leading-[1.35] text-[#365d74]">
+        <Icon size={19} strokeWidth={1.8}/><span>{label}</span>
+       </Link>)}
+     </div>
+    </section>}
+    {visible.map((item,index)=><div key={item.id} className="min-w-0">
     <button type="button" onClick={()=>setViewer(item)}
      aria-label={"Xem toàn bộ thẻ đại biểu của "+item.fullName}
      className="mx-auto mb-3 flex min-h-11 w-full max-w-[386px] items-center justify-center gap-2 rounded-xl border border-[#cbdfea] bg-white px-4 text-[12px] font-extrabold text-[#246d91] shadow-sm transition hover:bg-[#eff7fc]">

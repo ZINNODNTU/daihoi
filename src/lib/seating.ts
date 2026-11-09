@@ -161,6 +161,36 @@ export function seatGridCellIndex(
     row>=0&&row<size.rows&&column>=0&&column<size.columns
     ?row*size.columns+column:null;
 }
+/**
+ * Number real chairs from left to right within each physical grid row.
+ * Empty grid cells/aisles do not receive a number. Delegate and guest chairs
+ * use ONE sequence; preserve seat UUID, type and assignments.
+ * Chairs outside the active grid keep their original numbering and labels.
+ */
+export function renumberGridSeats(seats:SeatDraft[],size:SeatGridSize=DEFAULT_SEAT_GRID_SIZE):SeatDraft[]{
+  if(!seatGridSizeValid(size))throw new Error("Kích thước lưới không hợp lệ.");
+  const grid=seats.map(seat=>({seat,index:seatGridCellIndex(seat,size)}));
+  const outsideCodes=new Set(grid.filter(item=>item.index===null)
+    .map(item=>item.seat.code.trim().toUpperCase()));
+  const allocatedCodes=new Set(outsideCodes);
+  const byId=new Map<string,SeatDraft>();
+  const inside=grid.filter((item):item is {seat:SeatDraft;index:number}=>item.index!==null)
+    .sort((a,b)=>a.index-b.index);
+  let currentRow=-1,number=0;
+  for(const {seat,index} of inside){
+    const row=Math.floor(index/size.columns);
+    if(row!==currentRow){currentRow=row;number=0;}
+    const seatNumber=++number;
+    const rowLabel=rowLabelAt("A",row);
+    const base=seat.zone+"-"+rowLabel+"-"+String(seatNumber).padStart(2,"0");
+    let code=base,suffix=2;
+    while(allocatedCodes.has(code.toUpperCase())&&suffix<1000)code=base+"-"+suffix++;
+    if(allocatedCodes.has(code.toUpperCase()))throw new Error("Không tạo được mã ghế duy nhất.");
+    allocatedCodes.add(code.toUpperCase());
+    byId.set(seat.id,{...seat,rowLabel,seatNumber,code});
+  }
+  return seats.map(seat=>byId.get(seat.id)||seat);
+}
 export type SeatGridResult={seats:SeatDraft[];error:string|null};
 
 /** Lưu nguyên tử các ô: giữ ID và loại ghế cũ, bảo vệ ghế đã phân công.
@@ -206,9 +236,10 @@ export function setSeatGridCells(
     codes.add(code.toUpperCase());
     next.push({id:makeId(),code,zone:"G",rowLabel,seatNumber,x,y,blocked:false,seatType});
   }
-  const validation=validateSeatDrafts(next);
+  const renumbered=renumberGridSeats(next,size);
+   const validation=validateSeatDrafts(renumbered);
   if(validation)return {seats:current,error:validation};
-  return {seats:next,error:null};
+  return {seats:renumbered,error:null};
 }
 export function seatGridPattern(
   preset:SeatGridPreset,size:SeatGridSize=DEFAULT_SEAT_GRID_SIZE
