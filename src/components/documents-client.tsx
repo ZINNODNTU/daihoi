@@ -2,23 +2,15 @@
 
 import {ChangeEvent,useCallback,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
-import {CloudUpload,Download,FileImage,FileSpreadsheet,FileText,FolderOpen,Search,ShieldCheck,RefreshCw,Cloud,AlertCircle,CheckCircle2} from "lucide-react";
+import {CloudUpload,ExternalLink,FileImage,FileSpreadsheet,FileText,FolderOpen,Search,ShieldCheck,RefreshCw,Cloud,AlertCircle,CheckCircle2,Presentation} from "lucide-react";
 import type {DocRow} from "@/lib/types";
 
 const MAX_FILE_BYTES=4*1024*1024;
 type DriveStatus={ready:boolean;rootName?:string;reason?:string;missing?:string[];message:string};
-function fileSize(bytes:number){
-  return bytes<1024*1024?Math.max(1,Math.round(bytes/1024))+" KB":(bytes/1024/1024).toFixed(1)+" MB";
-}
 function iconFor(type:string){
-  return type.startsWith("image/")?FileImage:type.includes("sheet")?FileSpreadsheet:FileText;
-}
-function kind(type:string){
-  if(type.startsWith("image/"))return "Hình ảnh";
-  if(type.includes("pdf"))return "PDF";
-  if(type.includes("spreadsheet"))return "Excel";
-  if(type.includes("wordprocessing"))return "Word";
-  return "Tài liệu";
+ return type.startsWith("image/")?FileImage:
+  type.includes("sheet")||type==="application/vnd.ms-excel"?FileSpreadsheet:
+  type.includes("presentation")||type==="application/vnd.ms-powerpoint"?Presentation:FileText;
 }
 export function DocumentsClient({congressId,docs,canManage}:{congressId:string;docs:DocRow[];canManage:boolean}){
   const router=useRouter();
@@ -92,7 +84,7 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
 
   return <div className="space-y-6">
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-      <div><p className="eyebrow">Hồ sơ và văn kiện</p><h1 className="page-title mt-2">Tài liệu Đại hội</h1><p className="page-description">Lưu trữ, tra cứu và tải tài liệu theo quyền truy cập của Đại hội.</p></div>
+      <div><p className="eyebrow">Hồ sơ và văn kiện</p><h1 className="page-title mt-2">Tài liệu Đại hội</h1><p className="page-description">BTC tải lên Google Drive; đại biểu chỉ xem tên và mở liên kết Google Drive khi cần.</p></div>
       <span className="inline-flex w-fit items-center gap-2 rounded-xl bg-[#e6f6f2] px-3 py-2 text-xs font-bold text-[#0b8079]"><ShieldCheck size={16}/> Tài liệu phân quyền</span>
     </div>
 
@@ -129,13 +121,13 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
     {canManage&&<label className={`group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[12px] border-2 border-dashed border-[#c4e5df] bg-gradient-to-br from-[#f1fbf8] to-[#f8fbfc] px-5 py-8 text-center transition-colors hover:border-[#66bdb4] hover:bg-[#e9f8f2] sm:py-10 ${busy?"pointer-events-none opacity-60":""}`}>
       <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-white text-[#108e8c] shadow-sm"><CloudUpload size={27}/></span>
       <span className="text-base font-semibold text-[#193e4d]">{uploadProgress||"Chạm để chọn một hoặc nhiều tài liệu"}</span>
-      <span className="max-w-lg text-xs leading-relaxed text-[#738a98]">Hỗ trợ ảnh, PDF, Word, Excel và PowerPoint (.docx/.xlsx/.pptx, cả định dạng cũ). Tối đa 4 MB mỗi tệp. Tệp được lưu riêng tư trên Google Drive.</span>
+      <span className="max-w-lg text-xs leading-relaxed text-[#738a98]">Tải nhiều tệp PDF, Word, Excel, PowerPoint hoặc ảnh (tối đa 4 MB/tệp). Website tự lấy liên kết Google Drive và lưu danh sách tên.</span>
       <input aria-label="Chọn tài liệu để tải lên" type="file" multiple disabled={busy||driveStatus?.ready===false} className="sr-only" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" onChange={e=>void upload(e)}/>
     </label>}
 
     {canManage&&docs.length>0&&<section className="rounded-2xl border border-[#cbdfe9] bg-white p-4 sm:p-5">
       <h2 className="text-[15px] font-extrabold text-[#234e65]">Công bố tài liệu cho đại biểu</h2>
-      <p className="mt-2 text-[12px] leading-6 text-[#7894a2]">Tài liệu nội bộ mặc định không công khai. Bật chia sẻ cho từng tệp để đại biểu thấy trong cổng của mình.</p>
+      <p className="mt-2 text-[12px] leading-6 text-[#7894a2]">Khi bật công bố, hệ thống đồng thời cấp quyền “Người có đường liên kết được xem” trên Google Drive. Liên kết có thể được chuyển tiếp; chỉ công bố tài liệu được phép chia sẻ.</p>
       <div className="mt-4 grid gap-2 md:grid-cols-2">
        {docs.map(doc=><label key={doc.id} className="flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-[#e2ebee] bg-[#f9fbfc] px-3 py-3">
         <input type="checkbox" checked={doc.delegate_visible===true} disabled={sharing!==null}
@@ -156,26 +148,21 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
 
       {filtered.length?
       <>
-        <div className="table-wrap desktop-table"><table className="data">
-          <thead><tr><th>Tên tài liệu</th><th>Định dạng</th><th>Dung lượng</th><th>Ngày tải</th><th>Thao tác</th></tr></thead>
-          <tbody>{filtered.map(doc=>{
-            const Icon=iconFor(doc.mime_type);
-            return <tr key={doc.id}>
-              <td><div className="flex max-w-[420px] items-center gap-3"><span className="shrink-0 rounded-xl bg-[#edf3ff] p-2 text-[#007eb8]"><Icon size={19}/></span><span className="min-w-0 break-words font-bold">{doc.file_name}</span></div></td>
-              <td>{kind(doc.mime_type)}</td><td>{fileSize(doc.byte_size)}</td>
-              <td>{new Date(doc.created_at).toLocaleDateString("vi-VN")}</td>
-              <td><a className="btn btn-secondary" href={`/api/documents/${doc.id}`}><Download size={17}/> Tải về</a></td>
-            </tr>;
-          })}</tbody>
-        </table></div>
-        <div className="mobile-cards px-3 py-3">
-          {filtered.map(doc=>{
-            const Icon=iconFor(doc.mime_type);
-            return <article key={doc.id} className="mobile-record">
-              <div className="flex items-start gap-3"><span className="rounded-xl bg-[#edf3ff] p-2.5 text-[#007eb8]"><Icon size={21}/></span><div className="min-w-0 flex-1"><h3 className="mobile-record-title">{doc.file_name}</h3><p className="mobile-record-meta mt-1">{kind(doc.mime_type)} · {fileSize(doc.byte_size)} · {new Date(doc.created_at).toLocaleDateString("vi-VN")}</p></div></div>
-              <div className="mobile-record-actions"><a className="btn btn-secondary" href={`/api/documents/${doc.id}`}><Download size={17}/> Tải tài liệu</a></div>
-            </article>;
-          })}
+        <div className="divide-y divide-[#eaf0f4]">
+         {filtered.map(doc=>{
+          const Icon=iconFor(doc.mime_type);
+          return <a key={doc.id} href={"/api/documents/"+doc.id}
+           target="_blank" rel="noopener noreferrer"
+           aria-label={"Mở tài liệu "+doc.file_name+" trên Google Drive"}
+           className="group flex min-w-0 items-center gap-3 px-4 py-4 transition-colors hover:bg-[#f3f9fc] sm:px-6">
+           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] bg-[#e9f3f9] text-[#187fac]"><Icon size={22}/></span>
+           <span className="min-w-0 flex-1 break-words text-[13px] font-bold leading-5 text-[#294c65]">{doc.file_name}</span>
+           <span className={"hidden shrink-0 rounded-full px-3 py-1.5 text-[10px] font-bold sm:inline-flex "+(doc.delegate_visible?"bg-[#e6f6ec] text-[#247756]":"bg-[#edf1f4] text-[#758a97]")}>
+            {doc.delegate_visible?"Đã công bố":"Nội bộ"}
+           </span>
+           <ExternalLink size={18} className="shrink-0 text-[#7c9bab] group-hover:text-[#1480aa]"/>
+          </a>;
+         })}
         </div>
       </>:
       <div className="empty-state">
@@ -185,6 +172,6 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
       </div>}
     </section>
 
-    <p className="helper">Giới hạn 4 MB/tệp áp dụng cho Vercel Function. Nếu Drive chưa được kết nối, BTC cần cấu hình OAuth trên máy chủ/Vercel; không có quyền công khai tệp trên Google Drive.</p>
+    <p className="helper">Website chỉ lưu tên và ID tài liệu trong Supabase; khi bấm mở, trình duyệt chuyển tới Google Drive. Tệp không truyền qua server khi đại biểu xem. BTC có thể kết nối bằng Google Apps Script hoặc OAuth.</p>
   </div>;
 }

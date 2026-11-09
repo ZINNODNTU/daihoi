@@ -1,16 +1,20 @@
+import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
-import {fetchDriveFile,getDriveToken} from "@/lib/drive";
+import {googleDriveFileUrl} from "@/lib/drive-links";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-const fail=(status:number,error:string)=>Response.json({error},{status,headers:{"Cache-Control":"private, no-store"}});
-export async function GET(request:Request,{params}:{params:Promise<{id:string}>}){
+const fail=(status:number,error:string)=>NextResponse.json({error},{
+ status,headers:{"Cache-Control":"private, no-store"}
+});
+export async function GET(_request:Request,{params}:{params:Promise<{id:string}>}){
  const {id}=await params;
  const {supabase,user}=await getAuth();
  if(!user)return fail(401,"Cần đăng nhập.");
  const db=createAdminClient();
- const {data:doc,error}=await db.from("documents").select("*")
+ const {data:doc,error}=await db.from("documents")
+  .select("id,congress_id,drive_file_id,delegate_visible")
   .eq("id",id).maybeSingle();
  if(error||!doc)return fail(404,"Không tìm thấy tài liệu.");
  const staff=await hasRole(supabase,user.id,doc.congress_id,"viewer");
@@ -22,17 +26,11 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
   if(ownerError||!own?.length)return fail(403,"Không có quyền xem tài liệu này.");
  }
  try{
-  const file=await fetchDriveFile(await getDriveToken(),doc.drive_file_id);
-  if(!file.ok||!file.body)return fail(502,"Không đọc được tệp từ Drive.");
-  const inline=new URL(request.url).searchParams.get("inline")==="1" &&
-   ["image/jpeg","image/png","image/webp","application/pdf"].includes(doc.mime_type);
-  const safeName=doc.file_name.replace(/[\r\n"\\]/g,"_");
-  return new Response(file.body,{headers:{
-   "Content-Type":doc.mime_type,
-   "Content-Disposition":`${inline?"inline":"attachment"}; filename*=UTF-8''${encodeURIComponent(safeName)}`,
-   "Cache-Control":"private, no-store",
-   "X-Content-Type-Options":"nosniff",
-   "Content-Security-Policy":"default-src 'none'; sandbox"
-  }});
- }catch{return fail(502,"Lỗi kết nối Google Drive.");}
+  const destination=googleDriveFileUrl(doc.drive_file_id);
+  // Chỉ chuyển hướng qua link Google Drive; không truyền byte tài liệu qua Vercel.
+  const response=NextResponse.redirect(destination,302);
+  response.headers.set("Cache-Control","private, no-store");
+  response.headers.set("Referrer-Policy","no-referrer");
+  return response;
+ }catch{return fail(404,"Liên kết Google Drive của tài liệu không hợp lệ.");}
 }

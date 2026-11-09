@@ -144,3 +144,42 @@ export async function deleteDriveFile(token:string,fileId:string){
 export async function fetchDriveFile(token:string,fileId:string){
  return driveRequest(API+"/"+encodeURIComponent(fileId)+"?alt=media&supportsAllDrives=true",token);
 }
+/**
+ * Đồng bộ quyền "Người có đường liên kết được xem" khi BTC công bố tệp.
+ * Phương án này không tải byte của tệp xuống website; URL Google Drive được
+ * tạo từ fileId. File không công bố không có quyền xem bằng liên kết.
+ */
+export async function setDriveLinkSharing(token:string,fileId:string,visible:boolean){
+ const endpoint=API+"/"+encodeURIComponent(fileId)+"/permissions";
+ const params="?supportsAllDrives=true";
+ const result=await driveRequest(endpoint+params+"&fields=permissions(id,type,role),nextPageToken&pageSize=100",token);
+ const data=await jsonOrNull(result);
+ if(!result.ok)throw new DriveStorageError(
+  "Không đọc được quyền chia sẻ Google Drive. Kiểm tra tài khoản sở hữu tệp.",
+  "sharing_unavailable",502);
+ const permissions=Array.isArray(data?.permissions)?
+  data.permissions as Array<{id:string;type:string;role:string}>:[];
+ const anyone=permissions.filter(p=>p.type==="anyone");
+ if(visible){
+  // Không để tồn tại quyền bình luận/chỉnh sửa công khai từ cấu hình trước.
+  const previous=anyone[0];
+  const res=await driveRequest(previous?
+   endpoint+"/"+encodeURIComponent(previous.id)+params+"&fields=id":
+   endpoint+params+"&fields=id",token,{
+   method:previous?"PATCH":"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(previous?
+    {role:"reader",allowFileDiscovery:false}:
+    {type:"anyone",role:"reader",allowFileDiscovery:false})
+  });
+  if(!res.ok)throw new DriveStorageError(
+   "Google Drive không cho phép chia sẻ file cho người có liên kết. Kiểm tra chính sách Workspace.",
+   "sharing_blocked",502);
+ }else{
+  for(const permission of anyone){
+   const res=await driveRequest(endpoint+"/"+encodeURIComponent(permission.id)+params,token,{method:"DELETE"});
+   if(!res.ok&&res.status!==404)throw new DriveStorageError(
+    "Không thu hồi được quyền xem theo liên kết trên Google Drive.","unshare_failed",502);
+  }
+ }
+}

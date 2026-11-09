@@ -18,7 +18,9 @@ test("Các trang dữ liệu có bố cục danh sách đáp ứng màn hình nh
   const documents=source("src/components/documents-client.tsx");
   const attendance=source("src/components/attendance-client.tsx");
   const reports=source("src/components/attendance-report-client.tsx");
-  for(const page of [delegates,documents,attendance])assert.match(page,/mobile-cards/);
+  for(const page of [delegates,attendance])assert.match(page,/mobile-cards/);
+  assert.match(documents,/flex min-w-0 items-center gap-3/);
+  assert.match(documents,/break-words/);
   assert.match(reports,/mobile-list-table/);
   assert.match(attendance,/aspect-\[4\/3\]/);
 });

@@ -1,4 +1,5 @@
 import {NextResponse} from "next/server";
+import {deleteScriptDrive,scriptStorageSelected,uploadScriptDrive} from "@/lib/google-apps-script";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {
@@ -19,6 +20,8 @@ function fail(message:string,status:number){
 export async function POST(req:Request){
  let uploadedId="";
  let token="";
+ let storageMode:"script"|"oauth"="oauth";
+ let uploadCongressId="";
  try{
   const {supabase,user}=await getAuth();
   if(!user)return fail("Cần đăng nhập để tải tài liệu.",401);
@@ -27,6 +30,7 @@ export async function POST(req:Request){
    return fail("Nguồn yêu cầu không hợp lệ.",403);
   const form=await req.formData();
   const congressId=String(form.get("congressId")||"");
+  uploadCongressId=congressId;
   if(!UUID.test(congressId))return fail("Đại hội không hợp lệ.",400);
   if(!(await hasRole(supabase,user.id,congressId,"admin")))
    return fail("Chỉ quản trị Đại hội được tải tài liệu.",403);
@@ -44,25 +48,28 @@ export async function POST(req:Request){
    .select("id,drive_folder_id").eq("id",congressId).maybeSingle();
   if(findError||!congress)return fail("Không tìm thấy Đại hội hoặc lỗi truy vấn cơ sở dữ liệu.",404);
 
-  token=await getDriveToken();
-  let folder=congress.drive_folder_id;
-  if(folder){
-   try{await inspectDriveFolder(token,folder);}
-   catch(e){
-    // Recover if a previously saved folder was removed, but never hide a
-    // real permission error (which needs the Drive owner's intervention).
-    if(!(e instanceof DriveStorageError)||!["not_found","invalid_folder"].includes(e.code))throw e;
-    folder=null;
+  let uploaded:{id:string;name:string};
+  if(scriptStorageSelected()){
+   storageMode="script";
+   uploaded=await uploadScriptDrive(congressId,file);
+  }else{
+   token=await getDriveToken();
+   let folder=congress.drive_folder_id;
+   if(folder){
+    try{await inspectDriveFolder(token,folder);}
+    catch(e){
+     if(!(e instanceof DriveStorageError)||!["not_found","invalid_folder"].includes(e.code))throw e;
+     folder=null;
+    }
    }
+   if(!folder){
+    folder=await makeDriveFolder(token,congressId);
+    const {error:folderError}=await db.from("congresses")
+     .update({drive_folder_id:folder}).eq("id",congressId);
+    if(folderError)return fail("Không lưu được mã thư mục Drive vào Đại hội.",500);
+   }
+   uploaded=await uploadDriveFile(token,folder,file);
   }
-  if(!folder){
-   folder=await makeDriveFolder(token,congressId);
-   const {error:folderError}=await db.from("congresses")
-    .update({drive_folder_id:folder}).eq("id",congressId);
-   if(folderError)return fail("Không lưu được mã thư mục Drive vào Đại hội.",500);
-  }
-
-  const uploaded=await uploadDriveFile(token,folder,file);
   uploadedId=uploaded.id;
   const {data,error}=await db.from("documents").insert({
    congress_id:congressId,file_name:safeName,mime_type:mime,
@@ -71,7 +78,11 @@ export async function POST(req:Request){
   if(error){
    // Compensating transaction prevents orphaned private Drive files when
    // the SQL insert fails (missing table, permissions, network etc).
-   try{await deleteDriveFile(token,uploadedId);uploadedId="";}
+   try{
+    if(storageMode==="script")await deleteScriptDrive(uploadCongressId,uploadedId);
+    else await deleteDriveFile(token,uploadedId);
+    uploadedId="";
+   }
    catch(cleanupError){
     console.error("orphan document cleanup failed",{
      googleFileId:uploadedId,code:cleanupError instanceof DriveStorageError?cleanupError.code:"unknown"
