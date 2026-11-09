@@ -1,5 +1,7 @@
 # Cổng Đại biểu v11 — phân quyền, barcode, camera và chỗ ngồi
 
+> **Tài liệu lịch sử** — Ghi lại một phiên bản/thời điểm cũ; thông tin cấu hình, giao diện và trạng thái triển khai có thể đã thay đổi. Ưu tiên [mục lục hiện hành](../../README.md).
+
 ## Giao diện
 - `/my-card` là trang riêng cho đại biểu, có điều hướng đáy 4 tab tối ưu màn hình 320–430px: Thẻ, Điểm danh, Lịch sử, Tài khoản.
 - Thẻ đại biểu có tên Đại hội, nhiệm kỳ, chân dung, họ tên, đơn vị, chức vụ, **vị trí ghế theo phiên đang chọn**, địa điểm và **barcode CODE128 duy nhất**; không còn QR đại biểu. Hỗ trợ in thẻ.

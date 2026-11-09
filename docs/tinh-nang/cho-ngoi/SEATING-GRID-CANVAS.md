@@ -40,7 +40,7 @@ khoảng trống hoặc hành lang. Mỗi sơ đồ lưu kích thước độc l
 ## Dữ liệu và triển khai
 
 Cấu trúc lưu bằng các bảng Supabase hiện có, được mở rộng ở
-supabase/upgrade-seating-v6.sql (đã áp dụng vào project pnxdxdagpeyqarucdphk).
+`supabase/upgrade-seating-v6.sql` (tài liệu phiên bản cũ ghi đã áp dụng vào project `pnxdxdagpeyqarucdphk`; **cần kiểm tra trạng thái migration trên database hiện tại trước khi vận hành**).
 Các trường mới: seating_layouts.grid_rows, seating_layouts.grid_columns,
 seats.seat_type. RPC mới seating_save_layout_v6 và cơ chế phân công nâng cấp
 seating_apply_assignments bảo vệ đúng loại ghế.

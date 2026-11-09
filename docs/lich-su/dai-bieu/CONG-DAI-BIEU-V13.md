@@ -1,5 +1,7 @@
 # Đại hội số v13 — thẻ đại biểu ID, camera và sơ đồ hội trường
 
+> **Tài liệu lịch sử** — Ghi lại một phiên bản/thời điểm cũ; thông tin cấu hình, giao diện và trạng thái triển khai có thể đã thay đổi. Ưu tiên [mục lục hiện hành](../../README.md).
+
 ## Huy hiệu Đoàn
 
 Logo website, trang đăng nhập, thanh điều hướng, bản xem trước và favicon đã chuyển sang **Huy hiệu Đoàn TNCS Hồ Chí Minh**, không còn biểu tượng sân khấu tự vẽ. Huy hiệu dùng nguyên màu xanh lá/đỏ/vàng/trắng.

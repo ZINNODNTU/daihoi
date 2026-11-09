@@ -1,5 +1,7 @@
 # Đại hội số v14 — thẻ ID, tài khoản, tài liệu và trích ngang BCH
 
+> **Tài liệu lịch sử** — Ghi lại một phiên bản/thời điểm cũ; thông tin cấu hình, giao diện và trạng thái triển khai có thể đã thay đổi. Ưu tiên [mục lục hiện hành](../../README.md).
+
 ## Nghiên cứu thiết kế thẻ ID
 Tham khảo cấu trúc dữ liệu/ảnh/vị trí trong các repo và mẫu ID mở:
 - https://github.com/ankitDeveloperx/IDCard-Generator — ID cá nhân, ảnh và các trường định danh.

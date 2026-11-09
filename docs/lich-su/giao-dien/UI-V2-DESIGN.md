@@ -1,5 +1,7 @@
 # Đại hội số — UI v2 (Enterprise Editorial)
 
+> **Tài liệu lịch sử** — Ghi lại một phiên bản/thời điểm cũ; thông tin cấu hình, giao diện và trạng thái triển khai có thể đã thay đổi. Ưu tiên [mục lục hiện hành](../../README.md).
+
 Ngày: 06/11/2026. Phạm vi: website công khai, đăng nhập, shell quản trị, dashboard tổng, trang chi tiết Đại hội, danh sách Đại hội và token/kiểu chữ của các trang nghiệp vụ.
 
 ## Hướng thiết kế

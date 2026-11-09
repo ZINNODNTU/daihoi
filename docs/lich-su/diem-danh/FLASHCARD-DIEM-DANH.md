@@ -1,5 +1,7 @@
 # Nghiệp vụ điểm danh: Flashcard đại biểu vừa ghi nhận
 
+> **Tài liệu lịch sử** — Ghi lại một phiên bản/thời điểm cũ; thông tin cấu hình, giao diện và trạng thái triển khai có thể đã thay đổi. Ưu tiên [mục lục hiện hành](../../README.md).
+
 Tại Đại hội → Điểm danh → chọn phiên. Khi BTC điểm danh thành công qua QR, barcode
 dự phòng hoặc xác nhận thủ công, màn hình hiển thị ngay thẻ đại biểu mới nhất:
 - Ảnh chân dung đã xóa nền/crop nếu hồ sơ có ảnh, ảnh mặc định nếu chưa tải lên.

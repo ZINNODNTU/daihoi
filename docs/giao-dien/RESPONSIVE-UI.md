@@ -40,4 +40,4 @@
 5. Kiểm tra bật zoom 200%, phông hệ thống lớn, chỉ bàn phím, reduced motion và màu tương phản thực tế.
 6. In thẻ đại biểu, in báo cáo; đảm bảo thanh điều hướng không in.
 
-**Lưu ý:** Hoàn thiện giao diện không đồng nghĩa với đã kết nối Supabase live, Google Drive OAuth hoặc deploy Vercel. Các điều kiện hạ tầng vẫn xem tại docs/QUY-TRINH-TRIEN-KHAI.md.
+**Lưu ý:** Hoàn thiện giao diện không đồng nghĩa với đã kết nối Supabase live, kết nối Google Drive (Apps Script hoặc OAuth) hoặc deploy Vercel. Các điều kiện hạ tầng vẫn xem tại docs/huong-dan/QUY-TRINH-TRIEN-KHAI.md.

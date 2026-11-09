@@ -1,5 +1,7 @@
 # Màn hình điểm danh và vận hành trong LAN
 
+> **Tài liệu lịch sử** — Ghi lại một phiên bản/thời điểm cũ; thông tin cấu hình, giao diện và trạng thái triển khai có thể đã thay đổi. Ưu tiên [mục lục hiện hành](../../README.md).
+
 ## Luồng vận hành một cửa
 
 Vào **Đại hội → Trung tâm điểm danh** (`/congresses/[id]/attendance`). Chọn phiên tại **Điều khiển điểm danh**. Các thao tác của phiên tập trung trong một khu vực: **Mở/Đóng điểm danh**, **Màn hình điểm danh**, **Quét tại bàn BTC**, **Cấu hình phiên**. Danh sách bên dưới chỉ dùng để chọn phiên. Không còn một màn hình QR riêng.

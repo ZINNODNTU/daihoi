@@ -1,5 +1,7 @@
 # UI V3 — Đại hội số / Congress Workspace
 
+> **Tài liệu lịch sử (UI V3)** — Ghi lại thiết kế và file nhận diện của giai đoạn V3; một số tên tệp và bố cục có thể đã thay đổi. Xem [giao diện hiện hành](../../giao-dien/GIAO-DIEN-HIEN-HANH.md).
+
 ## Hướng thiết kế
 Phong cách institutional editorial: midnight navy, điểm nhấn vàng đồng, cobalt cho hành động chính và nền trung tính. Sử dụng khoảng trắng, typography có phân cấp, bề mặt gần phẳng và bố cục điều hành rõ ràng thay vì các gradient/glow chung chung.
 

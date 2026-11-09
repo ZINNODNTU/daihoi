@@ -29,10 +29,15 @@ for(const [label,key,verify] of checks){
  console.log((valid?"[OK] ":"[THIẾU] ")+label);
  if(!valid)failures++;
 }
-const drive=["GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","GOOGLE_REFRESH_TOKEN","GOOGLE_DRIVE_ROOT_FOLDER_ID"];
-const driveCount=drive.filter(k=>env[k]?.trim()).length;
-console.log((driveCount===4?"[OK] ":"[CHƯA] ")+"Google Drive OAuth: "+driveCount+"/4");
-if(driveCount!==4)failures++;
+const scriptKeys=["GOOGLE_APPS_SCRIPT_URL","GOOGLE_APPS_SCRIPT_SECRET"];
+const oauthKeys=["GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","GOOGLE_REFRESH_TOKEN","GOOGLE_DRIVE_ROOT_FOLDER_ID"];
+const scriptCount=scriptKeys.filter(k=>env[k]?.trim()).length;
+const oauthCount=oauthKeys.filter(k=>env[k]?.trim()).length;
+const scriptReady=scriptCount===2&&/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(env.GOOGLE_APPS_SCRIPT_URL);
+const oauthReady=oauthCount===4;
+const driveReady=scriptReady||oauthReady;
+console.log((driveReady?"[OK] ":"[CHƯA] ")+"Google Drive: Apps Script "+scriptCount+"/2"+(scriptReady?" (hợp lệ)":"")+"; OAuth "+oauthCount+"/4");
+if(!driveReady)failures++;
 const hasGit=existsSync(join(root,".git"));
 const hasVercel=existsSync(join(root,".vercel","project.json"));
 console.log((hasGit?"[OK] ":"[CHƯA] ")+"Git repository");

@@ -1,5 +1,7 @@
 # ĐẠI HỘI SỐ — Điểm danh hai loại QR và barcode dự phòng
 
+> **Tài liệu lịch sử (V2)** — Nội dung này mô tả QR cá nhân/QR phiên trước cơ chế QR trình chiếu `se2` và cổng đại biểu tự quét. Xem [hướng dẫn điểm danh hiện hành](../../tinh-nang/diem-danh/DIEM-DANH-QR-PHIEN-VA-BARCODE.md).
+
 Phiên bản: 05/11/2026. Mã nguồn triển khai ở `D:\daihoi`.
 
 ## Cách vận hành

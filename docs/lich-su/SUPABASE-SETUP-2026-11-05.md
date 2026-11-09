@@ -1,5 +1,7 @@
 # Trạng thái thiết lập Supabase — ĐẠI HỘI SỐ
 
+> **Tài liệu lịch sử** — Ghi lại một phiên bản/thời điểm cũ; thông tin cấu hình, giao diện và trạng thái triển khai có thể đã thay đổi. Ưu tiên [mục lục hiện hành](../README.md).
+
 Ngày kiểm tra: 05/11/2026 (giờ Việt Nam).
 
 ## Dự án được phép cấu hình

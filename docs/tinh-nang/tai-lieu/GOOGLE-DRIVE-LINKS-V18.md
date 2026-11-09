@@ -21,7 +21,7 @@
    ```
 6. Redeploy Vercel / khởi động lại máy local. Admin → **Tài liệu Đại hội → Kho lưu trữ Google Drive → Kiểm tra lại** phải báo **Sẵn sàng**. Thử upload PDF nhỏ, bật **Công bố tài liệu cho đại biểu**, đăng nhập đại biểu và bấm mở link.
 
-Không cần `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` hoặc `GOOGLE_REFRESH_TOKEN` ở phương án này. Website **tự chọn Apps Script khi phát hiện cấu hình URL/SECRET**. Nếu không có, vẫn dùng OAuth Drive API cũ (xem `docs/GOOGLE-DRIVE-V17.md`).
+Không cần `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` hoặc `GOOGLE_REFRESH_TOKEN` ở phương án này. Website **tự chọn Apps Script khi phát hiện cấu hình URL/SECRET**. Nếu không có, hệ thống vẫn hỗ trợ OAuth Drive API dự phòng (xem [hướng dẫn OAuth V17 — tài liệu lịch sử](../../lich-su/tai-lieu/GOOGLE-DRIVE-V17.md)).
 
 **Bảo mật:** Web App có URL công khai nhưng mã nguồn Script xác minh **HMAC-SHA256** trên toàn bộ payload, timestamp 5 phút và nonce chống phát lại. Khóa chỉ nằm trong Script Properties và môi trường server, **không nằm trong browser, không commit lên GitHub**. Mọi API upload/chia sẻ ở website kiểm tra **quyền admin Đại hội** trước khi gọi Script. Script cũng giới hạn file theo đúng thư mục `DAI_HOI_<congressId>` thuộc thư mục gốc để không thao tác file Drive bên ngoài Đại hội.
 

@@ -9,7 +9,7 @@
 5. Kéo trực tiếp trên khung ảnh và dùng thanh điều chỉnh vị trí/phóng to để crop tỷ lệ 3:4 (600x800).
 6. Lưu đại biểu: database tự cấp mã DB-000001, DB-000002... theo từng Đại hội.
 7. Với hồ sơ có sẵn, dùng nút Thêm ảnh hoặc Sửa ảnh ngay trên từng dòng.
-8. Ảnh xuất hiện trong danh sách, thẻ QR/Barcode BTC và trang Thẻ đại biểu của tôi.
+8. Ảnh xuất hiện trong danh sách, thẻ Barcode BTC và trang Thẻ đại biểu của tôi.
 
 ## Mã đại biểu và Excel
 
@@ -29,7 +29,7 @@
 - Tách nền chạy trên thiết bị, ảnh gốc không tải lên bên cung cấp dịch vụ AI.
 - Model MediaPipe SelfieSegmenter (Apache 2.0) được lưu ở public/models/selfie_segmenter.tflite; runtime WASM tải từ jsDelivr lần đầu.
 - Nếu không thể tải WASM, công cụ thông báo lỗi và có lựa chọn sử dụng ảnh gốc (không xóa phông), không âm thầm coi ảnh gốc là đã tách nền.
-- Hiện ảnh đại biểu lưu ở Supabase Storage riêng tư. Phần tài liệu hội nghị qua Google Drive là luồng riêng, cần OAuth khi triển khai.
+- Hiện ảnh đại biểu lưu ở Supabase Storage riêng tư. Phần tài liệu hội nghị qua Google Drive là luồng riêng, ưu tiên Apps Script hoặc OAuth dự phòng; xem [Google Drive V18](../tai-lieu/GOOGLE-DRIVE-LINKS-V18.md).
 
 ## Kiểm tra
 

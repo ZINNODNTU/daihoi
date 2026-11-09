@@ -94,5 +94,5 @@ test("Status phân biệt Apps Script / OAuth và file hướng dẫn không ch�
  assert.match(env,/GOOGLE_APPS_SCRIPT_URL/);
  assert.match(env,/GOOGLE_APPS_SCRIPT_SECRET/);
  assert.match(env,/GOOGLE_REFRESH_TOKEN/);
- assert.match(read("../docs/GOOGLE-DRIVE-LINKS-V18.md"),/Không cần/);
+ assert.match(read("../docs/tinh-nang/tai-lieu/GOOGLE-DRIVE-LINKS-V18.md"),/Không cần/);
 });

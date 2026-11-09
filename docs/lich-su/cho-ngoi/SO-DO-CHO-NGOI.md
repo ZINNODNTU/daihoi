@@ -1,5 +1,7 @@
 # Sơ đồ chỗ ngồi — ĐẠI HỘI SỐ (v4)
 
+> **Tài liệu lịch sử** — Ghi lại một phiên bản/thời điểm cũ; thông tin cấu hình, giao diện và trạng thái triển khai có thể đã thay đổi. Ưu tiên [mục lục hiện hành](../../README.md).
+
 ## Trạng thái triển khai
 - Đã thêm giao diện Next.js tại /congresses/[id]/seating và API /api/seating.
 - Mã nguồn đã triển khai, nhưng vẫn phải thực thi migration SQL trên đúng Supabase project trước khi sử dụng.

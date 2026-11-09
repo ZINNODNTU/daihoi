@@ -2,14 +2,18 @@
 
 Nền tảng điều hành **nhiều Đại hội Đoàn TNCS Hồ Chí Minh và Hội Sinh viên Việt Nam**.
 
+> **Bắt đầu từ [mục lục tài liệu chính thức](docs/README.md)** để xem hướng dẫn hiện hành, checklist triển khai, quy trình Supabase và kho tài liệu Google Drive. Nội dung theo từng mốc MVP/V2–V14 ở phía dưới là **ghi chép lịch sử**, không thay thế tài liệu triển khai mới.
+
+**Tài liệu đang dùng:** [Triển khai](docs/huong-dan/QUY-TRINH-TRIEN-KHAI.md) · [Supabase](docs/huong-dan/SUPABASE-SETUP.md) · [Google Drive V18 (link-only)](docs/tinh-nang/tai-lieu/GOOGLE-DRIVE-LINKS-V18.md) · [Màn hình điểm danh V16](docs/tinh-nang/diem-danh/MAN-HINH-DIEM-DANH-V16.md).
+
 ## Trải nghiệm giao diện V3
 
 - **Trang chủ mới:** http://localhost:3000/ — nhận diện midnight navy/gold, bố cục editorial và trình diễn sản phẩm.
 - **Xem thử tương tác:** http://localhost:3000/preview — chuyển giữa bảng điều hành, sơ đồ ghế và điểm danh **không cần đăng nhập hoặc Supabase**; toàn bộ dữ liệu trên trang này là giả lập.
 - Dashboard nội bộ, sidebar, đăng nhập và sơ đồ ghế đã được đồng bộ với hệ thiết kế mới.
-- Xem chi tiết trong `docs/UI-V3-BRANDING.md`. Các trang dữ liệu thật vẫn yêu cầu kết nối Supabase.
+- Xem chi tiết trong `docs/lich-su/giao-dien/UI-V3-BRANDING.md`. Các trang dữ liệu thật vẫn yêu cầu kết nối Supabase.
 
-## Trạng thái triển khai (MVP 01)
+## Mốc triển khai MVP 01 (thông tin lịch sử)
 
 Đã viết mã và kiểm tra build cho các chức năng:
 - Đăng nhập bằng Supabase Auth; kiểm soát quyền theo từng Đại hội.
@@ -21,25 +25,25 @@ Nền tảng điều hành **nhiều Đại hội Đoàn TNCS Hồ Chí Minh và
 - Điểm danh độc lập theo phiên; ràng buộc UNIQUE tại Postgres chống trùng khi nhiều máy gửi đồng thời.
 - Nhật ký thời gian, người thực hiện và phương thức; thống kê theo phiên (client làm mới mỗi 12 giây, không dùng kết nối Realtime cho mọi đại biểu).
 - **Trang Báo cáo theo phiên**: chính thức/dự khuyết/khách mời riêng, bảng theo đơn vị, lọc có/chưa check-in, xuất CSV, in báo cáo (trình duyệt có thể lưu PDF). Không tự xác nhận tư cách hoặc quyền biểu quyết.
-- Tài liệu khảo sát nghiệp vụ và ưu tiên triển khai tại `docs/NGHIEP-VU-DAI-HOI.md`.
-- Lưu và tải ảnh/tài liệu lên Google Drive qua OAuth của **một tài khoản quản lý** (chỉ hoạt động khi đã cấu hình OAuth).
+- Tài liệu khảo sát nghiệp vụ và ưu tiên triển khai tại `docs/nghiep-vu/NGHIEP-VU-DAI-HOI.md`.
+- **Hiện tại:** ảnh đại biểu dùng cơ chế lưu trữ ảnh riêng; tài liệu Đại hội lưu trên Google Drive, website chỉ hiện tên/icon và chuyển hướng link. Ưu tiên Apps Script; OAuth là phương án dự phòng, cần cấu hình kết nối trước khi upload.
 - Các bảng dự phòng cho biểu quyết công khai, **chưa triển khai giao diện và nghiệp vụ biểu quyết**. Chưa hỗ trợ bầu cử bằng phiếu kín.
 
-**Supabase:** CSDL 13 bảng cơ bản đã được tạo tại project `pnxdxdagpeyqarucdphk`, RLS bật 13/13 bảng. **Bản nâng cấp QR phiên/barcode chưa được áp dụng lên project trực tuyến** vì hồ sơ Chrome không thể xác minh và Supabase connector không có project này. SQL nâng cấp tại `supabase/upgrade-attendance-v2.sql`. `.env.local` vẫn cần **Publishable Key**, **SUPABASE_SECRET_KEY** (server-only) và tài khoản Super Admin. Chưa kiểm thử đăng nhập/RLS đa tài khoản thực, Google OAuth, deploy Vercel, tải 200 người hay camera/barcode trên điện thoại thật. Xem `docs/DIEM-DANH-QR-PHIEN-VA-BARCODE.md`.
+**Supabase:** CSDL 13 bảng cơ bản đã được tạo tại project `pnxdxdagpeyqarucdphk`, RLS bật 13/13 bảng. **Bản nâng cấp QR phiên/barcode chưa được áp dụng lên project trực tuyến** vì hồ sơ Chrome không thể xác minh và Supabase connector không có project này. SQL nâng cấp tại `supabase/upgrade-attendance-v2.sql`. `.env.local` vẫn cần **Publishable Key**, **SUPABASE_SECRET_KEY** (server-only) và tài khoản Super Admin. Chưa kiểm thử đăng nhập/RLS đa tài khoản thực, Google OAuth, deploy Vercel, tải 200 người hay camera/barcode trên điện thoại thật. Xem `docs/tinh-nang/diem-danh/DIEM-DANH-QR-PHIEN-VA-BARCODE.md`.
 
-## Module Sơ đồ chỗ ngồi (v4 — 06/11/2026)
+## Module Sơ đồ chỗ ngồi (v4 — 06/11/2026, lịch sử)
 
 - Truy cập `/congresses/[id]/seating`: tự tạo khu vực, hàng ghế và lối đi, kéo-thả/tinh chỉnh vị trí; lưu nhiều sơ đồ riêng theo Đại hội.
 - Nhấp ghế để phân công, chuyển hoặc bỏ gán đại biểu; đối chiếu trạng thái điểm danh theo phiên đã chọn.
 - Tải mẫu Excel `.xlsx` có mã ghế, mã đại biểu và phiên bản; nhập để gộp hoặc thay thế phân công sau khi kiểm tra lỗi.
 - Cơ sở dữ liệu mới `supabase/upgrade-seating-v4.sql`: `seating_layouts`, `seats`, `seat_assignments`, RLS, API server-only và RPC giao dịch có kiểm tra phiên bản chống ghi đè đồng thời.
-- **Chưa áp dụng migration v4 lên Supabase thực tế**, vì tài khoản kết nối hiện không được cấp quyền dự án `pnxdxdagpeyqarucdphk`; xem `docs/SO-DO-CHO-NGOI.md` trước khi đưa vào vận hành.
+- **Chưa áp dụng migration v4 lên Supabase thực tế**, vì tài khoản kết nối hiện không được cấp quyền dự án `pnxdxdagpeyqarucdphk`; xem `docs/lich-su/cho-ngoi/SO-DO-CHO-NGOI.md` trước khi đưa vào vận hành.
 
 ## Yêu cầu
 
 - Node.js >= 20 (đã xây dựng bằng Node 24)
 - Supabase project, Auth email/password
-- Google Cloud Project bật Google Drive API, OAuth client và refresh token
+- Kết nối Google Drive: ưu tiên Google Apps Script (URL + khóa máy chủ) hoặc Google Drive API OAuth dự phòng
 - Vercel nếu muốn triển khai internet
 
 ## Cài đặt chạy máy
@@ -76,15 +80,15 @@ values ('<CONGRESS_UUID>','<USER_UUID>','checkin');
 ```
 Vai trò: `admin` (quản trị Đại hội), `checkin` (QR/thủ công), `secretary` (xem, chưa điều hành).
 
-## Google Drive: thiết lập
+## Google Drive — upload bởi BTC, mở liên kết bởi đại biểu (V18)
 
-Phiên bản đầu sử dụng **một Drive chung** do Ban Quản trị sở hữu; mỗi đại hội có thư mục con riêng.
-- Bật Google Drive API; cấu hình OAuth consent, ứng dụng và OAuth client phù hợp. Dùng OAuth 2.0 **offline** để cấp refresh token cho tài khoản quản lý. Tài khoản phải có quyền ghi thư mục Drive gốc.
-- Điền `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_DRIVE_ROOT_FOLDER_ID` trong biến môi trường server; tuyệt đối không sử dụng `NEXT_PUBLIC_` cho các khóa này.
-- Thư mục gốc cần được cấp quyền ghi cho tài khoản OAuth. Khi tải tệp đầu tiên, backend tạo thư mục `DAI_HOI_<id>`, tải tệp lên và lưu `drive_file_id` ở Supabase.
-- Ảnh và tài liệu được đọc qua API đã kiểm tra quyền (không công khai link Drive). Không xem Drive như CDN; nếu cần hình ảnh công khai lưu lượng lớn, bổ sung CDN/bộ nhớ đệm phù hợp.\n- Giới hạn upload **4 MB/tệp** để không vượt giới hạn 4.5 MB request/response của Vercel Functions. Tệp lớn hơn cần quy trình upload trực tiếp/chia khối qua API chuyên dụng, chưa hỗ trợ.
+- **BTC:** tải một hoặc nhiều tệp từ trang quản lý tài liệu. Server lưu tệp vào Google Drive và ghi metadata (`file_name`, `drive_file_id`, `delegate_visible`) vào Supabase.
+- **Đại biểu:** chỉ thấy icon, tên và số lượng tệp đã công bố; khi nhấn, trình duyệt chuyển tới trang Google Drive. Website **không truyền nội dung tệp** về qua API khi người dùng xem.
+- **Ưu tiên Apps Script:** cấu hình `GOOGLE_APPS_SCRIPT_URL` và `GOOGLE_APPS_SCRIPT_SECRET` (chỉ server); không cần OAuth Refresh Token.
+- **OAuth API dự phòng:** dùng `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_DRIVE_ROOT_FOLDER_ID` nếu không cấu hình Apps Script.
+- Giới hạn upload **4 MiB/tệp** qua Vercel Function. Bật công bố đồng thời cấp quyền xem bằng link trên Drive; **bất kỳ ai sở hữu link đều có thể xem tệp đã công bố**.
 
-**Lưu ý về service account:** Google Drive service account không sở hữu dung lượng lưu trữ cá nhân, do đó cần Shared Drive hoặc OAuth của người dùng nếu sử dụng My Drive. Ở đây sử dụng OAuth người dùng. Mở rộng **mỗi đơn vị kết nối Drive riêng** cần thêm bảng kết nối OAuth và mã hóa refresh token; chưa triển khai.
+**Hướng dẫn chuẩn:** [Google Drive V18](docs/tinh-nang/tai-lieu/GOOGLE-DRIVE-LINKS-V18.md). Việc hoàn tất mã nguồn không đồng nghĩa đã triển khai Apps Script, cấp quyền, cấu hình Vercel hoặc kiểm thử upload thật.
 
 ## Triển khai Vercel
 
@@ -130,7 +134,7 @@ Lưu ý: camera chạy trên thiết bị; backend chỉ nhận **mã QR**. `get
 - Quản lý nhân sự BTC tại /congresses/[id]/team: mời tài khoản bằng email qua Supabase Auth, phân vai trò admin/checkin/secretary, điều chỉnh hoặc gỡ quyền. Mọi thao tác quản lý quyền ghi qua Next.js server dùng SUPABASE_SECRET_KEY, không cho ghi trực tiếp bằng client. Tương tự, cập nhật phiên điểm danh, thay đổi thông tin Đại hội và ghi metadata tài liệu đều được kiểm tra tại API server.
 - Cấu hình Đại hội tại /congresses/[id]/settings: tên, nhiệm kỳ, địa điểm, trạng thái; chỉ Admin của Đại hội được chỉnh sửa.
 - Bản SQL mới: **supabase/upgrade-management-v3.sql**, bắt buộc chạy **sau** upgrade-attendance-v2.sql và sao lưu đúng project. Cần triển khai API mới **trước khi chạy v3** để không gián đoạn việc gán thành viên BTC.
-- Kiểm tra điều kiện chạy production bằng `npm run readiness`; hướng dẫn từng bước ở docs/QUY-TRINH-TRIEN-KHAI.md.
+- Kiểm tra điều kiện chạy production bằng `npm run readiness`; hướng dẫn từng bước ở docs/huong-dan/QUY-TRINH-TRIEN-KHAI.md.
 - Vào thời điểm cập nhật này, Supabase Publishable/Secret Keys, Google Drive OAuth và Vercel chưa được cấu hình hoàn chỉnh; không được tuyên bố đã triển khai hệ thống production.
 
 ## Nâng cấp giao diện Responsive (06/11/2026)
@@ -139,7 +143,7 @@ Lưu ý: camera chạy trên thiết bị; backend chỉ nhận **mã QR**. `get
 - Máy tính: sidebar cố định, bảng chi tiết, bộ lọc và KPI nhiều cột. Điện thoại: menu trượt, thanh điều hướng 4 nghiệp vụ ở cuối màn hình, các danh sách dưới dạng thẻ, hộp thoại dạng bottom-sheet.
 - Camera trên điện thoại dùng bố cục quét 4:3; màn hình điểm danh có nút lớn và luồng dự phòng rõ ràng, giữ nguyên xác thực API và thời gian quét ở máy chủ.
 - Hỗ trợ nhập liệu chống zoom iOS, vùng safe-area, phím Escape, focus-visible, điều khiển bàn phím cơ bản và reduced-motion; cập nhật CSS in.
-- Tài liệu kỹ thuật và quy trình kiểm tra giao diện: `docs/RESPONSIVE-UI.md`. Kiểm thử cấu trúc mới: `tests/responsive-ui.test.mjs` (không thay thế kiểm thử giao diện thực tế).
+- Tài liệu kỹ thuật và quy trình kiểm tra giao diện: `docs/giao-dien/RESPONSIVE-UI.md`. Kiểm thử cấu trúc mới: `tests/responsive-ui.test.mjs` (không thay thế kiểm thử giao diện thực tế).
 
 ## Tài khoản đại biểu & nhận diện Đoàn (08/11/2026)
 
@@ -203,7 +207,7 @@ Mẫu nhanh gồm 200 ghế, 180 ghế có lối đi giữa hoặc lưới trố
 nhiều sơ đồ độc lập, vẫn hỗ trợ Canvas tự do, phân công đại biểu và Excel.
 Đã bảo vệ ghế có phân công; không cần migration mới.
 
-Hướng dẫn chi tiết: docs/SEATING-GRID-CANVAS.md.
+Hướng dẫn chi tiết: docs/tinh-nang/cho-ngoi/SEATING-GRID-CANVAS.md.
 
 ## Canvas tùy biến số ô và phân loại ghế – v6 (08/11/2026)
 
@@ -213,7 +217,7 @@ tự tô ghế/chừa lối đi, chọn người ngồi ngay trên sơ đồ và
 Ghế đại biểu nhận hồ sơ chính thức/dự khuyết; ghế khách mời chỉ nhận khách mời.
 Quy tắc được kiểm tra trong API, nhập Excel và Supabase RPC.
 Đã áp dụng migration supabase/upgrade-seating-v6.sql; tài liệu sử dụng tại
-docs/SEATING-GRID-CANVAS.md.
+docs/tinh-nang/cho-ngoi/SEATING-GRID-CANVAS.md.
 
 ## Ảnh đại biểu nền trắng và mã định danh tự cấp – v7 (08/11/2026)
 
@@ -227,7 +231,7 @@ tên hiển thị thành Đơn vị; Excel cũ vẫn được đọc để tươ
 
 Đã triển khai migration supabase/upgrade-delegate-photos-v7.sql và tạo bucket
 private trong Supabase. Khi cài dự án mới, chạy npm run setup:delegate-photos.
-Chi tiết: docs/DAI-BIEU-ANH.md.
+Chi tiết: docs/tinh-nang/dai-bieu/DAI-BIEU-ANH.md.
 
 ## Flashcard điểm danh & Trích ngang nhân sự BCH (08/11/2026)
 
@@ -235,7 +239,7 @@ Trang Điểm danh có flashcard hiển thị đại biểu vừa ghi nhận:
 ảnh chân dung, họ tên, đơn vị, mã ghế/hội trường, mã đại biểu và giờ quét.
 Được cập nhật ngay sau check-in thành công, tự đồng bộ thiết bị BTC khác
 mỗi 8 giây. Nếu chưa phân ghế hiển thị đúng trạng thái chưa xếp chỗ.
-Chi tiết: docs/FLASHCARD-DIEM-DANH.md.
+Chi tiết: docs/lich-su/diem-danh/FLASHCARD-DIEM-DANH.md.
 
 Menu Đại hội bổ sung **Trích ngang nhân sự BCH** (quản trị / thư ký):
 lưu 7 trường Họ tên – Năm sinh – Quê quán – Dân tộc – Trình độ –
@@ -243,7 +247,7 @@ Năm vào Đoàn – Chức vụ hiện tại, cho phép thêm, sửa, xóa, tì
 lấy nhanh Họ tên/Chức vụ từ đại biểu và xuất Excel trích ngang.
 Bảng Supabase public.bch_candidates có RLS riêng; không phải kết quả bầu cử.
 Đã triển khai supabase/upgrade-bch-candidates-v8.sql.
-Chi tiết: docs/NHAN-SU-BCH.md.
+Chi tiết: docs/tinh-nang/nhan-su/NHAN-SU-BCH.md.
 
 
 ## Ảnh trích ngang BCH giống ảnh đại biểu – v9 (08/11/2026)
@@ -255,4 +259,4 @@ hoặc lấy ảnh từ hồ sơ đại biểu đã chọn. Ảnh nhân sự BCH
 trong kho private `delegate-photos/<congress_id>/bch/<candidate_id>.jpg`,
 được phân quyền riêng cho quản trị viên/thư ký. Migration
 `supabase/upgrade-bch-photos-v9.sql` đã áp dụng. Hướng dẫn:
-`docs/NHAN-SU-BCH.md`.
+`docs/tinh-nang/nhan-su/NHAN-SU-BCH.md`.

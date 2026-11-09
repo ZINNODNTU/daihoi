@@ -1,5 +1,7 @@
 # Kết nối lưu trữ tài liệu Đại hội với Google Drive (V17)
 
+> **Tài liệu lịch sử** — Ghi lại một phiên bản/thời điểm cũ; thông tin cấu hình, giao diện và trạng thái triển khai có thể đã thay đổi. Ưu tiên [mục lục hiện hành](../../README.md).
+
 ## 1. Mô hình lưu trữ
 
 - **Tệp thật (PDF/Word/Excel/PowerPoint/ảnh)** được lưu trên Google Drive của tài khoản quản trị lưu trữ.

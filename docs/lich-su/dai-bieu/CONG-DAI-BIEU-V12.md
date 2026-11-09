@@ -1,5 +1,7 @@
 # Đại hội số v12 — Thẻ đại biểu tối giản và đăng nhập qua LAN
 
+> **Tài liệu lịch sử** — Ghi lại một phiên bản/thời điểm cũ; thông tin cấu hình, giao diện và trạng thái triển khai có thể đã thay đổi. Ưu tiên [mục lục hiện hành](../../README.md).
+
 ## Trải nghiệm dành cho đại biểu
 - **Thẻ đại biểu**: `/my-card` — chỉ còn tên Đại hội, nhiệm kỳ, loại đại biểu, ảnh, tên, chức vụ, đơn vị, mã ghế phiên phù hợp và barcode CODE128. Không có QR đại biểu; đã bỏ nhãn "Thẻ đại biểu số 01". Ba nút chức năng nằm bên ngoài thẻ.
 - **Điểm danh**: `/my-card/checkin` — giao diện camera QR riêng, có phương án chụp ảnh QR và dán liên kết trên trình duyệt thiếu HTTPS.

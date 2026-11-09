@@ -22,4 +22,4 @@ Mở từ `/congresses/[id]/attendance/live?sessionId=...`.
 `npm run build`, `npm run lint`, `node --test tests/*.test.mjs`;
 kiểm tra quyền truy cập màn hình. Để nghiệm thu trực quan, cần tài khoản BTC, một phiên mở và một đại biểu điểm danh thật trên điện thoại. Nên thử máy chiếu 1920×1080, 1366×768 và điện thoại 375px; cỡ nhỏ được cuộn dọc, không cắt nội dung.
 
-Thay đổi hiện lưu ở **máy local**, chưa push hoặc deploy Vercel.
+Mã nguồn V16 đã được đưa vào repository ở các phiên bản sau đó. **Chưa có bằng chứng nghiệm thu máy chiếu/điện thoại thật hoặc xác minh Vercel production trong tài liệu này**; kiểm tra theo [quy trình triển khai](../../huong-dan/QUY-TRINH-TRIEN-KHAI.md).
