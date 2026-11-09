@@ -14,6 +14,7 @@
     "check:supabase": "node scripts/check-supabase.mjs",
     "check:quality": "node scripts/diagnose-quality-v15.mjs",
     "check:drive": "node scripts/check-drive.mjs",
+    "check:documents": "node scripts/check-documents-schema.mjs",
     "diagnose:drive-upload": "node scripts/diagnose-drive-upload.mjs",
     "backup:supabase": "node scripts/backup-supabase.mjs",
     "setup:delegate-photos": "node scripts/setup-delegate-photos.mjs",

@@ -39,7 +39,7 @@ Khi tắt công bố, hệ thống thu hồi quyền xem qua link trên Google D
 ## Tệp cũ và migration
 
 - Bảng `documents` giữ nguyên schema, không phải tạo cột link. URL Google Drive được tạo từ `drive_file_id`: `https://drive.google.com/file/d/<id>/view`.
-- Các bản ghi `delegate_visible` cần `supabase/upgrade-delegate-resources-v14.sql` nếu chưa chạy.
+- Trạng thái thực tế (09/11/2026): **đã áp dụng V14** lên Supabase project `pnxdxdagpeyqarucdphk`, xác minh cột `documents.delegate_visible` và 1 bản ghi tài liệu hiện hữu được giữ nguyên. Nếu chuyển sang database khác, hãy áp dụng `supabase/upgrade-delegate-resources-v14.sql` trước khi bật công bố. Chạy `npm run check:documents` để kiểm tra chính xác schema; lệnh chỉ đọc và không in thông tin tài liệu.
 - Tệp cũ đã được đánh dấu `delegate_visible=true` nhưng chưa được cấp quyền Drive cần được BTC **tắt rồi bật công bố lại một lần** để đồng bộ quyền.
 - App Script chỉ sửa được file trong thư mục `DAI_HOI_<congressId>` dưới root đã cấu hình. Tài liệu cũ lưu qua tài khoản Google khác hoặc nằm trong thư mục khác có thể cần chuyển thư mục/chuyển quyền trước khi thao tác.
 - Vercel Functions vẫn giới hạn request của BTC khi **upload**: tối đa 4 MiB/tệp trong code hiện tại; không áp dụng khi đại biểu xem file trên Google Drive.

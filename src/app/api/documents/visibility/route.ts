@@ -23,7 +23,12 @@ export async function PATCH(request:Request){
  const {data:record,error:lookupError}=await db.from("documents")
   .select("id,drive_file_id,delegate_visible").eq("id",documentId)
   .eq("congress_id",congressId).maybeSingle();
- if(lookupError)return fail("Không đọc được tài liệu. Kiểm tra migration v14.",500);
+ if(lookupError){
+  console.error("document visibility lookup failed",lookupError.code);
+  return fail(lookupError.code==="42703"||lookupError.code==="PGRST204"?
+   "Cơ sở dữ liệu chưa có trường công bố tài liệu. Cần áp dụng migration V14.":
+   "Không đọc được thông tin tài liệu trên Supabase. Vui lòng thử lại.",500);
+ }
  if(!record)return fail("Không tìm thấy tài liệu thuộc Đại hội.",404);
  if(record.delegate_visible===body.visible)
   return NextResponse.json({ok:true,visible:record.delegate_visible},{headers:{"Cache-Control":"no-store"}});
@@ -50,7 +55,10 @@ export async function PATCH(request:Request){
  if(error||!data){
   try{await share(previouslyVisible);}
   catch(e){console.error("document sharing rollback failed",e instanceof DriveStorageError?e.code:"unknown");}
-  return fail("Google Drive đã đổi quyền nhưng Supabase chưa lưu được. Kiểm tra migration v14.",500);
+  console.error("document visibility update failed",error?.code||"no_row");
+  return fail(error?.code==="42703"||error?.code==="PGRST204"?
+   "Cơ sở dữ liệu chưa có trường công bố tài liệu. Cần áp dụng migration V14.":
+   "Google Drive đã đổi quyền nhưng Supabase chưa lưu được. Hệ thống đã thử hoàn tác quyền chia sẻ.",500);
  }
  return NextResponse.json({ok:true,visible:data.delegate_visible},{headers:{"Cache-Control":"no-store"}});
 }

@@ -51,7 +51,7 @@ Không có SQL riêng cho từng phiên bản giao diện V12, V13, V16, V17, V1
 3. Kiểm thử với **hai Đại hội tách biệt** và vai trò Admin, BTC, thư ký, đại biểu, khách mời.
 4. Đại biểu **không được truy cập** API/quản trị nghiệp vụ; chỉ xem đúng thông tin cá nhân, lịch sử, tài liệu đã công bố.
 5. Tạo hai lượt điểm danh đồng thời một người trong cùng phiên, chỉ được lưu **một** lượt; kiểm tra giờ mở/đóng và QR.
-6. Với tài liệu, kiểm tra `documents.delegate_visible` và chỉ công bố tệp **sau khi** Google Drive cấp quyền chia sẻ.
+6. Với tài liệu, chạy `npm run check:documents` để kiểm tra cột `documents.delegate_visible`. **Ngày 09/11/2026 đã áp dụng V14** trên project `pnxdxdagpeyqarucdphk` sau khi phát hiện lỗi `42703`; 1 tài liệu hiện có được giữ nguyên và trang Tài liệu đã hiển thị hết cảnh báo. Chỉ công bố tệp **sau khi** Google Drive cấp quyền chia sẻ. Không áp dụng kết luận này cho các Supabase project khác.
 7. Đối chiếu dữ liệu phân tích V15 chỉ tính người đã điểm danh, không tính các bản ghi chưa tới.
 
 ## 5. Nghiệm thu

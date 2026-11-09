@@ -132,3 +132,20 @@ test("Ứng dụng dùng hàm serializeSignedPayload khi tạo chữ ký HMAC",(
  assert.match(server,/const payload=serializeSignedPayload\(request\)/);
  assert.match(server,/createHmac\("sha256",secret\)\.update\(time\+"\."\+nonce\+"\."\+payload,"utf8"\)/);
 });
+
+test("Migration V14 bổ sung cột công bố mặc định riêng tư, có kiểm tra schema",()=>{
+ const sql=read("../supabase/upgrade-delegate-resources-v14.sql");
+ assert.match(sql,/ALTER TABLE public\.documents/);
+ assert.match(sql,/ADD COLUMN IF NOT EXISTS delegate_visible boolean NOT NULL DEFAULT false/);
+ assert.match(sql,/CREATE INDEX IF NOT EXISTS documents_delegate_visible_idx/);
+ assert.doesNotMatch(sql,/DROP TABLE|TRUNCATE|DELETE FROM/i);
+ const pkg=JSON.parse(read("../package.json"));
+ assert.equal(pkg.scripts["check:documents"],"node scripts/check-documents-schema.mjs");
+ const check=read("../scripts/check-documents-schema.mjs");
+ assert.match(check,/\["id","delegate_visible","drive_file_id","congress_id"\]/);
+ assert.match(check,/\.from\("documents"\)\.select\(column\)\.limit\(1\)/);
+ const api=read("../src/app/api/documents/visibility/route.ts");
+ assert.match(api,/lookupError\.code==="42703"/);
+ assert.match(api,/error\?\.code==="42703"/);
+ assert.match(api,/await share\(previouslyVisible\)/);
+});
