@@ -886,3 +886,41 @@
 @media (max-height:700px) {
  .projection-stage:fullscreen .projection-qr-clickable {width:clamp(112px,19vh,165px)!important;}
 }
+
+/* Phone auditorium viewer: CSS fallback works even on iOS, which may reject orientation.lock. */
+.delegate-seat-landscape {
+ position:fixed;inset:0;z-index:10000;
+ width:100dvw;height:100dvh;
+ display:flex;overflow:hidden;
+ background:#eaf0f2;
+ overscroll-behavior:contain;
+}
+.delegate-seat-landscape .delegate-seat-panel {
+ width:100%;height:100%;min-height:0;
+ display:flex;flex-direction:column;
+ border:0;border-radius:0;box-shadow:none;
+}
+.delegate-seat-landscape .delegate-seat-scroll-region {
+ flex:1;min-height:0;
+ display:flex;flex-direction:column;
+ padding:6px 8px 8px;
+}
+.delegate-seat-landscape .delegate-seat-scroller {
+ flex:1;min-height:0;height:auto;max-height:none;
+ overflow:auto;-webkit-overflow-scrolling:touch;
+ touch-action:pan-x pan-y;
+}
+.delegate-seat-landscape .delegate-seat-hint {display:none;}
+@media (orientation:portrait) {
+ .delegate-seat-landscape {
+  inset:auto;top:0;left:100dvw;
+  width:100dvh;height:100dvw;
+  transform-origin:top left;
+  transform:rotate(90deg);
+ }
+}
+@media (max-height:480px) and (orientation:landscape) {
+ .delegate-seat-landscape .delegate-seat-panel > div:first-child {padding-top:6px;padding-bottom:6px;}
+ .delegate-seat-landscape .delegate-seat-panel > div:nth-child(2) {padding-top:5px;padding-bottom:5px;}
+}
+
