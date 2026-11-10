@@ -65,7 +65,8 @@ test("Mỗi chức năng có một route riêng và thanh điều hướng đi�
  assert.match(content("../src/lib/delegate-seat-map.ts"),/\.eq\("congress_id",congressId\)/);
  assert.match(content("../src/lib/delegate-seat-map.ts"),/items\.flatMap\(item=>item\.sessions/);
  assert.doesNotMatch(content("../src/lib/delegate-seat-map.ts"),/seat_assignments|full_name|delegate_id/);
- assert.match(content("../src/components/delegate-seat-hall.tsx"),/seat\.x-bounds\.minX/);
+ assert.match(content("../src/components/delegate-seat-hall.tsx"),/projectSeatGrid\(/);
+ assert.match(content("../src/components/delegate-seat-hall.tsx"),/seat\.x-freeform\.minX/);
  assert.match(content("../src/components/delegate-seat-hall.tsx"),/Tìm ghế/);
  const history=content("../src/app/my-card/history/page.tsx");
  assert.match(history,/Lịch sử điểm danh/);

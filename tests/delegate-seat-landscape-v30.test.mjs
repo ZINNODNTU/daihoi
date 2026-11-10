@@ -38,11 +38,15 @@ test("Sơ đồ vẫn giữ cuộn hai chiều, zoom và tự tìm đúng ghế 
  assert.match(ui,/setZoom\(z=>boundedZoom\(z-0\.12\)\)/);
  assert.match(ui,/setZoom\(z=>boundedZoom\(z\+0\.12\)\)/);
  assert.match(ui,/fitLandscape\(\)/);
- assert.match(ui,/const drawing=seat\.offsetParent/);
+ assert.match(ui,/node=node\.offsetParent/);
  assert.match(ui,/area\.scrollTo/);
  assert.match(ui,/overflow-auto overscroll-contain/);
- assert.match(ui,/seat\.x-bounds\.minX/);
+ assert.match(ui,/seat\.x-freeform\.minX/);
+ assert.match(ui,/projectSeatGrid\(/);
+ assert.match(ui,/data-physical-seat-grid/);
+ assert.match(ui,/rowLabelAt\("A",r\)/);
  assert.match(ui,/seat\.id===map\.ownSeatId/);
+ assert.match(ui,/seatNumbers\.get\(seat\.id\)/);
  const server=source("../src/lib/delegate-seat-map.ts");
  assert.doesNotMatch(server,/seat_assignments|full_name|delegate_id/);
 });

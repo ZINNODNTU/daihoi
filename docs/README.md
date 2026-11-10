@@ -29,6 +29,7 @@
 | Quản lý thông tin, ảnh đại biểu | [Ảnh đại biểu](tinh-nang/dai-bieu/DAI-BIEU-ANH.md) |
 | Thống kê giới tính, ngày sinh của người điểm danh | [Phân tích chất lượng đại biểu V15](tinh-nang/dai-bieu/PHAN-TICH-CHAT-LUONG-DAI-BIEU-V15.md) |
 | Nhân sự BCH và ảnh hồ sơ | [Danh sách trích ngang BCH](tinh-nang/nhan-su/NHAN-SU-BCH.md) |
+| **Đồng bộ sơ đồ ghế V34 — sửa hàng F, lối đi và số ghế đại biểu** | [Đồng bộ sơ đồ V34](huong-dan/DONG-BO-SO-DO-GHE-V34.md) |
 | **Giao diện Editorial V33 — nghiên cứu repo UI, trang chủ và dashboard** | [Hướng dẫn thiết kế V33](huong-dan/GIAO-DIEN-EDITORIAL-V33.md) |
 | Thiết kế trên điện thoại và máy tính | [Responsive UI](giao-dien/RESPONSIVE-UI.md) |
 | Nhận diện thương hiệu | [Giao diện hiện hành](giao-dien/GIAO-DIEN-HIEN-HANH.md) |

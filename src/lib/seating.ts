@@ -241,6 +241,48 @@ export function setSeatGridCells(
   if(validation)return {seats:current,error:validation};
   return {seats:renumbered,error:null};
 }
+/**
+ * A single read-only physical grid for editor, delegate portal and projector.
+ * The saved layout size may lag behind chairs added by legacy versions; expand
+ * only for chairs placed on the canonical grid. Empty cells/aisles remain cells
+ * and NEVER receive seat numbers. No seat UUID or assignment is modified.
+ */
+export function projectSeatGrid<S extends Pick<SeatDraft,"id"|"x"|"y"> & {zone?:string}>(
+ requested:SeatGridSize,seats:readonly S[]
+){
+ let size={...requested};
+ const cells=new Map<number,S>();
+ const outside:S[]=[];
+ const seatNumbers=new Map<string,number>();
+ if(!seatGridSizeValid(size))return {size,cells,outside:[...seats],seatNumbers};
+ let maxRow=size.rows-1,maxColumn=size.columns-1;
+ for(const seat of seats){
+  if(seat.zone!=="G")continue;
+  const row=(seat.y-SEAT_GRID_TOP)/SEAT_GRID_STEP_Y;
+  const col=(seat.x-SEAT_GRID_LEFT)/SEAT_GRID_STEP_X;
+  if(Number.isInteger(row)&&Number.isInteger(col)&&row>=0&&row<SEAT_GRID_MAX_ROWS&&
+   col>=0&&col<SEAT_GRID_MAX_COLUMNS){
+   maxRow=Math.max(row,maxRow);
+   maxColumn=Math.max(col,maxColumn);
+  }
+ }
+ const expanded={rows:maxRow+1,columns:maxColumn+1};
+ if(seatGridSizeValid(expanded))size=expanded;
+ for(const seat of seats){
+  const index=seatGridCellIndex(seat,size);
+  if(index===null||cells.has(index))outside.push(seat);
+  else cells.set(index,seat);
+ }
+ for(let row=0;row<size.rows;row++){
+  let number=0;
+  for(let column=0;column<size.columns;column++){
+   const seat=cells.get(row*size.columns+column);
+   if(seat)seatNumbers.set(seat.id,++number);
+  }
+ }
+ return {size,cells,outside,seatNumbers};
+}
+
 export function seatGridPattern(
   preset:SeatGridPreset,size:SeatGridSize=DEFAULT_SEAT_GRID_SIZE
 ):Set<number>{

@@ -9,7 +9,7 @@ import {
   Users,ZoomIn,ZoomOut
 } from "lucide-react";
 import {
-  generateSection,parseSeatImport,validateImport,validateSeatDrafts,renumberGridSeats,
+  generateSection,parseSeatImport,validateImport,validateSeatDrafts,renumberGridSeats,projectSeatGrid,
   seatGridCellIndex,seatGridPattern,seatGridSizeValid,setSeatGridCells,
   type SeatDraft,type SeatAssignment,type SeatingDelegate,type SeatingLayout,
   type SeatingSession,type ImportEntry,type ImportIssue,type SeatGridPreset,type SeatType,type SeatGridSize
@@ -93,19 +93,22 @@ export function SeatingClient({congressId,canManage}:Props){
       if(!response.ok)throw new Error(next.error||"Không tải được sơ đồ.");
       setData(next);setLayoutId(next.layout?.id||"");
       setTitle(next.layout?.title||"");setStageLabel(next.layout?.stage_label||"SÂN KHẤU");
-      const nextSize={rows:next.layout?.grid_rows??10,columns:next.layout?.grid_columns??20};
-      setGridRows(seatGridSizeValid(nextSize)?nextSize.rows:10);
-      setGridColumns(seatGridSizeValid(nextSize)?nextSize.columns:20);
-      // Upgrade legacy grid numbering in the editor without changing seat IDs.
+      const storedSize={rows:next.layout?.grid_rows??10,columns:next.layout?.grid_columns??20};
+      // Legacy layouts may have row F while stored metadata still says A–E.
+      // Derive the true canvas dimensions without changing any assigned seat.
+      const inferred=projectSeatGrid(storedSize,next.seats);
+      const nextSize=seatGridSizeValid(inferred.size)?inferred.size:{rows:10,columns:20};
+      const sizeOutdated=nextSize.rows!==storedSize.rows||nextSize.columns!==storedSize.columns;
+      setGridRows(nextSize.rows);setGridColumns(nextSize.columns);
       const isGridMap=next.seats.some(s=>s.zone==="G"&&seatGridCellIndex(s,nextSize)!==null);
-      const fixed=canManage&&isGridMap&&seatGridSizeValid(nextSize)
-        ?renumberGridSeats(next.seats,nextSize):next.seats;
-      const needsSave=fixed.some((seat,index)=>
-        seat.code!==next.seats[index].code||seat.seatNumber!==next.seats[index].seatNumber);
+      // All BTC viewers see normalized numbers; only managers may persist changes.
+      const fixed=isGridMap?renumberGridSeats(next.seats,nextSize):next.seats;
+      const needsSave=canManage&&(sizeOutdated||fixed.some((seat,index)=>
+        seat.code!==next.seats[index].code||seat.seatNumber!==next.seats[index].seatNumber));
       seatsSnapshot.current=fixed;setSeats(fixed);setSessionId(next.selectedSessionId||"");
       setDesignSurface(!next.seats.length||next.seats.some(s=>seatGridCellIndex(s,nextSize)!==null)?"grid":"free");
       setDirty(needsSave);setImportEntries([]);setImportIssues([]);
-      if(needsSave)setNotice("Đã đánh số liên tục từ trái sang phải cho ghế đại biểu và khách mời. Nhấn Lưu sơ đồ để đồng bộ sang đại biểu và Excel.");
+      if(needsSave)setNotice("Đã đồng bộ kích thước lưới và số ghế thực tế (không đánh số lối đi). Nhấn Lưu sơ đồ để cập nhật trên cổng đại biểu và màn hình điểm danh.");
     }catch(reason){setError(reason instanceof Error?reason.message:"Không thể tải sơ đồ.");}
     finally{setLoading(false);}
   },[congressId,canManage]);

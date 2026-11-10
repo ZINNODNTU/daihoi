@@ -3,25 +3,27 @@ import {useEffect,useMemo,useRef,useState,useTransition} from "react";
 import {createPortal} from "react-dom";
 import {useRouter} from "next/navigation";
 import {Focus,Info,Layers3,Minus,Plus,MapPinned,RotateCw,Maximize2,X} from "lucide-react";
+import {projectSeatGrid,rowLabelAt,seatGridSizeValid} from "@/lib/seating";
 import type {MyHallMap,HallSeat} from "@/lib/delegate-seat-map";
 
 type Choice={id:string;name:string;congressName:string};
-const ZOOM_MIN=0.48,ZOOM_MAX=1.32;
-function mapBounds(seats:HallSeat[]){
- if(!seats.length)return {minX:0,minY:0,maxX:1000,maxY:450};
- return {
-  minX:Math.min(...seats.map(s=>s.x)),minY:Math.min(...seats.map(s=>s.y)),
-  maxX:Math.max(...seats.map(s=>s.x)),maxY:Math.max(...seats.map(s=>s.y))
- };
-}
+const ZOOM_MIN=0.38,ZOOM_MAX=1.40;
 function boundedZoom(value:number){
  return Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,Number(value.toFixed(2))));
+}
+function freeformBounds(seats:HallSeat[]){
+ return {
+  minX:Math.min(...seats.map(s=>s.x)),
+  minY:Math.min(...seats.map(s=>s.y)),
+  maxX:Math.max(...seats.map(s=>s.x)),
+  maxY:Math.max(...seats.map(s=>s.y))
+ };
 }
 
 export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choice[]}){
  const router=useRouter();
  const [pending,startTransition]=useTransition();
- const [zoom,setZoom]=useState(0.84);
+ const [zoom,setZoom]=useState(.58);
  const [landscapeView,setLandscapeView]=useState(false);
  const scroller=useRef<HTMLDivElement>(null);
  const mine=useRef<HTMLDivElement>(null);
@@ -32,46 +34,53 @@ export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choic
  const ownedFullscreen=useRef(false);
  const seats=useMemo(()=>map?.seats||[],[map]);
  const layout=map?.layout;
- const bounds=useMemo(()=>mapBounds(seats),[seats]);
- const positioned=useMemo(()=>seats.map(seat=>({
-  ...seat,
-  left:40+(seat.x-bounds.minX)*zoom,
-  top:123+(seat.y-bounds.minY)*zoom
- })),[seats,bounds,zoom]);
- const tile=Math.max(25,Math.round(46*zoom));
- const mapWidth=Math.max(360,Math.ceil(40+(bounds.maxX-bounds.minX)*zoom+tile+35));
- const mapHeight=Math.max(290,Math.ceil(123+(bounds.maxY-bounds.minY)*zoom+tile+65));
+ // A single seat geometry is used by BTC, delegate portal and attendance projector.
+ // Empty physical grid cells and central aisles remain visible to all three users.
+ const projected=useMemo(()=>projectSeatGrid(
+  {rows:layout?.grid_rows||0,columns:layout?.grid_columns||0},seats
+ ),[layout?.grid_rows,layout?.grid_columns,seats]);
+ const {size,cells,outside,seatNumbers}=projected;
+ const valid=seatGridSizeValid(size);
+ const gridVisible=valid&&(cells.size>0||seats.length===0);
+ const tile=Math.max(20,Math.round(46*zoom));
+ const gap=Math.max(3,Math.round(9*zoom));
+ const labelWidth=Math.max(24,Math.round(36*zoom));
+ const gridWidth=valid?labelWidth+size.columns*tile+size.columns*gap:380;
+ const mapWidth=Math.max(320,gridWidth+30);
+ const freeform=useMemo(()=>outside.length?freeformBounds(outside):null,[outside]);
+ const freeformWidth=freeform?Math.max(380,Math.ceil((freeform.maxX-freeform.minX)*zoom+90)):380;
+ const freeformHeight=freeform?Math.max(150,Math.ceil((freeform.maxY-freeform.minY)*zoom+110)):150;
  const found=seats.find(s=>s.id===map?.ownSeatId);
- const rowMarkers=useMemo(()=>{
-  const unique=new Map<string,number>();
-  for(const seat of positioned){
-   if(!seat.row_label||unique.has(seat.row_label))continue;
-   unique.set(seat.row_label,seat.top);
-  }
-  return [...unique.entries()].map(([label,top])=>({label,top}));
- },[positioned]);
+ const placed=Boolean(found&&(seatNumbers.has(found.id)||outside.some(seat=>seat.id===found.id)));
+ const gridIndex=found?[...cells.entries()].find(([,seat])=>seat.id===found.id)?.[0]:undefined;
+ const displayedSeatCode=found&&gridIndex!==undefined?
+  found.zone+"-"+rowLabelAt("A",Math.floor(gridIndex/size.columns))+"-"+
+   String(seatNumbers.get(found.id)).padStart(2,"0"):
+  map?.session.seat?.code||"Chưa phân ghế";
 
  function focusMySeat(smooth=true){
   const area=scroller.current,seat=mine.current;
   if(!area||!seat)return;
-  // Offset coordinates stay correct even when the mobile viewer is rotated with CSS.
-  const drawing=seat.offsetParent as HTMLElement|null;
-  const desiredX=(drawing?.offsetLeft||0)+seat.offsetLeft-area.clientWidth/2+seat.offsetWidth/2;
-  const desiredY=(drawing?.offsetTop||0)+seat.offsetTop-area.clientHeight/2+seat.offsetHeight/2;
+  // Offset coordinates are invariant under the iOS CSS rotation fallback.
+  // Accumulate ancestors so a freeform chair below the main grid also centers.
+  let x=seat.offsetWidth/2,y=seat.offsetHeight/2;
+  for(let node:HTMLElement|null=seat;node&&node!==area;node=node.offsetParent as HTMLElement|null){
+   x+=node.offsetLeft;y+=node.offsetTop;
+  }
+  const desiredX=x-area.clientWidth/2,desiredY=y-area.clientHeight/2;
   area.scrollTo({left:Math.max(0,desiredX),top:Math.max(0,desiredY),
    behavior:smooth?"smooth":"instant"});
  }
  function fitLandscape(){
-  const available=Math.max(window.innerWidth,window.innerHeight)-64;
-  const span=bounds.maxX-bounds.minX;
-  setZoom(boundedZoom(available/(span+130)));
+  // Fit physical columns, not min/max occupied coordinates: empty/aisle cells count.
+  const available=Math.max(window.innerWidth,window.innerHeight)-80;
+  const natural=gridVisible?36+size.columns*55:freeformWidth;
+  setZoom(boundedZoom(available/natural));
  }
  function openLandscape(){
   setLandscapeView(true);
   fitLandscape();
   const generation=++requestGeneration.current;
-  // iPhone Safari doesn't expose orientation.lock/fullscreen for arbitrary elements.
-  // The CSS rotation is the reliable path, native landscape is progressive enhancement.
   if(document.fullscreenElement||!document.documentElement.requestFullscreen)return;
   void document.documentElement.requestFullscreen().then(async()=>{
    if(generation!==requestGeneration.current){
@@ -80,17 +89,16 @@ export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choic
     return;
    }
    ownedFullscreen.current=true;
-   const orientation=screen.orientation as ScreenOrientation & {
-    lock?:(mode:"landscape")=>Promise<void>;
-   };
-   try{await orientation?.lock?.("landscape");}catch{/* CSS fallback works. */}
+   // CSS fallback works on iOS Safari if screen orientation lock is unavailable.
+   const orientation=screen.orientation as ScreenOrientation&{lock?:(mode:"landscape")=>Promise<void>};
+   try{await orientation?.lock?.("landscape");}catch{}
    if(generation!==requestGeneration.current){
     try{orientation?.unlock?.();}catch{}
     if(document.fullscreenElement===document.documentElement)
      await document.exitFullscreen().catch(()=>{});
     ownedFullscreen.current=false;
    }
-  }).catch(()=>{/* CSS rotated landscape remains available. */});
+  }).catch(()=>{/* CSS rotation still works. */});
  }
  function closeLandscape(){
   ++requestGeneration.current;
@@ -102,9 +110,16 @@ export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choic
   requestAnimationFrame(()=>openButton.current?.focus());
  }
  useEffect(()=>{
+  // Fit the complete physical hall on laptops/tablets instead of clipping its
+  // last columns. Phones keep a readable zoom and use swipe/landscape mode.
+  const area=scroller.current;
+  if(landscapeView||!gridVisible||!area||area.clientWidth<720)return;
+  const target=boundedZoom(Math.min(.88,(area.clientWidth-85)/(36+size.columns*55)));
+  setZoom(target);
+ },[layout?.id,size.columns,gridVisible,landscapeView]);
+ useEffect(()=>{
   const frame=requestAnimationFrame(()=>focusMySeat(false));
   return()=>cancelAnimationFrame(frame);
- // Center on the authenticated person's chair when changing layout, zoom or viewer mode.
  },[map?.session.id,zoom,landscapeView]);
  useEffect(()=>{
   if(!landscapeView)return;
@@ -114,9 +129,7 @@ export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choic
   const keydown=(event:KeyboardEvent)=>{
    if(event.key==="Escape"){event.preventDefault();closeLandscape();}
    if(event.key!=="Tab")return;
-   const items=overlay.current?.querySelectorAll<HTMLElement>(
-    'button:not([disabled]),[tabindex="0"]'
-   );
+   const items=overlay.current?.querySelectorAll<HTMLElement>('button:not([disabled]),[tabindex="0"]');
    if(!items?.length)return;
    const first=items[0],last=items[items.length-1];
    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
@@ -127,9 +140,8 @@ export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choic
    document.body.style.overflow=oldOverflow;
    document.removeEventListener("keydown",keydown);
   };
- // The closing callback reads refs and current browser state, not React state.
  },[landscapeView]);
- useEffect(()=>()=> {
+ useEffect(()=>()=>{
   ++requestGeneration.current;
   if(ownedFullscreen.current){
    try{screen.orientation?.unlock?.();}catch{}
@@ -152,7 +164,7 @@ export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choic
    <Plus size={17}/>
   </button>
   <button type="button" title="Định vị ghế của tôi" aria-label="Đưa ghế của tôi vào giữa màn hình"
-   onClick={()=>focusMySeat()} disabled={!found}
+   onClick={()=>focusMySeat()} disabled={!placed}
    className="flex min-h-10 items-center gap-1.5 rounded-lg bg-[#007fae] px-3 text-xs font-extrabold text-white disabled:bg-[#b5c8cd]">
    <Focus size={16}/><span>Tìm ghế</span>
   </button>
@@ -167,54 +179,90 @@ export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choic
     <RotateCw size={16}/> Xem ngang <Maximize2 size={14}/>
    </button>}
  </div>;
+
  const hallPanel=layout?<section data-delegate-seat-map
   className="delegate-seat-panel overflow-hidden rounded-[20px] border border-[#d2e1e6] bg-white shadow-[0_15px_40px_rgba(17,58,73,.08)]">
   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e4ecef] bg-[#f9fbfc] px-3 py-3 sm:px-6 sm:py-4">
    <div className="min-w-0 flex-1">
     <p className="text-[10px] font-extrabold uppercase tracking-[.15em] text-[#469087]">BẢN ĐỒ HỘI TRƯỜNG</p>
     <h2 className="mt-1 truncate text-[16px] font-extrabold tracking-tight text-[#214759]">{layout.title}</h2>
-    {!landscapeView&&<p className="mt-1 text-[11px] text-[#89a0aa]">{seats.length} vị trí · Vuốt ngang và dọc để xem sơ đồ</p>}
+    {!landscapeView&&<p className="mt-1 text-[11px] text-[#89a0aa]">{seats.length} ghế · {valid?size.rows+" hàng × "+size.columns+" vị trí":"Sơ đồ tự do"} · Vuốt để xem toàn bộ</p>}
    </div>
    {controls}
   </div>
   <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-[#e8eef1] px-3 py-2.5 text-[11px] font-semibold text-[#69838e] sm:px-6">
    <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-[4px] bg-[#e5eff2] ring-1 ring-[#c4d6dd]"/> Ghế hội trường</span>
    <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-[4px] bg-[#f5ca72] ring-2 ring-[#b57b29]"/> Vị trí của bạn</span>
+   <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-[4px] bg-[#f0f4f6] ring-1 ring-[#e0e8ed]"/> Lối đi / ô trống</span>
    <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-[4px] bg-[#a9bbc2]"/> Không sử dụng</span>
   </div>
   <div className="delegate-seat-scroll-region bg-[#eaf0f2] px-2 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4">
    <div ref={scroller} tabIndex={0} aria-label="Sơ đồ hội trường đầy đủ; cuộn ngang hoặc dọc để xem vị trí ghế"
-    className="delegate-seat-scroller h-[min(55dvh,530px)] min-h-[290px] max-h-[610px] overflow-auto overscroll-contain rounded-[13px] border border-[#d2e1e6] bg-white p-2 shadow-inner sm:p-4">
-    <div className="relative mx-auto" style={{width:mapWidth,height:mapHeight,minWidth:mapWidth}}>
-     <div className="absolute left-1/2 top-4 flex h-12 w-[min(45%,300px)] -translate-x-1/2 items-center justify-center rounded-b-2xl border-x border-b border-[#bed4df] bg-[#deecf2] px-5 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#38687c] shadow-sm">
+    className="delegate-seat-scroller relative h-[min(55dvh,530px)] min-h-[290px] max-h-[610px] overflow-auto overscroll-contain rounded-[13px] border border-[#d2e1e6] bg-white p-2 shadow-inner sm:p-4">
+    {gridVisible&&<div className="relative mx-auto pb-5" style={{width:mapWidth,minWidth:mapWidth}}>
+     <div className="mx-auto mb-7 flex h-11 w-[min(46%,300px)] items-center justify-center rounded-b-xl border-x border-b border-[#bed4df] bg-[#deecf2] px-3 text-center text-[11px] font-extrabold uppercase tracking-[.12em] text-[#38687c] shadow-sm">
       {layout.stage_label||"SÂN KHẤU"}
      </div>
-     <div className="absolute inset-x-8 top-[92px] h-px bg-gradient-to-r from-transparent via-[#dbe6e9] to-transparent"/>
-     {rowMarkers.map(row=><span key={row.label}
-      className="absolute left-0 flex h-8 w-8 items-center justify-center text-[10px] font-extrabold text-[#9aafb8]"
-      style={{top:row.top}}>{row.label}</span>)}
-     {positioned.map(seat=>{
-      const highlighted=seat.id===map.ownSeatId;
-      return <div key={seat.id} ref={highlighted?mine:undefined}
-       data-my-seat={highlighted?"true":undefined}
-       title={highlighted?"Ghế của bạn: "+seat.code:"Ghế "+seat.code}
-       aria-label={highlighted?"Vị trí của bạn "+seat.code:undefined}
-       className={"absolute flex items-center justify-center rounded-[5px] border text-center font-extrabold shadow-sm transition-colors "+(
-        highlighted?"z-10 border-[#9a6621] bg-[#f4c666] text-[#62410c] ring-[3px] ring-[#ffdf96] shadow-[0_0_0_5px_rgba(212,146,35,.28)]":
-        seat.blocked?"border-[#9cb1bb] bg-[#a9bdc5] text-[#647982]":
-        "border-[#c8dce2] bg-[#e7f0f3] text-[#4c7182]"+
-        (seat.seat_type==="guest"?" ring-1 ring-inset ring-[#ab91b9]":"")
-       )} style={{left:seat.left,top:seat.top,width:tile,height:tile,
-        fontSize:Math.max(9,Math.round(11*zoom))}}>
-       {seat.blocked?"×":seat.seat_number}
-      </div>;
-     })}
-    </div>
+     <div data-physical-seat-grid className="relative grid" style={{
+      width:gridWidth,
+      gridTemplateColumns:labelWidth+"px repeat("+size.columns+", "+tile+"px)",
+      columnGap:gap,rowGap:Math.max(5,Math.round(14*zoom))
+     }}>
+      {Array.from({length:size.rows},(_,r)=><div key={r} className="contents">
+       <span className="flex items-center justify-center text-[10px] font-extrabold text-[#7592a2]">{rowLabelAt("A",r)}</span>
+       {Array.from({length:size.columns},(_,c)=>{
+        const seat=cells.get(r*size.columns+c);
+        if(!seat)return <span key={c} title="Lối đi / ô trống" aria-hidden="true"
+         className="rounded-[5px] border border-[#ecf0f2] bg-[#f0f4f6]" style={{height:tile,width:tile}}/>;
+        const highlighted=seat.id===map.ownSeatId;
+        const displayNumber=seatNumbers.get(seat.id)??seat.seat_number;
+        return <div key={seat.id} ref={highlighted?mine:undefined}
+         data-my-seat={highlighted?"true":undefined}
+         title={highlighted?"Ghế của bạn — hàng "+rowLabelAt("A",r)+", số "+displayNumber:"Hàng "+rowLabelAt("A",r)+" · Ghế "+displayNumber}
+         aria-label={highlighted?"Vị trí của bạn: hàng "+rowLabelAt("A",r)+", ghế "+displayNumber:undefined}
+         className={"relative flex items-center justify-center rounded-[5px] border text-center font-extrabold tabular-nums shadow-sm "+(
+          highlighted?"z-10 border-[#a06b25] bg-[#f4c666] text-[#62410c] ring-[2px] ring-[#ffdf96] shadow-[0_0_0_4px_rgba(212,146,35,.25)]":
+          seat.blocked?"border-[#9cb1bb] bg-[#a9bdc5] text-[#647982]":
+          "border-[#c8dce2] bg-[#e7f0f3] text-[#4c7182]"+
+          (seat.seat_type==="guest"?" ring-1 ring-inset ring-[#ab91b9]":"")
+         )} style={{width:tile,height:tile,fontSize:Math.max(9,Math.round(11*zoom))}}>
+         {seat.blocked?"×":displayNumber}
+        </div>;
+       })}
+      </div>)}
+     </div>
+     <p className="mt-6 text-center text-[9px] font-extrabold uppercase tracking-[.16em] text-[#8ba1ab]">LỐI VÀO · CUỐI HỘI TRƯỜNG</p>
+    </div>}
+    {outside.length>0&&<div className="relative mx-auto mt-4 border-t border-[#e5ecef] pt-5"
+     style={{width:gridVisible?Math.max(mapWidth,freeformWidth):freeformWidth}}>
+     <p className="mb-2 text-[10px] font-bold uppercase tracking-[.1em] text-[#718c9a]">
+      {gridVisible?"Khu ghế bố trí ngoài lưới":"Sơ đồ ghế bố trí tự do"} · {outside.length} ghế
+     </p>
+     {!gridVisible&&<div className="mx-auto mb-5 flex h-11 w-[min(46%,300px)] items-center justify-center rounded-b-xl border-x border-b border-[#bed4df] bg-[#deecf2] px-3 text-center text-[11px] font-extrabold uppercase tracking-[.12em] text-[#38687c]">{layout.stage_label||"SÂN KHẤU"}</div>}
+     {freeform&&<div className="relative rounded-xl border border-[#dce7ec] bg-[#f9fcfd]" style={{height:freeformHeight,width:freeformWidth}}>
+      {outside.map(seat=>{
+       const highlighted=seat.id===map.ownSeatId;
+       return <div key={seat.id} ref={highlighted?mine:undefined}
+        data-my-seat={highlighted?"true":undefined}
+        title={highlighted?"Ghế của bạn: "+seat.code:"Ghế "+seat.code}
+        className={"absolute flex items-center justify-center rounded-[5px] border text-[10px] font-extrabold "+(
+         highlighted?"z-10 border-[#a06b25] bg-[#f4c666] text-[#62410c] ring-[2px] ring-[#ffdf96]":
+         seat.blocked?"border-[#9cb1bb] bg-[#a9bdc5] text-[#647982]":
+         seat.seat_type==="guest"?"border-[#ab91b9] bg-[#eee7f8] text-[#76569c]":
+         "border-[#c8dce2] bg-[#e7f0f3] text-[#4c7182]"
+        )} style={{
+         left:25+(seat.x-freeform.minX)*zoom,
+         top:30+(seat.y-freeform.minY)*zoom,
+         width:tile,height:tile
+        }}>{seat.blocked?"×":seat.seat_number}</div>;
+      })}
+     </div>}
+    </div>}
    </div>
   </div>
   <div className="delegate-seat-hint flex items-start gap-2 border-t border-[#e2ebee] bg-[#fbfcfc] px-4 py-3 text-[11px] leading-5 text-[#718d9a] sm:px-6">
    <Info size={16} className="mt-0.5 shrink-0 text-[#57909a]"/>
-   <span>Ghế màu vàng là vị trí của bạn. Dùng <strong>Tìm ghế</strong> để định vị; dùng <strong>Xem ngang</strong> để mở sơ đồ toàn màn hình trên điện thoại.</span>
+   <span>Sơ đồ giữ nguyên lối đi và ô trống như trong trang quản trị. Ghế vàng là vị trí của bạn. Chọn <strong>Tìm ghế</strong> để định vị hoặc <strong>Xem ngang</strong> trên điện thoại.</span>
   </div>
  </section>:null;
 
@@ -235,7 +283,7 @@ export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choic
     <MapPinned size={21} className="shrink-0 text-[#1b7fa2]"/>
     <div>
      <p className="text-[10px] font-bold uppercase tracking-[.08em] text-[#53869d]">GHẾ CỦA BẠN</p>
-     <p className="text-[17px] font-extrabold text-[#19759d]">{map.session.seat?.code||"Chưa phân ghế"}</p>
+     <p className="text-[17px] font-extrabold text-[#19759d]">{displayedSeatCode}</p>
     </div>
    </div>}
   </div>

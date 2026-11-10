@@ -160,7 +160,7 @@ export function SeatGridCanvas({
      tabIndex={0} aria-label={"Lưới "+total+" vị trí chỗ ngồi, cuộn để xem"}>
      <div className="seat-grid-surface mx-auto w-max rounded-xl border border-[#d5e3eb] bg-white px-4 pb-5 pt-4 shadow-[0_4px_24px_rgba(31,65,88,.045)] sm:px-6">
        <div className="mb-5 flex justify-center">
-         <div className="w-[62%] rounded-b-lg border border-[#195c7e] bg-[#12587b] py-3 text-center text-[11px] font-extrabold uppercase tracking-[.16em] text-white">
+         <div className="w-[min(46%,300px)] rounded-b-xl border border-[#195c7e] bg-[#12587b] px-3 py-3 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-white">
            {stageLabel||"SÂN KHẤU"}
          </div>
        </div>
@@ -207,7 +207,7 @@ export function SeatGridCanvas({
                   guest?"border-[#9c81ce] bg-[#eee5fc] text-[#67419f] ":
                   occupied?"border-[#59a99e] bg-[#d6f1ea] text-[#14675b] ":
                   seat?"border-[#448caf] bg-[#d9edf9] text-[#155a80] ":
-                  "border-dashed border-[#c6d3de] bg-[#f5f8fa] text-[#b9cad5] hover:border-[#6399b8] hover:bg-[#e8f4fb] ")+
+                  "border border-[#e0e8ed] bg-[#f0f4f6] text-[#b9cad5] hover:border-[#6399b8] hover:bg-[#e8f4fb] ")+
                  (editable?"cursor-crosshair":"cursor-pointer")}>
                {seat?<>
                   <span className="text-[11px] font-extrabold tabular-nums tracking-tight">{String(seat.seatNumber).padStart(2,"0")}</span>
@@ -216,7 +216,7 @@ export function SeatGridCanvas({
                  </>:
 
 
-                <span className="text-[14px] font-normal">·</span>}
+                <span aria-hidden="true" className="sr-only">Ô trống / lối đi</span>}
              </button>;
            })}
          </Fragment>)}
