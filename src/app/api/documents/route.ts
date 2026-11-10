@@ -1,10 +1,10 @@
 import {NextResponse} from "next/server";
-import {deleteScriptDrive,scriptStorageSelected,uploadScriptDrive} from "@/lib/google-apps-script";
+import {deleteScriptDrive,scriptStorageSelected,shareScriptDrive,uploadScriptDrive} from "@/lib/google-apps-script";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {
  DriveStorageError,getDriveToken,inspectDriveFolder,makeDriveFolder,
- uploadDriveFile,deleteDriveFile
+ uploadDriveFile,deleteDriveFile,setDriveLinkSharing
 } from "@/lib/drive";
 import {
  DocumentValidationError,MAX_DOCUMENT_BYTES,validateDocumentBytes,validateDocumentName
@@ -30,7 +30,9 @@ export async function POST(req:Request){
    return fail("Nguồn yêu cầu không hợp lệ.",403);
   const form=await req.formData();
   const congressId=String(form.get("congressId")||"");
-  uploadCongressId=congressId;
+  // Explicit opt-in: uploaded documents stay private by default.
+   const publishAfterUpload=form.get("publish")==="true";
+   uploadCongressId=congressId;
   if(!UUID.test(congressId))return fail("Đại hội không hợp lệ.",400);
   if(!(await hasRole(supabase,user.id,congressId,"admin")))
    return fail("Chỉ quản trị Đại hội được tải tài liệu.",403);
@@ -73,8 +75,9 @@ export async function POST(req:Request){
   uploadedId=uploaded.id;
   const {data,error}=await db.from("documents").insert({
    congress_id:congressId,file_name:safeName,mime_type:mime,
-   byte_size:file.size,drive_file_id:uploaded.id,uploaded_by:user.id
-  }).select("id,file_name").single();
+   byte_size:file.size,drive_file_id:uploaded.id,uploaded_by:user.id,
+    delegate_visible:false
+  }).select("id,file_name,delegate_visible").single();
   if(error){
    // Compensating transaction prevents orphaned private Drive files when
    // the SQL insert fails (missing table, permissions, network etc).
@@ -91,7 +94,36 @@ export async function POST(req:Request){
    console.error("document db insert failed",error.code);
    return fail("Drive đã nhận tệp nhưng không lưu được thông tin vào Supabase. Kiểm tra bảng documents và quyền truy cập.",500);
   }
-  return NextResponse.json({ok:true,document:data},{headers:{"Cache-Control":"private, no-store"}});
+  let published=false;
+   let warning="";
+   // Google Drive must be shareable before the metadata becomes visible.
+   // A sharing error never exposes a private file to delegates.
+   if(publishAfterUpload){
+    try{
+     if(storageMode==="script")await shareScriptDrive(congressId,uploaded.id,true);
+     else await setDriveLinkSharing(token,uploaded.id,true);
+     const {data:updated,error:publishError}=await db.from("documents")
+      .update({delegate_visible:true}).eq("id",data.id).eq("congress_id",congressId)
+      .select("id,delegate_visible").single();
+     if(publishError||!updated?.delegate_visible){
+      try{
+       if(storageMode==="script")await shareScriptDrive(congressId,uploaded.id,false);
+       else await setDriveLinkSharing(token,uploaded.id,false);
+      }catch(rollbackError){
+       console.error("document sharing rollback failed",
+        rollbackError instanceof DriveStorageError?rollbackError.code:"unknown");
+      }
+      warning="Đã lưu tệp nội bộ, nhưng chưa đồng bộ được công bố. Hãy thử công bố lại trong danh sách tài liệu.";
+     }else published=true;
+    }catch(e){
+     console.error("document publication after upload failed",
+      e instanceof DriveStorageError?e.code:"unknown");
+     warning="Tệp đã lưu nội bộ. Google Drive chưa cấp được quyền xem; hãy kiểm tra cấu hình chia sẻ rồi công bố lại.";
+    }
+   }
+   return NextResponse.json({ok:true,document:{...data,delegate_visible:published},published,warning},{
+    headers:{"Cache-Control":"private, no-store"}
+   });
  }catch(e){
   if(e instanceof DocumentValidationError)return fail(e.message,400);
   if(e instanceof DriveStorageError)return fail(e.message,e.status);

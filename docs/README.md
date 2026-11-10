@@ -1,6 +1,6 @@
 # Tài liệu dự án Đại hội số
 
-> **Mục lục chính thức — cập nhật 09/11/2026.** Bắt đầu từ trang này khi phát triển, cấu hình hoặc vận hành hệ thống. Những tài liệu trong `lich-su/` là bản ghi phiên bản cũ, không phải hướng dẫn triển khai hiện hành.
+> **Mục lục chính thức — cập nhật 10/11/2026.** Bắt đầu từ trang này khi phát triển, cấu hình hoặc vận hành hệ thống. Những tài liệu trong `lich-su/` là bản ghi phiên bản cũ, không phải hướng dẫn triển khai hiện hành.
 
 Đại hội số là nền tảng điều hành nhiều Đại hội Đoàn/Hội với **Next.js, Supabase, Google Drive** và Vercel (khi triển khai). Phần tài liệu được tổ chức theo **mục đích sử dụng**, không chỉ theo mốc phiên bản.
 
@@ -13,7 +13,7 @@
 | **Tối ưu 200 đại biểu đồng thời, cache an toàn, giới hạn Auth và favicon Đoàn** | [Vận hành tải đồng thời V32](huong-dan/TOI-UU-200-DAI-BIEU-V32.md) |
 | Chuẩn bị cơ sở dữ liệu, phân quyền | [Checklist Supabase và các migration](huong-dan/SUPABASE-SETUP.md) |
 | Hiểu nghiệp vụ Đại hội và giới hạn sản phẩm | [Nghiệp vụ Đại hội số](nghiep-vu/NGHIEP-VU-DAI-HOI.md) |
-| **Lưu file trên Google Drive, đại biểu chỉ xem tên/link** | [Google Drive V18 — hướng dẫn hiện hành](tinh-nang/tai-lieu/GOOGLE-DRIVE-LINKS-V18.md) |
+| **Công bố tài liệu lên cổng đại biểu, quyền Google Drive và trạng thái nội bộ (V35)** | [Đồng bộ tài liệu V35](huong-dan/DONG-BO-TAI-LIEU-DAI-BIEU-V35.md) |
 | Điều hành điểm danh và mã QR | [QR theo phiên và barcode](tinh-nang/diem-danh/DIEM-DANH-QR-PHIEN-VA-BARCODE.md) |
 | Trình chiếu realtime, hàng chờ, tối ưu ảnh và dữ liệu đại biểu | [Tối ưu realtime và hiệu năng V19](huong-dan/TOI-UU-HIEU-NANG-REALTIME-V19.md) |
 | **Một tài khoản nhiều Đại hội, tự đổi ảnh/hồ sơ và khách mời** | [Hướng dẫn tài khoản và khách mời V20](huong-dan/TAI-KHOAN-DA-DAI-HOI-KHACH-MOI-V20.md) |
@@ -59,7 +59,7 @@ docs/
 
 | Lĩnh vực | Tài liệu ưu tiên | Lưu ý |
 | --- | --- | --- |
-| Google Drive | **V18** | **Đã triển khai và thử kết nối + upload/chia sẻ/thu hồi/xóa qua Apps Script trên local (09/11/2026)**. Chưa kiểm chứng trang BTC/cổng đại biểu với dữ liệu thật và **chưa cấu hình Vercel Production**. Xem hướng dẫn V18. |
+| Google Drive | **V35** | Đã xác minh dữ liệu thật: công bố một tài liệu thuộc Đại hội Hội Sinh viên bằng Google Apps Script và Supabase thành công (10/11/2026); Vercel production chưa được xác minh. Xem hướng dẫn V35 và [cấu hình nền V18](tinh-nang/tai-lieu/GOOGLE-DRIVE-LINKS-V18.md). |
 | Màn hình điểm danh | **V19** | Realtime theo lượt với hàng chờ FIFO; migration V19 và cấu hình production cần kiểm chứng trên Supabase. |
 | Thống kê đại biểu | **V15** | Chỉ phân tích người đã điểm danh; cần migration V15 trên Supabase. |
 | Cổng đại biểu / Khách mời | **V22** | Bổ sung tối ưu điện thoại trên V20: thao tác nhanh, lọc tài liệu/BCH/lịch sử theo Đại hội, quét QR và sơ đồ ghế. Đã build local, chưa thử thực tế trên điện thoại bằng tài khoản thật. |

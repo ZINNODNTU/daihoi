@@ -18,6 +18,8 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
   const [notice,setNotice]=useState<{type:"error"|"success";message:string}|null>(null);
   const [query,setQuery]=useState("");
   const [sharing,setSharing]=useState<string|null>(null);
+  const [publishOnUpload,setPublishOnUpload]=useState(false);
+  const [visibilityOverrides,setVisibilityOverrides]=useState<Record<string,boolean>>({});
   const [driveStatus,setDriveStatus]=useState<DriveStatus|null>(null);
   const [checkingDrive,setCheckingDrive]=useState(false);
   const [uploadProgress,setUploadProgress]=useState("");
@@ -33,6 +35,9 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
     finally{setCheckingDrive(false);}
   },[congressId]);
   useEffect(()=>{if(canManage)queueMicrotask(()=>void checkDrive());},[canManage,checkDrive]);
+  const isPublished=(doc:DocRow)=>visibilityOverrides[doc.id]??(doc.delegate_visible===true);
+  const publishedCount=docs.filter(doc=>isPublished(doc)).length;
+  const unpublished=docs.filter(doc=>!isPublished(doc));
   const filtered=useMemo(()=>{
     const q=query.trim().toLocaleLowerCase("vi");
     return docs.filter(doc=>doc.file_name.toLocaleLowerCase("vi").includes(q));
@@ -44,21 +49,47 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
     try{
       const res=await fetch("/api/documents/visibility",{
        method:"PATCH",headers:{"Content-Type":"application/json"},
-       body:JSON.stringify({congressId,documentId:doc.id,visible:!doc.delegate_visible})
+       body:JSON.stringify({congressId,documentId:doc.id,visible:!isPublished(doc)})
       });
       const payload=await res.json();
       if(!res.ok)throw new Error(payload.error||"Không cập nhật được quyền xem tài liệu.");
-      setNotice({type:"success",message:payload.visible?"Đã công bố tài liệu cho đại biểu.":"Đã thu hồi quyền xem của đại biểu."});
+      setVisibilityOverrides(previous=>({...previous,[doc.id]:payload.visible===true}));
+      setNotice({type:"success",message:payload.visible?"Đã công bố tài liệu cho đại biểu, liên kết Google Drive có thể truy cập.":"Đã chuyển tài liệu về nội bộ."});
       router.refresh();
     }catch(error){setNotice({type:"error",message:error instanceof Error?error.message:"Không cập nhật được."});}
     finally{setSharing(null);}
   }
+  async function publishAll(){
+     if(sharing||busy||!unpublished.length)return;
+     if(!window.confirm("Công bố "+unpublished.length+" tài liệu cho đại biểu? Người nhận liên kết Google Drive có thể mở và chuyển tiếp tài liệu này."))return;
+     setSharing("bulk");setNotice(null);
+     let completed=0;const failures:string[]=[];
+     for(const doc of unpublished){
+       try{
+         const response=await fetch("/api/documents/visibility",{
+           method:"PATCH",headers:{"Content-Type":"application/json"},
+           body:JSON.stringify({congressId,documentId:doc.id,visible:true})
+         });
+         const result=await response.json();
+         if(!response.ok||!result.visible)throw new Error(result.error||"Không cấp được quyền trên Drive");
+         completed++;
+      setVisibilityOverrides(previous=>({...previous,[doc.id]:true}));
+       }catch(e){failures.push(doc.file_name+": "+(e instanceof Error?e.message:"Lỗi chia sẻ"));}
+     }
+     setSharing(null);
+     setNotice({type:failures.length?"error":"success",message:
+       "Đã công bố "+completed+"/"+unpublished.length+" tài liệu."+
+       (failures.length?" Không công bố được: "+failures.slice(0,3).join(" · "):" Đại biểu có thể xem trong cổng tài liệu.")});
+     if(completed)router.refresh();
+   }
   async function upload(e:ChangeEvent<HTMLInputElement>){
     const files=Array.from(e.target.files||[]);
     e.target.value="";
     if(!files.length)return;
     setBusy(true);setNotice(null);
     const success:string[]=[];
+    const published:string[]=[];
+    const warnings:string[]=[];
     const failed:string[]=[];
     for(let i=0;i<files.length;i++){
       const file=files[i];
@@ -69,16 +100,23 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
         const form=new FormData();
         form.append("congressId",congressId);
         form.append("file",file);
+        form.append("publish",publishOnUpload?"true":"false");
         const response=await fetch("/api/documents",{method:"POST",body:form,credentials:"same-origin"});
         const data=await response.json();
         if(!response.ok)throw new Error(data.error||"Không thể tải tệp.");
         success.push(file.name);
+        if(data.published)published.push(file.name);
+        if(data.warning)warnings.push(file.name+": "+data.warning);
       }catch(error){failed.push(file.name+": "+(error instanceof Error?error.message:"Lỗi tải tệp."));}
     }
     setUploadProgress("");setBusy(false);
-    if(failed.length)setNotice({type:"error",message:
-      (success.length?"Đã lưu "+success.length+" tệp. ":"")+"Không tải được: "+failed.slice(0,3).join(" · ")});
-    else setNotice({type:"success",message:"Đã lưu "+success.length+" tài liệu lên Google Drive thành công."});
+         if(failed.length||warnings.length)setNotice({type:"error",message:
+       (success.length?"Đã tải "+success.length+" tệp, công bố "+published.length+" tệp. ":"")+
+       (warnings.length?"Lưu ý: "+warnings.slice(0,3).join(" · ")+". ":"")+
+       (failed.length?"Không tải được: "+failed.slice(0,3).join(" · "):"")});
+     else setNotice({type:"success",message:"Đã tải "+success.length+" tài liệu, công bố "+
+       published.length+" tài liệu cho đại biểu."+
+       (success.length!==published.length?" "+(success.length-published.length)+" tài liệu còn nội bộ; bật Công bố bên dưới để đại biểu xem.":"")});
     if(success.length)router.refresh();
   }
 
@@ -118,7 +156,18 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
        Chỉ cấu hình những biến này trên máy chủ/Vercel, không nhập khóa vào trình duyệt.
       </p>}
      </section>}
-    {canManage&&<label className={`group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[12px] border-2 border-dashed border-[#c4e5df] bg-gradient-to-br from-[#f1fbf8] to-[#f8fbfc] px-5 py-8 text-center transition-colors hover:border-[#66bdb4] hover:bg-[#e9f8f2] sm:py-10 ${busy?"pointer-events-none opacity-60":""}`}>
+    {canManage&&<div className="rounded-xl border border-[#d9e8ee] bg-[#f7fbfd] px-4 py-3">
+       <label className="flex cursor-pointer items-start gap-3">
+         <input type="checkbox" checked={publishOnUpload} disabled={busy||sharing!==null}
+           onChange={event=>setPublishOnUpload(event.target.checked)}
+           className="mt-0.5 h-5 w-5 shrink-0 accent-[#087da9]"/>
+         <span>
+           <strong className="block text-[13px] text-[#22516c]">Công bố ngay cho đại biểu sau khi tải lên</strong>
+           <span className="mt-1 block text-[11px] leading-5 text-[#728c9b]">Mặc định tài liệu là nội bộ. Khi chọn công bố, hệ thống cấp quyền <strong>người có liên kết được xem</strong> trên Google Drive; chỉ bật đối với tệp được phép chia sẻ.</span>
+         </span>
+       </label>
+     </div>}
+     {canManage&&<label className={`group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[12px] border-2 border-dashed border-[#c4e5df] bg-gradient-to-br from-[#f1fbf8] to-[#f8fbfc] px-5 py-8 text-center transition-colors hover:border-[#66bdb4] hover:bg-[#e9f8f2] sm:py-10 ${busy?"pointer-events-none opacity-60":""}`}>
       <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-white text-[#108e8c] shadow-sm"><CloudUpload size={27}/></span>
       <span className="text-base font-semibold text-[#193e4d]">{uploadProgress||"Chạm để chọn một hoặc nhiều tài liệu"}</span>
       <span className="max-w-lg text-xs leading-relaxed text-[#738a98]">Tải nhiều tệp PDF, Word, Excel, PowerPoint hoặc ảnh (tối đa 4 MB/tệp). Website tự lấy liên kết Google Drive và lưu danh sách tên.</span>
@@ -126,16 +175,26 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
     </label>}
 
     {canManage&&docs.length>0&&<section className="rounded-2xl border border-[#cbdfe9] bg-white p-4 sm:p-5">
-      <h2 className="text-[15px] font-extrabold text-[#234e65]">Công bố tài liệu cho đại biểu</h2>
+             <div className="flex flex-wrap items-center justify-between gap-3">
+         <div>
+           <h2 className="text-[15px] font-extrabold text-[#234e65]">Công bố tài liệu cho đại biểu</h2>
+           <p className="mt-1 text-[12px] font-bold text-[#507e90]">{publishedCount}/{docs.length} tệp đã công bố · {unpublished.length} tệp nội bộ</p>
+         </div>
+         {unpublished.length>0&&<button type="button" disabled={sharing!==null||busy}
+           onClick={()=>void publishAll()}
+           className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#087ca8] px-4 text-[12px] font-bold text-white hover:bg-[#06618a] disabled:opacity-50">
+           <ShieldCheck size={15}/>{sharing==="bulk"?"Đang công bố...":"Công bố "+unpublished.length+" tệp nội bộ"}
+         </button>}
+       </div>
       <p className="mt-2 text-[12px] leading-6 text-[#7894a2]">Khi bật công bố, hệ thống đồng thời cấp quyền “Người có đường liên kết được xem” trên Google Drive. Liên kết có thể được chuyển tiếp; chỉ công bố tài liệu được phép chia sẻ.</p>
       <div className="mt-4 grid gap-2 md:grid-cols-2">
        {docs.map(doc=><label key={doc.id} className="flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-[#e2ebee] bg-[#f9fbfc] px-3 py-3">
-        <input type="checkbox" checked={doc.delegate_visible===true} disabled={sharing!==null}
+        <input type="checkbox" checked={isPublished(doc)} disabled={sharing!==null}
          onChange={()=>void toggleShare(doc)} aria-label={"Cho đại biểu xem "+doc.file_name}
          className="h-4 w-4 shrink-0 accent-[#087da9]"/>
         <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#416b7e]">{doc.file_name}</span>
-        <span className={"shrink-0 text-[10px] font-bold "+(doc.delegate_visible?"text-[#177e61]":"text-[#8596a5]")}>
-         {doc.delegate_visible?"Đã công bố":"Nội bộ"}
+        <span className={"shrink-0 text-[10px] font-bold "+(isPublished(doc)?"text-[#177e61]":"text-[#8596a5]")}>
+         {isPublished(doc)?"Đã công bố":"Nội bộ"}
         </span>
        </label>)}
       </div>
@@ -157,8 +216,8 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
            className="group flex min-w-0 items-center gap-3 px-4 py-4 transition-colors hover:bg-[#f3f9fc] sm:px-6">
            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] bg-[#e9f3f9] text-[#187fac]"><Icon size={22}/></span>
            <span className="min-w-0 flex-1 break-words text-[13px] font-bold leading-5 text-[#294c65]">{doc.file_name}</span>
-           <span className={"hidden shrink-0 rounded-full px-3 py-1.5 text-[10px] font-bold sm:inline-flex "+(doc.delegate_visible?"bg-[#e6f6ec] text-[#247756]":"bg-[#edf1f4] text-[#758a97]")}>
-            {doc.delegate_visible?"Đã công bố":"Nội bộ"}
+           <span className={"hidden shrink-0 rounded-full px-3 py-1.5 text-[10px] font-bold sm:inline-flex "+(isPublished(doc)?"bg-[#e6f6ec] text-[#247756]":"bg-[#edf1f4] text-[#758a97]")}>
+            {isPublished(doc)?"Đã công bố":"Nội bộ"}
            </span>
            <ExternalLink size={18} className="shrink-0 text-[#7c9bab] group-hover:text-[#1480aa]"/>
           </a>;

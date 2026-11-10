@@ -65,10 +65,10 @@ export function DelegateDocumentsList({docs,congresses,initialCongressId=""}:{
     </a>;
    })}
   </div>:<div className="flex flex-col items-center px-5 py-12 text-center">
-   {query||congressId?<Search size={32} className="text-[#a0b6c5]"/>:<FolderOpen size={36} className="text-[#a0b6c5]"/>}
-   <h3 className="mt-3 text-[15px] font-bold text-[#3d5877]">{query||congressId?"Không tìm thấy tài liệu phù hợp":"Chưa có tài liệu được công bố"}</h3>
-   <p className="mt-2 text-[12px] leading-6 text-[#8299aa]">{query||congressId?"Thử đổi từ khóa hoặc chọn Đại hội khác.":"Ban Tổ chức sẽ cập nhật tài liệu khi được công bố."}</p>
-   {(query||congressId)&&<button type="button" onClick={()=>{setQuery("");changeCongress("");}}
+   {docs.length>0?<Search size={32} className="text-[#a0b6c5]"/>:<FolderOpen size={36} className="text-[#a0b6c5]"/>}
+   <h3 className="mt-3 text-[15px] font-bold text-[#3d5877]">{docs.length===0?"Chưa có tài liệu được công bố":"Không tìm thấy tài liệu phù hợp"}</h3>
+   <p className="mt-2 text-[12px] leading-6 text-[#8299aa]">{docs.length===0?"Ban Tổ chức chưa công bố tài liệu cho đại biểu tại Đại hội này.":"Thử đổi từ khóa hoặc chọn Đại hội khác."}</p>
+   {docs.length>0&&(query||congressId)&&<button type="button" onClick={()=>{setQuery("");changeCongress("");}}
     className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#c9dce7] px-4 text-xs font-bold text-[#177ca7]">
     <X size={16}/> Xóa bộ lọc
    </button>}
