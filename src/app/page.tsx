@@ -1,135 +1,178 @@
 import Link from "next/link";
 import {
-  ArrowRight, Armchair, BarChart3, Check, ChevronRight,
-  ClipboardList, QrCode, ShieldCheck, Users
+ ArrowRight,Armchair,ArrowUpRight,BarChart3,Check,ChevronRight,
+ ClipboardCheck,Clock3,FileCheck2,LockKeyhole,QrCode,ShieldCheck,
+ Layers3,Users,Workflow
 } from "lucide-react";
 import {BrandMark} from "@/components/brand-mark";
 
-const features=[
-  {icon:Users,title:"Đại biểu",detail:"Hồ sơ và phân quyền"},
-  {icon:QrCode,title:"Điểm danh",detail:"QR và barcode theo phiên"},
-  {icon:Armchair,title:"Sơ đồ ghế",detail:"Bố trí vị trí trực quan"},
-  {icon:BarChart3,title:"Báo cáo",detail:"Theo dõi và tổng hợp"}
+const capabilities=[
+ {number:"01",icon:QrCode,title:"Điểm danh thông minh",
+  detail:"Một mã QR cho từng phiên. Nắm bắt lượt đến, vị trí ghế và trạng thái tham dự."},
+ {number:"02",icon:Armchair,title:"Hội trường trực quan",
+  detail:"Thiết kế sơ đồ theo không gian thực, phân ghế và theo dõi trực tiếp."},
+ {number:"03",icon:Users,title:"Hồ sơ tập trung",
+  detail:"Đại biểu, khách mời và nhân sự BCH được quản lý theo từng Đại hội."},
+ {number:"04",icon:BarChart3,title:"Báo cáo tức thời",
+  detail:"Dữ liệu được tổng hợp thành những con số rõ ràng, sẵn sàng cho điều hành."}
 ] as const;
-
 const stages=[
-  {number:"01",name:"Chuẩn bị",detail:"Đại biểu · Chỗ ngồi"},
-  {number:"02",name:"Điều hành",detail:"Phiên họp · Điểm danh"},
-  {number:"03",name:"Tổng hợp",detail:"Báo cáo · Thống kê"}
+ {number:"01",title:"Chuẩn bị",detail:"Hồ sơ · Hội trường"},
+ {number:"02",title:"Điều hành",detail:"Phiên họp · Điểm danh"},
+ {number:"03",title:"Tổng kết",detail:"Thống kê · Báo cáo"}
 ] as const;
 
 export default function Home(){
-  return <main className="landing-page min-h-dvh overflow-x-hidden">
-    <a href="#noi-dung-chinh" className="skip-link">Bỏ qua điều hướng</a>
+ return <main className="landing-page min-h-dvh overflow-x-hidden">
+  <a href="#noi-dung-chinh" className="skip-link">Bỏ qua điều hướng</a>
+  <header className="landing-header">
+   <div className="landing-container flex h-full items-center justify-between gap-4">
+    <Link href="/" aria-label="Đại hội số — Trang chủ" className="landing-wordmark flex min-w-0 items-center gap-3">
+     <BrandMark className="landing-logo"/>
+     <span className="min-w-0 leading-tight">
+      <span className="block text-[17px] font-extrabold tracking-[-.05em] text-[#102f46]">Đại hội số<span className="text-[#cf9b4b]">.</span></span>
+      <span className="mt-1 block text-[9px] font-bold uppercase tracking-[.17em] text-[#6f8694]">Không gian Đoàn – Hội</span>
+     </span>
+    </Link>
+    <nav aria-label="Điều hướng chính" className="flex shrink-0 items-center gap-4 sm:gap-7">
+     <a href="#chuc-nang" className="hidden text-[12px] font-semibold text-[#546f7e] transition-colors hover:text-[#035d86] sm:block">Giải pháp</a>
+     <a href="#quy-trinh" className="hidden text-[12px] font-semibold text-[#546f7e] transition-colors hover:text-[#035d86] md:block">Quy trình</a>
+     <Link href="/preview" className="hidden text-[12px] font-semibold text-[#546f7e] transition-colors hover:text-[#035d86] lg:block">Trải nghiệm</Link>
+     <Link href="/login" className="landing-nav-action">Đăng nhập <ArrowUpRight size={16} aria-hidden="true"/></Link>
+    </nav>
+   </div>
+  </header>
 
-    <header className="landing-header">
-      <div className="landing-container flex h-full items-center justify-between gap-4">
-        <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Đại hội số - Trang chủ">
-          <BrandMark className="landing-logo"/>
-          <span className="flex min-w-0 flex-col leading-tight">
-            <span className="text-[18px] font-extrabold tracking-[-.035em] text-[#073c5e]">Đại hội số<span className="text-[#ecb932]">.</span></span>
-            <span className="mt-1 text-[9px] font-bold uppercase tracking-[.14em] text-[#6c8799]">Nền tảng điều hành Đại hội</span>
-          </span>
-        </Link>
-        <nav aria-label="Điều hướng chính" className="flex shrink-0 items-center gap-3 sm:gap-7">
-          <a href="#chuc-nang" className="hidden text-[13px] font-medium text-[#587086] transition-colors hover:text-[#006d9e] sm:block">Chức năng</a>
-          <Link href="/preview" className="hidden text-[13px] font-medium text-[#587086] transition-colors hover:text-[#006d9e] md:block">Giao diện mẫu</Link>
-          <Link href="/login" className="landing-nav-action">
-            Đăng nhập <ArrowRight size={15} aria-hidden="true"/>
-          </Link>
-        </nav>
+  <section id="noi-dung-chinh" className="landing-hero">
+   <div className="landing-hero-glow" aria-hidden="true"/>
+   <div className="landing-container landing-hero-grid">
+    <div className="landing-intro">
+     <div className="landing-kicker"><span aria-hidden="true"/> NỀN TẢNG ĐIỀU HÀNH ĐẠI HỘI ĐOÀN – HỘI</div>
+     <h1 className="landing-heading">Mỗi kỳ Đại hội.<span>Một dấu ấn</span><em>trọn vẹn.</em></h1>
+     <p className="landing-lead">Từ chuẩn bị đại biểu đến vận hành hội trường — mọi quy trình được kết nối trong một không gian chỉn chu, hiện đại và đáng tin cậy.</p>
+     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+      <Link href="/login" className="landing-cta-primary">Vào không gian điều hành <ArrowRight size={18} aria-hidden="true"/></Link>
+      <Link href="/preview" className="landing-cta-secondary">Khám phá giao diện <ChevronRight size={18} aria-hidden="true"/></Link>
+     </div>
+     <div className="landing-assurance">
+      <span className="landing-assurance-mark"><ShieldCheck size={16} aria-hidden="true"/></span>
+      <span>Phân quyền theo vai trò <span aria-hidden="true" className="mx-2 text-[#b5c4c9]">·</span> Đồng bộ theo từng phiên Đại hội</span>
+     </div>
+     <div className="landing-hero-footnote" aria-label="Những điểm nổi bật">
+      <div><strong>01</strong><span>Nền tảng thống nhất</span></div>
+      <div><strong>03</strong><span>Giai đoạn vận hành</span></div>
+      <div><strong>24/7</strong><span>Truy cập đa thiết bị</span></div>
+     </div>
+    </div>
+
+    <aside className="landing-preview" aria-label="Minh họa giao diện điều hành Đại hội số">
+     <div className="landing-preview-window">
+      <div className="landing-preview-top">
+       <span className="flex items-center gap-2.5">
+        <span className="landing-preview-dots" aria-hidden="true"><i/><i/><i/></span>
+        <span className="text-[10px] font-bold tracking-[.025em] text-[#557184]">Đại hội số / Bảng điều hành</span>
+       </span>
+       <span className="landing-preview-label">DEMO VIEW</span>
       </div>
-    </header>
-
-    <section id="noi-dung-chinh" className="landing-hero">
-      <div className="landing-container landing-hero-grid">
-        <div className="landing-intro">
-          <p className="landing-kicker"><span aria-hidden="true"/> DÀNH CHO ĐẠI HỘI ĐOÀN – HỘI</p>
-          <h1 className="landing-heading">
-            Tổ chức Đại hội.<span>Điều hành tập trung.</span>
-          </h1>
-          <p className="landing-lead">
-            Quản lý đại biểu, điểm danh QR, sơ đồ chỗ ngồi và báo cáo — tất cả trong một hệ thống.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link href="/login" className="landing-cta-primary">
-              Truy cập hệ thống <ArrowRight size={18} aria-hidden="true"/>
-            </Link>
-            <Link href="/preview" className="landing-cta-secondary">
-              Xem giao diện mẫu <ChevronRight size={18} aria-hidden="true"/>
-            </Link>
-          </div>
-          <p className="landing-assurance"><ShieldCheck size={17} aria-hidden="true"/> Truy cập theo tài khoản và vai trò được cấp.</p>
+      <div className="landing-preview-body">
+       <div className="landing-preview-masthead">
+        <div className="min-w-0">
+         <p className="landing-preview-eyebrow"><span className="h-1.5 w-1.5 rounded-full bg-[#82dcc3]"/> KHÔNG GIAN ĐIỀU HÀNH</p>
+         <h2 className="mt-3 text-[clamp(18px,2vw,25px)] font-extrabold tracking-[-.04em] text-white">Tổng quan Đại hội</h2>
+         <p className="mt-1 text-[10px] text-[#bdcddd]">Trực quan. Đồng bộ. Chủ động.</p>
         </div>
-
-        <aside className="landing-preview" aria-label="Minh họa giao diện điều hành">
-          <div className="landing-preview-top">
-            <div className="flex items-center gap-2">
-              <span className="landing-preview-dot" aria-hidden="true"/>
-              <span className="text-[11px] font-bold tracking-[.02em] text-[#194761]">Bảng điều hành</span>
-            </div>
-            <span className="landing-preview-label">Giao diện minh họa</span>
-          </div>
-          <div className="landing-preview-body">
-            <div className="mb-6 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#61869c]">Không gian làm việc</p>
-                <h2 className="mt-2 text-[21px] font-bold tracking-[-.04em] text-[#153d59]">Tổng quan Đại hội</h2>
-              </div>
-              <span className="landing-preview-pill"><span className="h-1.5 w-1.5 rounded-full bg-[#189369]"/> Chuẩn bị</span>
-            </div>
-
-            <div className="landing-preview-overview">
-              <div className="landing-stage-list">
-                {stages.map((stage,index)=><div className="landing-stage" key={stage.number}>
-                  <span className={"landing-stage-icon "+(index===0?"is-active":"")}>
-                    {index===0?<Check size={16} aria-hidden="true"/>:<span>{stage.number}</span>}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-bold text-[#24465c]">{stage.name}</p>
-                    <p className="mt-1 text-[11px] text-[#6c8596]">{stage.detail}</p>
-                  </div>
-                </div>)}
-              </div>
-              <div className="landing-seating">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold text-[#385870]">Sơ đồ hội trường</span>
-                  <Armchair size={16} className="text-[#5689a4]" aria-hidden="true"/>
-                </div>
-                <div className="landing-stage-platform">SÂN KHẤU</div>
-                <div className="landing-seat-grid" aria-hidden="true">
-                  {Array.from({length:48},(_,index)=><span key={index} className={"landing-seat "+(index%11===0?"is-gold":index%7===0?"is-muted":"")}/>)}
-                </div>
-                <p className="mt-3 text-center text-[10px] text-[#7c98aa]">Phân ghế theo từng vị trí</p>
-              </div>
-            </div>
-            <div className="landing-preview-footer">
-              <ClipboardList size={16} aria-hidden="true"/>
-              <span>Thông tin được tổ chức theo từng Đại hội</span>
-              <Check size={15} className="ml-auto text-[#198d70]" aria-hidden="true"/>
-            </div>
-          </div>
-        </aside>
+        <span className="landing-preview-live"><span className="h-1.5 w-1.5 rounded-full bg-[#78e9bd]"/> Trạng thái mẫu</span>
+       </div>
+       <div className="landing-preview-stats">
+        <div><span>TỔNG ĐẠI BIỂU</span><strong>200</strong><small>Hồ sơ dự kiến</small></div>
+        <div><span>ĐÃ THAM DỰ</span><strong>158</strong><small>Minh họa tiến độ</small></div>
+        <div><span>TỶ LỆ</span><strong>79<em>%</em></strong><small>Cập nhật theo phiên</small></div>
+       </div>
+       <div className="landing-preview-progress" aria-label="Thanh tỷ lệ tham dự minh họa 79 phần trăm"><span/></div>
+       <div className="landing-preview-board">
+        <div className="landing-preview-board-head">
+         <div><p className="text-[9px] font-extrabold tracking-[.14em] text-[#438093]">SƠ ĐỒ HỘI TRƯỜNG</p><p className="mt-1 text-[12px] font-bold text-[#244c60]">Vị trí đại biểu</p></div>
+         <span className="landing-preview-board-status"><Check size={12}/> Đồng bộ</span>
+        </div>
+        <div className="landing-preview-stage">SÂN KHẤU</div>
+        <div className="landing-preview-aisle" aria-hidden="true">
+         {Array.from({length:72},(_,i)=><span key={i} className={i%12===5||i%12===6?"is-aisle":i%8===0||i%13===0?"is-empty":i%4===0?"is-arrived":"is-seat"}/>)}
+        </div>
+        <div className="landing-preview-legend">
+         <span><i className="is-arrived"/> Đã đến</span><span><i className="is-seat"/> Chưa đến</span><span><i className="is-aisle"/> Lối đi</span>
+        </div>
+       </div>
       </div>
-    </section>
-
-    <section id="chuc-nang" className="landing-features" aria-label="Chức năng chính">
-      <div className="landing-container grid grid-cols-2 gap-x-4 gap-y-8 py-8 sm:py-10 lg:grid-cols-4 lg:gap-8">
-        {features.map(feature=><div key={feature.title} className="landing-feature">
-          <span className="landing-feature-icon"><feature.icon size={21} strokeWidth={1.8} aria-hidden="true"/></span>
-          <div className="min-w-0">
-            <h3 className="text-[14px] font-bold text-[#183e57]">{feature.title}</h3>
-            <p className="mt-1 text-[12px] leading-[1.6] text-[#6a8090]">{feature.detail}</p>
-          </div>
-        </div>)}
+      <div className="landing-preview-statusbar">
+       <span className="inline-flex items-center gap-2"><ShieldCheck size={13}/> Giao diện minh họa — không phải dữ liệu thật</span>
+       <span className="hidden sm:inline-flex items-center gap-1"><Clock3 size={13}/> Theo phiên</span>
       </div>
-    </section>
+     </div>
+     <div className="landing-floating-ticket" aria-hidden="true">
+      <span className="landing-floating-icon"><ClipboardCheck size={18}/></span>
+      <div><strong>Điểm danh QR</strong><span>Ghi nhận tức thời</span></div>
+      <span className="landing-floating-check"><Check size={15}/></span>
+     </div>
+     <div className="landing-preview-ornament" aria-hidden="true">ĐẠI<br/>HỘI</div>
+    </aside>
+   </div>
+   <div className="landing-container"><div className="landing-hero-bottomline"><span>THIẾT KẾ CHO NHỮNG KỲ ĐẠI HỘI CHỈN CHU</span><span>ĐOÀN TNCS HỒ CHÍ MINH · HỘI SINH VIÊN VIỆT NAM</span></div></div>
+  </section>
 
-    <footer className="landing-footer">
-      <div className="landing-container flex flex-col justify-between gap-2 py-5 text-[11px] text-[#7890a0] sm:flex-row sm:items-center">
-        <span>Đại hội số · Nền tảng phục vụ công tác Đại hội Đoàn – Hội</span>
-        <span>Gọn gàng. Rõ ràng. Hiệu quả.</span>
+  <section id="chuc-nang" className="landing-features" aria-label="Chức năng chính">
+   <div className="landing-container py-16 sm:py-20">
+    <div className="landing-section-heading">
+     <div><p className="landing-section-kicker"><Layers3 size={15}/> GIẢI PHÁP TOÀN DIỆN</p>
+      <h2>Đại hội được vận hành<br/><span>theo cách thông minh hơn.</span></h2></div>
+     <p>Không rời rạc giữa các công cụ. Mọi thao tác có cùng một luồng làm việc rõ ràng cho Ban Tổ chức và đại biểu.</p>
+    </div>
+    <div className="landing-capability-grid">
+     {capabilities.map((feature,index)=><article key={feature.number} className={"landing-capability "+(index===0?"landing-capability-featured":"")}>
+      <div className="landing-capability-top">
+       <span className="landing-capability-icon"><feature.icon size={23} strokeWidth={1.7} aria-hidden="true"/></span>
+       <span className="landing-capability-index">{feature.number} / 04</span>
       </div>
-    </footer>
-  </main>;
+      <h3>{feature.title}</h3>
+      <p>{feature.detail}</p>
+      <span className="landing-capability-rule" aria-hidden="true"/>
+     </article>)}
+    </div>
+   </div>
+  </section>
+
+  <section id="quy-trinh" className="landing-process">
+   <div className="landing-container landing-process-layout">
+    <div className="landing-process-intro">
+     <span className="landing-process-label"><Workflow size={15}/> MỘT DÒNG CHẢY XUYÊN SUỐT</span>
+     <h2>Từ kế hoạch<br/>đến thành công.</h2>
+     <p>Ba giai đoạn. Một hệ thống vận hành nhất quán từ trước, trong và sau Đại hội.</p>
+     <Link href="/preview" className="landing-process-link">Khám phá trải nghiệm <ArrowUpRight size={17}/></Link>
+    </div>
+    <div className="landing-process-list">
+     {stages.map((stage,index)=><div className="landing-process-step" key={stage.number}>
+      <span className="landing-process-number">{stage.number}</span>
+      <div className="min-w-0"><h3>{stage.title}</h3><p>{stage.detail}</p></div>
+      <span className="landing-process-indicator">{index===2?<FileCheck2 size={18}/>:<ArrowUpRight size={18}/>}</span>
+     </div>)}
+    </div>
+   </div>
+  </section>
+
+  <section className="landing-final">
+   <div className="landing-container">
+    <div className="landing-final-panel">
+     <div><span className="landing-final-kicker"><LockKeyhole size={14}/> KHÔNG GIAN RIÊNG CHO ĐẠI HỘI</span>
+      <h2>Chuẩn mực trong tổ chức.<br/><em>Ấn tượng trong trải nghiệm.</em></h2>
+     </div>
+     <Link href="/login" className="landing-final-button">Truy cập Đại hội số <ArrowRight size={18}/></Link>
+    </div>
+   </div>
+  </section>
+  <footer className="landing-footer">
+   <div className="landing-container flex flex-col justify-between gap-3 py-6 text-[11px] sm:flex-row sm:items-center">
+    <span>© Đại hội số · Nền tảng điều hành Đại hội Đoàn – Hội</span>
+    <span className="flex items-center gap-2"><ShieldCheck size={14}/> Truy cập theo tài khoản được cấp quyền</span>
+   </div>
+  </footer>
+ </main>;
 }

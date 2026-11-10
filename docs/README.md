@@ -29,6 +29,7 @@
 | Quản lý thông tin, ảnh đại biểu | [Ảnh đại biểu](tinh-nang/dai-bieu/DAI-BIEU-ANH.md) |
 | Thống kê giới tính, ngày sinh của người điểm danh | [Phân tích chất lượng đại biểu V15](tinh-nang/dai-bieu/PHAN-TICH-CHAT-LUONG-DAI-BIEU-V15.md) |
 | Nhân sự BCH và ảnh hồ sơ | [Danh sách trích ngang BCH](tinh-nang/nhan-su/NHAN-SU-BCH.md) |
+| **Giao diện Editorial V33 — nghiên cứu repo UI, trang chủ và dashboard** | [Hướng dẫn thiết kế V33](huong-dan/GIAO-DIEN-EDITORIAL-V33.md) |
 | Thiết kế trên điện thoại và máy tính | [Responsive UI](giao-dien/RESPONSIVE-UI.md) |
 | Nhận diện thương hiệu | [Giao diện hiện hành](giao-dien/GIAO-DIEN-HIEN-HANH.md) |
 | Tra cứu thiết kế/giải pháp của các bản cũ | [Lịch sử phiên bản](lich-su/README.md) và [bản lưu README gốc](lich-su/README-GOC-2026-11-09.md) |

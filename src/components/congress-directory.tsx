@@ -1,6 +1,7 @@
 "use client";
 import {useMemo,useState} from "react";
 import Link from "next/link";
+import {BrandMark} from "@/components/brand-mark";
 import {ArrowUpRight,CalendarDays,LayoutGrid,MapPin,Search,SlidersHorizontal} from "lucide-react";
 
 export type CongressSummary={
@@ -54,22 +55,23 @@ export function CongressDirectory({items}:{items:CongressSummary[]}){
         <div role="group" aria-label="Lọc trạng thái Đại hội" className="flex max-w-full gap-1 overflow-x-auto">
           {filters.map(item=><button key={item.value} type="button"
             aria-pressed={filter===item.value} onClick={()=>setFilter(item.value)}
-            className={"min-h-9 shrink-0 rounded-[7px] px-3 text-[11px] font-semibold transition-colors "+
-              (filter===item.value?"bg-[#eaf0ff] text-[#2454b5]":"text-[#718094] hover:bg-[#f5f7fa]")}>
+            className={"directory-filter min-h-10 shrink-0 rounded-xl px-3 text-[11px] font-semibold transition-colors "+
+              (filter===item.value?"bg-[#e4f2f3] text-[#006c91]":"text-[#718094] hover:bg-[#f5f7fa]")}>
             {item.label}
           </button>)}
         </div>
       </div>
 
-      {matches.length?matches.map(item=>{
+      {matches.length?matches.map((item,index)=>{
         const state=states[item.status];
         return <Link key={item.id} href={"/congresses/"+item.id}
-          className="group flex min-w-0 flex-col gap-3 border-b border-[#edf0f4] px-4 py-4 transition-colors last:border-b-0 hover:bg-[#fafbfd] sm:flex-row sm:items-center sm:gap-5 sm:px-5 sm:py-5">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[9px] border border-[#e5eaf0] bg-[#f4f7fa] text-[#527099]">
-            <LayoutGrid size={20} strokeWidth={1.8}/>
+          className="directory-row group flex min-w-0 flex-col gap-3 border-b border-[#edf0f4] px-4 py-4 transition-colors last:border-b-0 hover:bg-[#fafbfd] sm:flex-row sm:items-center sm:gap-5 sm:px-5 sm:py-5">
+          <span className="directory-kind-mark flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#e5eaf0] bg-[#f4f7fa]">
+            <BrandMark kind={item.kind} className="!h-10 !w-10 !flex-[0_0_40px] !rounded-[9px] !border-0 !p-1"/>
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="line-clamp-2 text-[14px] font-bold leading-6 text-[#27364c] group-hover:text-[#007eb8]">{item.name}</h3>
+            <span className="directory-row-index">ĐẠI HỘI {String(index+1).padStart(2,"0")}</span>
+             <h3 className="mt-1 line-clamp-2 text-[14px] font-bold leading-6 text-[#27364c] group-hover:text-[#007eb8]">{item.name}</h3>
             <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-[#8793a2]">
               <span>{item.kind==="doan"?"Đoàn TNCS Hồ Chí Minh":"Hội Sinh viên Việt Nam"}</span>
               {item.term&&<span className="inline-flex items-center gap-1"><CalendarDays size={12}/>{item.term}</span>}

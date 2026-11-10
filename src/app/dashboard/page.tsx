@@ -44,20 +44,47 @@ export default async function Dashboard(){
   ];
 
   return <AppShell name={profile?.full_name||user.email||""}>
-    <section className="command-hero mb-7 px-6 py-7 sm:px-9 sm:py-9 xl:px-10 xl:py-10" aria-label="Trung tâm điều hành">
-      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-        <div>
-          <p className="command-label">HỆ THỐNG ĐIỀU HÀNH / TỔNG QUAN</p>
-          <h1 className="mt-4 text-[clamp(29px,3vw,39px)] font-semibold leading-[1.16] tracking-[-.052em] text-white">Một không gian.<br/>
-            <span className="font-sans font-semibold not-italic tracking-[-.025em] text-[#ffde7c]">Mọi kỳ Đại hội.</span></h1>
-          <p className="mt-4 max-w-[630px] text-[13px] leading-[1.8] text-[#b6c6dc]">Quản lý thông tin và tình trạng các Đại hội trong cùng một hệ thống, thuận tiện cho việc phối hợp công tác.</p>
-        </div>
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="hidden border-l border-white/20 pl-4 text-[11px] text-[#bdcce0] xl:block">
-            <span className="block text-[10px] uppercase tracking-[.12em] text-[#d9bd88]">ĐẠI HỘI TRONG HỆ THỐNG</span>
-            <strong className="mt-2 block text-[33px] font-semibold leading-none tabular-nums text-white">{items.length.toLocaleString("vi-VN")}</strong>
+    <section className="command-hero dashboard-command-hero mb-7 px-5 py-7 sm:px-8 sm:py-9 xl:px-10 xl:py-11" aria-label="Trung tâm điều hành">
+      <div className="dashboard-hero-layout">
+        <div className="relative z-10 min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="command-label">TRUNG TÂM ĐIỀU HÀNH / DASHBOARD</p>
+            <span className="dashboard-hero-dot"><span/> Hệ thống Đại hội</span>
           </div>
-          {canCreate&&<a href="#tao-dai-hoi" className="btn command-action shrink-0"><Plus size={17}/> Tạo Đại hội mới</a>}
+          <h1 className="mt-5 text-[clamp(29px,3.65vw,49px)] font-extrabold leading-[1.2] tracking-[-.05em] text-white">
+            Tất cả Đại hội.<br/>
+            <span className="text-[#f3d89e]">Trong tầm điều hành.</span>
+          </h1>
+          <p className="mt-4 max-w-[510px] text-[13px] leading-[1.9] text-[#c5dce4]">
+            Một trung tâm quản lý xuyên suốt — từ chuẩn bị, điều hành đến tổng kết từng kỳ Đại hội.
+          </p>
+          <div className="mt-7 flex flex-wrap gap-2.5">
+            {canCreate&&<a href="#tao-dai-hoi" className="btn command-action shrink-0"><Plus size={17}/> Tạo Đại hội mới</a>}
+            {items.length>0&&<Link href={"/congresses/"+items[0].id}
+              className="dashboard-hero-secondary inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 text-[12px] font-bold text-white transition hover:bg-white/20">
+              Mở Đại hội gần nhất <ArrowRight size={15}/>
+            </Link>}
+          </div>
+        </div>
+        <div className="dashboard-ops-panel" aria-label="Tình hình các Đại hội">
+          <div className="flex items-center justify-between gap-3">
+            <span className="dashboard-ops-label"><Activity size={15}/> TÌNH HÌNH VẬN HÀNH</span>
+            <span className="dashboard-ops-live"><span/> Cập nhật</span>
+          </div>
+          <div className="dashboard-ops-value">
+            <strong>{items.length.toLocaleString("vi-VN")}</strong>
+            <span>Đại hội được quản lý</span>
+          </div>
+          <div className="dashboard-ops-track" aria-label="Tỷ trọng trạng thái Đại hội">
+            <span style={{width:(items.length?live/items.length*100:0)+"%"}} className="is-live"/>
+            <span style={{width:(items.length?preparing/items.length*100:0)+"%"}} className="is-preparing"/>
+            <span style={{width:(items.length?completed/items.length*100:0)+"%"}} className="is-completed"/>
+          </div>
+          <div className="dashboard-ops-breakdown">
+            <div><span className="dashboard-ops-bullet is-live"/><span>Đang diễn ra</span><strong>{live}</strong></div>
+            <div><span className="dashboard-ops-bullet is-preparing"/><span>Đang chuẩn bị</span><strong>{preparing}</strong></div>
+            <div><span className="dashboard-ops-bullet is-completed"/><span>Đã kết thúc</span><strong>{completed}</strong></div>
+          </div>
         </div>
       </div>
     </section>

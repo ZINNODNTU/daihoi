@@ -107,7 +107,7 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
    </section>
   </>}
   <nav aria-label="Điều hướng trên điện thoại"
-   className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-0.5 border-t border-[#dce5ee] bg-white/98 px-1.5 pb-[max(.55rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-7px_26px_rgba(18,45,76,.075)] lg:hidden print:hidden">
+   className="delegate-tabbar fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-0.5 border-t border-[#dce5ee] bg-white/98 px-1.5 pb-[max(.55rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-7px_26px_rgba(18,45,76,.075)] lg:hidden print:hidden">
    {primaryLinks.map(({href,mobile,icon:Icon})=>{
     const active=path===href;
     return <Link key={href} href={href} prefetch={false} aria-current={active?"page":undefined}
