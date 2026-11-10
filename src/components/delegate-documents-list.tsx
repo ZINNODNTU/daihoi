@@ -1,7 +1,8 @@
 "use client";
-import {useMemo,useState} from "react";
+import {useCallback,useMemo,useState} from "react";
 import {BookOpen,ExternalLink,FileImage,FileSpreadsheet,FileText,FolderOpen,Presentation,Search,X} from "lucide-react";
 import type {DocRow} from "@/lib/types";
+import {GoogleDrivePdfViewer} from "@/components/google-drive-pdf-viewer";
 
 type CongressOption={id:string;name:string};
 const normalize=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
@@ -17,6 +18,8 @@ export function DelegateDocumentsList({docs,congresses,initialCongressId=""}:{
  const [query,setQuery]=useState("");
  const [congressId,setCongressId]=useState(initialCongressId);
  const [limit,setLimit]=useState(24);
+ const [selected,setSelected]=useState<DocRow|null>(null);
+ const closeViewer=useCallback(()=>setSelected(null),[]);
  const names=useMemo(()=>new Map(congresses.map(item=>[item.id,item.name])),[congresses]);
  const visible=useMemo(()=>{
   const q=normalize(query);
@@ -53,16 +56,22 @@ export function DelegateDocumentsList({docs,congresses,initialCongressId=""}:{
   {visible.length?<div className="grid gap-2 p-3 sm:grid-cols-2 sm:p-5">
    {visible.slice(0,limit).map(doc=>{
     const Icon=fileIcon(doc.mime_type);
-    return <a key={doc.id} href={"/api/documents/"+doc.id} target="_blank"
-     rel="noopener noreferrer" aria-label={"Mở "+doc.file_name+" trên Google Drive"}
-     className="group flex min-h-[76px] min-w-0 items-center gap-3 rounded-xl border border-[#e1eaf0] bg-[#fbfdfe] px-3.5 py-3.5 transition-colors hover:border-[#a8cadc] hover:bg-[#eef7fb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#147aa5]">
+    const card=<>
      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#e8f2f9] text-[#237eaa]"><Icon size={23}/></span>
-     <span className="min-w-0 flex-1">
+     <span className="min-w-0 flex-1 text-left">
       <span className="block break-words text-[13px] font-bold leading-[1.5] text-[#284660]">{doc.file_name}</span>
       <span className="mt-1 block break-words text-[11px] leading-4 text-[#708da0]">{names.get(doc.congress_id)||"Đại hội"}</span>
      </span>
-     <ExternalLink size={18} className="shrink-0 text-[#7a9aab] group-hover:text-[#177ca7]"/>
-    </a>;
+     {doc.mime_type==="application/pdf"?<BookOpen size={18} className="shrink-0 text-[#7a9aab] group-hover:text-[#177ca7]"/>:
+      <ExternalLink size={18} className="shrink-0 text-[#7a9aab] group-hover:text-[#177ca7]"/>}
+    </>;
+    const cardClass="group flex min-h-[76px] w-full min-w-0 items-center gap-3 rounded-xl border border-[#e1eaf0] bg-[#fbfdfe] px-3.5 py-3.5 text-left transition-colors hover:border-[#a8cadc] hover:bg-[#eef7fb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#147aa5]";
+    return doc.mime_type==="application/pdf"?
+     <button type="button" key={doc.id} onClick={()=>setSelected(doc)}
+      aria-label={"Xem PDF "+doc.file_name+" trên website"} className={cardClass}>{card}</button>:
+     <a key={doc.id} href={"/api/documents/"+doc.id} target="_blank"
+      rel="noopener noreferrer" aria-label={"Mở "+doc.file_name+" trên Google Drive"}
+      className={cardClass}>{card}</a>;
    })}
   </div>:<div className="flex flex-col items-center px-5 py-12 text-center">
    {docs.length>0?<Search size={32} className="text-[#a0b6c5]"/>:<FolderOpen size={36} className="text-[#a0b6c5]"/>}
@@ -80,7 +89,9 @@ export function DelegateDocumentsList({docs,congresses,initialCongressId=""}:{
    </button>
   </div>}
   <p className="flex items-center justify-center gap-2 border-t border-[#e8eef2] bg-[#f8fbfd] px-4 py-3 text-center text-[11px] text-[#718e9f]">
-   <BookOpen size={15}/> Chọn một tệp để xem trên Google Drive
+   <BookOpen size={15}/> Chọn tệp PDF để đọc ngay trên website bằng Google Drive
   </p>
+  {selected&&<GoogleDrivePdfViewer documentId={selected.id} fileName={selected.file_name}
+   congressName={names.get(selected.congress_id)} onClose={closeViewer}/>}
  </section>;
 }

@@ -3,3 +3,7 @@ export function googleDriveFileUrl(fileId:string){
  if(!GOOGLE_FILE_ID.test(fileId))throw new Error("Mã tài liệu Google Drive không hợp lệ.");
  return "https://drive.google.com/file/d/"+encodeURIComponent(fileId)+"/view";
 }
+export function googleDrivePreviewUrl(fileId:string){
+ if(!GOOGLE_FILE_ID.test(fileId))throw new Error("Mã tài liệu Google Drive không hợp lệ.");
+ return "https://drive.google.com/file/d/"+encodeURIComponent(fileId)+"/preview";
+}

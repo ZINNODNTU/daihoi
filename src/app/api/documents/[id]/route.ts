@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
-import {googleDriveFileUrl} from "@/lib/drive-links";
+import {googleDriveFileUrl,googleDrivePreviewUrl} from "@/lib/drive-links";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -14,7 +14,7 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
  if(!user)return fail(401,"Cần đăng nhập.");
  const db=createAdminClient();
  const {data:doc,error}=await db.from("documents")
-  .select("id,congress_id,drive_file_id,delegate_visible")
+  .select("id,congress_id,drive_file_id,mime_type,delegate_visible")
   .eq("id",id).maybeSingle();
  if(error||!doc)return fail(404,"Không tìm thấy tài liệu.");
  const staff=await hasRole(supabase,user.id,doc.congress_id,"viewer");
@@ -32,8 +32,11 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
    }
  }
  try{
-  const destination=googleDriveFileUrl(doc.drive_file_id);
-  // Chỉ chuyển hướng qua link Google Drive; không truyền byte tài liệu qua Vercel.
+  const preview=new URL(_request.url).searchParams.get("preview")==="1";
+  if(preview&&doc.mime_type!=="application/pdf")
+   return fail(415,"Trình xem chỉ hỗ trợ PDF. Hãy mở tệp trực tiếp trên Google Drive.");
+  const destination=preview?googleDrivePreviewUrl(doc.drive_file_id):googleDriveFileUrl(doc.drive_file_id);
+  // Google phục vụ tệp trực tiếp: Vercel chỉ kiểm tra quyền và chuyển hướng.
   const response=NextResponse.redirect(destination,302);
   response.headers.set("Cache-Control","private, no-store");
   response.headers.set("Referrer-Policy","no-referrer");

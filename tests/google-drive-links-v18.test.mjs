@@ -1,18 +1,22 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {googleDriveFileUrl} from "../src/lib/drive-links.ts";
+import {googleDriveFileUrl,googleDrivePreviewUrl} from "../src/lib/drive-links.ts";
 import {serializeSignedPayload} from "../src/lib/drive-signature.ts";
 const read=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 
 test("Đường dẫn Google Drive chỉ sinh từ ID file hợp lệ, không cho redirect tùy ý",()=>{
  assert.equal(googleDriveFileUrl("1AbCdEfGh12345_-"),
   "https://drive.google.com/file/d/1AbCdEfGh12345_-/view");
- for(const id of ["https://evil.example","../../etc/passwd","id?evil=1","", "a".repeat(250)])
+ assert.equal(googleDrivePreviewUrl("1AbCdEfGh12345_-"),
+  "https://drive.google.com/file/d/1AbCdEfGh12345_-/preview");
+ for(const id of ["https://evil.example","../../etc/passwd","id?evil=1","", "a".repeat(250)]){
   assert.throws(()=>googleDriveFileUrl(id));
+  assert.throws(()=>googleDrivePreviewUrl(id));
+ }
 });
 
-test("Đại biểu chỉ xem tên/icon/số file, nhấn sẽ chuyển sang Drive trong tab khác",()=>{
+test("Đại biểu đọc PDF qua Google Drive Preview trên web, file cũ mở Drive dự phòng",()=>{
  const page=read("../src/app/my-card/documents/page.tsx");
   const list=read("../src/components/delegate-documents-list.tsx");
  assert.match(page,/getPortalCongressContext/);
@@ -23,10 +27,19 @@ test("Đại biểu chỉ xem tên/icon/số file, nhấn sẽ chuyển sang Dri
  assert.match(list,/icon=|fileIcon\(doc\.mime_type\)/);
  assert.match(list,/href=\{"\/api\/documents\/"\+doc\.id\}/);
  assert.match(list,/target="_blank"/);
+ assert.match(list,/GoogleDrivePdfViewer/);
+ assert.match(list,/setSelected\(doc\)/);
+ const viewer=read("../src/components/google-drive-pdf-viewer.tsx");
+ assert.match(viewer,/\?preview=1/);
+ assert.match(viewer,/<iframe/);
+ assert.match(viewer,/Mở trên Google Drive/);
  assert.doesNotMatch(list,/Download|Tải về|inline=1/);
  const redirect=read("../src/app/api/documents/[id]/route.ts");
  assert.match(redirect,/NextResponse\.redirect\(destination,302\)/);
  assert.match(redirect,/googleDriveFileUrl\(doc\.drive_file_id\)/);
+ assert.match(redirect,/googleDrivePreviewUrl\(doc\.drive_file_id\)/);
+ assert.match(redirect,/searchParams\.get\("preview"\)/);
+ assert.match(redirect,/mime_type!=="application\/pdf"/);
  assert.match(redirect,/hasRole\(supabase,user\.id,doc\.congress_id,"viewer"\)/);
  assert.match(redirect,/if\(!doc\.delegate_visible\)/);
  assert.match(redirect,/\.eq\("auth_user_id",user\.id\)/);

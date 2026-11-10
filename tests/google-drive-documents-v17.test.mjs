@@ -87,5 +87,5 @@ test("Chỉ BTC được đăng tải và quản lý; đại biểu chỉ xem t�
  assert.match(ui,/documents\/status/);
  assert.match(ui,/Kiểm tra lại/);
  assert.match(ui,/Công bố tài liệu cho đại biểu/);
- assert.match(ui,/\.pptx/);
+assert.match(ui,/accept="\.pdf,application\/pdf"/);
 });

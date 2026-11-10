@@ -4,6 +4,7 @@ import {ChangeEvent,useCallback,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
 import {CloudUpload,ExternalLink,FileImage,FileSpreadsheet,FileText,FolderOpen,Search,ShieldCheck,RefreshCw,Cloud,AlertCircle,CheckCircle2,Presentation} from "lucide-react";
 import type {DocRow} from "@/lib/types";
+import {GoogleDrivePdfViewer} from "@/components/google-drive-pdf-viewer";
 
 const MAX_FILE_BYTES=4*1024*1024;
 type DriveStatus={ready:boolean;rootName?:string;reason?:string;missing?:string[];message:string};
@@ -17,6 +18,8 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
   const [busy,setBusy]=useState(false);
   const [notice,setNotice]=useState<{type:"error"|"success";message:string}|null>(null);
   const [query,setQuery]=useState("");
+  const [previewDoc,setPreviewDoc]=useState<DocRow|null>(null);
+  const closeViewer=useCallback(()=>setPreviewDoc(null),[]);
   const [sharing,setSharing]=useState<string|null>(null);
   const [publishOnUpload,setPublishOnUpload]=useState(false);
   const [visibilityOverrides,setVisibilityOverrides]=useState<Record<string,boolean>>({});
@@ -95,6 +98,7 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
       const file=files[i];
       setUploadProgress("Đang tải "+(i+1)+"/"+files.length+": "+file.name);
       try{
+        if(!/\.pdf$/i.test(file.name))throw new Error("Thư viện chỉ nhận tài liệu PDF.");
         if(file.size>MAX_FILE_BYTES)throw new Error("Tệp vượt quá 4 MB");
         if(!file.size)throw new Error("Tệp trống");
         const form=new FormData();
@@ -122,7 +126,7 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
 
   return <div className="space-y-6">
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-      <div><p className="eyebrow">Hồ sơ và văn kiện</p><h1 className="page-title mt-2">Tài liệu Đại hội</h1><p className="page-description">BTC tải lên Google Drive; đại biểu chỉ xem tên và mở liên kết Google Drive khi cần.</p></div>
+      <div><p className="eyebrow">Hồ sơ và văn kiện</p><h1 className="page-title mt-2">Tài liệu Đại hội</h1><p className="page-description">BTC tải PDF lên Google Drive; đại biểu đọc trực tiếp trên website, không cần tải tệp về.</p></div>
       <span className="inline-flex w-fit items-center gap-2 rounded-xl bg-[#e6f6f2] px-3 py-2 text-xs font-bold text-[#0b8079]"><ShieldCheck size={16}/> Tài liệu phân quyền</span>
     </div>
 
@@ -170,8 +174,8 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
      {canManage&&<label className={`group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[12px] border-2 border-dashed border-[#c4e5df] bg-gradient-to-br from-[#f1fbf8] to-[#f8fbfc] px-5 py-8 text-center transition-colors hover:border-[#66bdb4] hover:bg-[#e9f8f2] sm:py-10 ${busy?"pointer-events-none opacity-60":""}`}>
       <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-white text-[#108e8c] shadow-sm"><CloudUpload size={27}/></span>
       <span className="text-base font-semibold text-[#193e4d]">{uploadProgress||"Chạm để chọn một hoặc nhiều tài liệu"}</span>
-      <span className="max-w-lg text-xs leading-relaxed text-[#738a98]">Tải nhiều tệp PDF, Word, Excel, PowerPoint hoặc ảnh (tối đa 4 MB/tệp). Website tự lấy liên kết Google Drive và lưu danh sách tên.</span>
-      <input aria-label="Chọn tài liệu để tải lên" type="file" multiple disabled={busy||driveStatus?.ready===false} className="sr-only" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" onChange={e=>void upload(e)}/>
+      <span className="max-w-lg text-xs leading-relaxed text-[#738a98]">Chọn một hoặc nhiều tệp PDF (tối đa 4 MB/tệp). Tệp gốc vẫn lưu trên Google Drive; website chỉ lưu thông tin tệp.</span>
+      <input aria-label="Chọn tài liệu để tải lên" type="file" multiple disabled={busy||driveStatus?.ready===false} className="sr-only" accept=".pdf,application/pdf" onChange={e=>void upload(e)}/>
     </label>}
 
     {canManage&&docs.length>0&&<section className="rounded-2xl border border-[#cbdfe9] bg-white p-4 sm:p-5">
@@ -210,17 +214,21 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
         <div className="divide-y divide-[#eaf0f4]">
          {filtered.map(doc=>{
           const Icon=iconFor(doc.mime_type);
-          return <a key={doc.id} href={"/api/documents/"+doc.id}
-           target="_blank" rel="noopener noreferrer"
-           aria-label={"Mở tài liệu "+doc.file_name+" trên Google Drive"}
-           className="group flex min-w-0 items-center gap-3 px-4 py-4 transition-colors hover:bg-[#f3f9fc] sm:px-6">
+          const label=<>
            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] bg-[#e9f3f9] text-[#187fac]"><Icon size={22}/></span>
-           <span className="min-w-0 flex-1 break-words text-[13px] font-bold leading-5 text-[#294c65]">{doc.file_name}</span>
+           <span className="min-w-0 flex-1 break-words text-left text-[13px] font-bold leading-5 text-[#294c65]">{doc.file_name}</span>
            <span className={"hidden shrink-0 rounded-full px-3 py-1.5 text-[10px] font-bold sm:inline-flex "+(isPublished(doc)?"bg-[#e6f6ec] text-[#247756]":"bg-[#edf1f4] text-[#758a97]")}>
             {isPublished(doc)?"Đã công bố":"Nội bộ"}
            </span>
-           <ExternalLink size={18} className="shrink-0 text-[#7c9bab] group-hover:text-[#1480aa]"/>
-          </a>;
+           {doc.mime_type==="application/pdf"?<FileText size={18} className="shrink-0 text-[#7c9bab] group-hover:text-[#1480aa]"/>:
+            <ExternalLink size={18} className="shrink-0 text-[#7c9bab] group-hover:text-[#1480aa]"/>}
+          </>;
+          const className="group flex w-full min-w-0 items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-[#f3f9fc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#147aa5] sm:px-6";
+          return doc.mime_type==="application/pdf"?
+           <button type="button" key={doc.id} onClick={()=>setPreviewDoc(doc)}
+            aria-label={"Xem PDF "+doc.file_name+" ngay trên website"} className={className}>{label}</button>:
+           <a key={doc.id} href={"/api/documents/"+doc.id} target="_blank" rel="noopener noreferrer"
+            aria-label={"Mở tài liệu "+doc.file_name+" trên Google Drive"} className={className}>{label}</a>;
          })}
         </div>
       </>:
@@ -231,6 +239,8 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
       </div>}
     </section>
 
-    <p className="helper">Website chỉ lưu tên và ID tài liệu trong Supabase; khi bấm mở, trình duyệt chuyển tới Google Drive. Tệp không truyền qua server khi đại biểu xem. BTC có thể kết nối bằng Google Apps Script hoặc OAuth.</p>
+    <p className="helper">Website chỉ lưu thông tin tài liệu trên Supabase. Tệp PDF được xem qua Google Drive Preview, không truyền dữ liệu PDF qua máy chủ Vercel.</p>
+    {previewDoc&&<GoogleDrivePdfViewer documentId={previewDoc.id} fileName={previewDoc.file_name}
+     congressName="Quản trị tài liệu Đại hội" onClose={closeViewer}/>}
   </div>;
 }
