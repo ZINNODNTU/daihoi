@@ -8,7 +8,7 @@ export const runtime="nodejs";
 const headers={"Cache-Control":"private, no-store, max-age=0","Pragma":"no-cache","Vary":"Cookie"};
 
 function fail(error:string,status:number){
- return NextResponse.json({error},{status,headers});
+ return NextResponse.json({error},{status,headers:status===429?{...headers,"Retry-After":"15"}:headers});
 }
 
 export async function POST(request:NextRequest){
@@ -60,7 +60,7 @@ export async function POST(request:NextRequest){
    result=await supabase.auth.signInWithPassword({email:normalized,password});
   }
   if(result.error||!result.data.user){
-   if(result.error?.status===429)return fail("Đăng nhập quá nhiều lần. Vui lòng thử lại sau.",429);
+   if(result.error?.status===429)return fail("Hệ thống đang nhận nhiều lượt đăng nhập. Vui lòng đợi 15 giây rồi thử lại.",429);
    return fail("Tên đăng nhập hoặc mật khẩu không đúng.",401);
   }
   const id=result.data.user.id;

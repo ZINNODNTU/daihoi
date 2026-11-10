@@ -1,5 +1,6 @@
 import "server-only";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {loadSharedCongressInfo,loadSharedSessionInfo} from "@/lib/portal-shared-reads";
 
 export type PortalSeat={
  id:string;code:string;rowLabel:string;seatNumber:number;zone:string;layoutTitle:string;
@@ -32,17 +33,16 @@ export async function loadDelegatePortal(authenticatedUserId:string):Promise<Por
  const delegates=own.data;
  const congressIds=[...new Set(delegates.map(d=>d.congress_id))];
  const delegateIds=delegates.map(d=>d.id);
- const [congressesResult,sessionsResult,assignmentResult,checkinsResult]=await Promise.all([
-  db.from("congresses").select("id,name,kind,term,venue").in("id",congressIds).limit(30),
-  db.from("attendance_sessions")
-   .select("id,congress_id,name,status,starts_at,ends_at,qr_policy,seating_layout_id")
-   .in("congress_id",congressIds).order("starts_at",{ascending:false}).limit(500),
+ const sharedIds=[...congressIds].sort();
+ const [sharedCongresses,sharedSessions,assignmentResult,checkinsResult]=await Promise.all([
+  loadSharedCongressInfo(sharedIds),
+  loadSharedSessionInfo(sharedIds),
   db.from("seat_assignments").select("delegate_id,seat_id,layout_id")
    .in("delegate_id",delegateIds).limit(500),
   db.from("checkins").select("id,congress_id,delegate_id,session_id,checked_in_at,method")
    .in("delegate_id",delegateIds).order("checked_in_at",{ascending:false}).limit(1500)
  ]);
- if(congressesResult.error||sessionsResult.error||assignmentResult.error||checkinsResult.error)
+ if(assignmentResult.error||checkinsResult.error)
   throw new Error("Không tải được lịch sử điểm danh hoặc sơ đồ vị trí ghế.");
  const assignments=assignmentResult.data||[];
  const seatIds=[...new Set(assignments.map(a=>a.seat_id))];
@@ -54,8 +54,8 @@ export async function loadDelegatePortal(authenticatedUserId:string):Promise<Por
    :Promise.resolve({data:[],error:null})
  ]);
  if(seatsResult.error||layoutsResult.error)throw new Error("Không đọc được vị trí ghế.");
- const congresses=new Map((congressesResult.data||[]).map(c=>[c.id,c]));
- const sessions=sessionsResult.data||[];
+ const congresses=new Map(sharedCongresses.map(c=>[c.id,c]));
+ const sessions=sharedSessions;
  const checkins=checkinsResult.data||[];
  const seats=new Map((seatsResult.data||[]).map(s=>[s.id,s]));
  const layouts=new Map((layoutsResult.data||[]).map(l=>[l.id,l]));

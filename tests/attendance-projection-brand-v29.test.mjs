@@ -83,7 +83,8 @@ test("Loại Đại hội điều khiển logo ở quản trị, thẻ, màn hì
  const sessionView=read("../src/components/session-qr-screen.tsx");
  assert.match(sessionView,/BrandMark kind=\{congressKind\}/);
  const choice=read("../src/lib/active-congress.ts");
- assert.match(choice,/\.select\("id,name,term,status,kind"\)/);
+ assert.match(choice,/loadSharedCongressInfo/);
+ assert.match(read("../src/lib/portal-shared-reads.ts"),/\.select\("id,name,term,status,kind,venue"\)/);
  const portal=read("../src/components/delegate-shell.tsx");
  assert.match(portal,/BrandMark kind=\{congresses\.find\(item=>item\.id===activeCongressId\)\?\.kind\|\|"doan"\}/);
  const card=read("../src/components/my-delegate-cards.tsx");

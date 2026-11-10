@@ -10,6 +10,7 @@
 | --- | --- |
 | Cài đặt/chạy hệ thống và triển khai | [Quy trình triển khai](huong-dan/QUY-TRINH-TRIEN-KHAI.md) |
 | **Checklist phát hành Vercel + Supabase, trạng thái migration live (10/11/2026)** | [Chuẩn bị production V31](huong-dan/CHUAN-BI-PRODUCTION-VERCEL-SUPABASE-V31.md) |
+| **Tối ưu 200 đại biểu đồng thời, cache an toàn, giới hạn Auth và favicon Đoàn** | [Vận hành tải đồng thời V32](huong-dan/TOI-UU-200-DAI-BIEU-V32.md) |
 | Chuẩn bị cơ sở dữ liệu, phân quyền | [Checklist Supabase và các migration](huong-dan/SUPABASE-SETUP.md) |
 | Hiểu nghiệp vụ Đại hội và giới hạn sản phẩm | [Nghiệp vụ Đại hội số](nghiep-vu/NGHIEP-VU-DAI-HOI.md) |
 | **Lưu file trên Google Drive, đại biểu chỉ xem tên/link** | [Google Drive V18 — hướng dẫn hiện hành](tinh-nang/tai-lieu/GOOGLE-DRIVE-LINKS-V18.md) |

@@ -1,6 +1,6 @@
 import {Armchair} from "lucide-react";
 import {redirect} from "next/navigation";
-import {getAuth} from "@/lib/auth";
+import {getPortalViewerAuth} from "@/lib/auth";
 import {getSelectedCongressId} from "@/lib/active-congress";
 import {getMyDelegateData} from "@/lib/delegate-page";
 import {loadMyHallMap} from "@/lib/delegate-seat-map";
@@ -11,7 +11,7 @@ export const dynamic="force-dynamic";
 export default async function DelegateSeatsPage({searchParams}:{
  searchParams:Promise<{sessionId?:string}>
 }){
- const {user}=await getAuth();
+ const {user}=await getPortalViewerAuth();
  if(!user)redirect("/login");
  let congressId:string|null=null;
  try{congressId=await getSelectedCongressId(user.id);}

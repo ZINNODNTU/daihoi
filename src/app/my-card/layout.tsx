@@ -1,6 +1,6 @@
 import {redirect} from "next/navigation";
 import {DelegateShell} from "@/components/delegate-shell";
-import {getAuth} from "@/lib/auth";
+import {getPortalViewerAuth} from "@/lib/auth";
 import {getPortalCongressContext} from "@/lib/active-congress";
 import Link from "next/link";
 import {IdCard} from "lucide-react";
@@ -16,7 +16,7 @@ export default async function DelegatePortalLayout({children}:{children:React.Re
   <p className="mt-3 text-sm leading-7 text-[#718c99]">Cần cấu hình Supabase trên máy chủ để đăng nhập và xem thẻ.</p>
   <Link href="/login" className="mt-5 rounded-xl bg-[#145a70] px-5 py-3 text-sm font-bold text-white">Trở lại đăng nhập</Link>
  </main>;
- const {supabase,user}=await getAuth();
+ const {supabase,user}=await getPortalViewerAuth();
  if(!user)redirect("/login");
  const {data:profile}=await supabase.from("profiles").select("full_name").eq("id",user.id).maybeSingle();
  const access=await getPortalCongressContext(user.id).catch(()=>null);

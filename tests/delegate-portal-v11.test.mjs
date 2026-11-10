@@ -61,8 +61,8 @@ test("Mỗi chức năng có một route riêng và thanh điều hướng đi�
  const seats=content("../src/app/my-card/seats/page.tsx");
  assert.match(seats,/DelegateSeatHall/);
  assert.match(content("../src/components/delegate-seat-hall.tsx"),/data-my-seat/);
- assert.match(content("../src/lib/delegate-seat-map.ts"),/\.eq\("layout_id",session\.layoutId\)/);
- assert.match(content("../src/lib/delegate-seat-map.ts"),/\.eq\("congress_id",item\.congressId\)/);
+ assert.match(content("../src/lib/delegate-seat-map.ts"),/\.eq\("layout_id",layoutId\)/);
+ assert.match(content("../src/lib/delegate-seat-map.ts"),/\.eq\("congress_id",congressId\)/);
  assert.match(content("../src/lib/delegate-seat-map.ts"),/items\.flatMap\(item=>item\.sessions/);
  assert.doesNotMatch(content("../src/lib/delegate-seat-map.ts"),/seat_assignments|full_name|delegate_id/);
  assert.match(content("../src/components/delegate-seat-hall.tsx"),/seat\.x-bounds\.minX/);

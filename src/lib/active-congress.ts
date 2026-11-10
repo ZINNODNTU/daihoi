@@ -1,7 +1,7 @@
 import "server-only";
 import {cookies} from "next/headers";
 import {cache} from "react";
-import {createAdminClient} from "@/lib/supabase/admin";
+import {loadSharedCongressInfo} from "@/lib/portal-shared-reads";
 import {getPortalCongressAccess} from "@/lib/portal-congress-access";
 
 export const ACTIVE_CONGRESS_COOKIE="daihoi_active_congress";
@@ -20,13 +20,10 @@ export const getPortalCongressContext=cache(async (userId:string):Promise<Portal
  const ids=access.congressIds;
  if(!ids.length)return {options:[],activeCongressId:null,
   delegateCongressIds:[],guestCongressIds:[]};
- const db=createAdminClient();
- const {data,error}=await db.from("congresses")
-  .select("id,name,term,status,kind").in("id",ids).limit(100);
- if(error)throw new Error("Không tải được danh sách Đại hội.");
+ const data=await loadSharedCongressInfo([...ids].sort());
  const delegated=new Set(access.delegateCongressIds);
  const guests=new Set(access.guestCongressIds);
- const options=(data||[]).map(c=>({
+ const options=data.map(c=>({
   id:c.id,name:c.name,term:c.term||"",status:c.status||"",kind:c.kind||"doan",
   asDelegate:delegated.has(c.id),asGuest:guests.has(c.id)
  })).sort((a,b)=>a.name.localeCompare(b.name,"vi"));

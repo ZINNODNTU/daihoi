@@ -1,8 +1,9 @@
 import "server-only";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {cache} from "react";
 
 /** Only congresses belonging to this authenticated user are visible in the portal. */
-export async function getPortalCongressAccess(userId:string){
+export const getPortalCongressAccess=cache(async (userId:string)=>{
  const db=createAdminClient();
  const [delegates,guests]=await Promise.all([
   db.from("delegates").select("congress_id").eq("auth_user_id",userId)
@@ -17,4 +18,4 @@ export async function getPortalCongressAccess(userId:string){
   delegateCongressIds,guestCongressIds,
   congressIds:[...new Set([...delegateCongressIds,...guestCongressIds])]
  };
-}
+});

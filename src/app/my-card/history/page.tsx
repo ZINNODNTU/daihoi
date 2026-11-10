@@ -1,13 +1,13 @@
 import {History} from "lucide-react";
 import {redirect} from "next/navigation";
-import {getAuth} from "@/lib/auth";
+import {getPortalViewerAuth} from "@/lib/auth";
 import {loadDelegateHistory} from "@/lib/delegate-history";
 import {DelegatePageHeading,DelegateUnavailable} from "@/components/delegate-page-elements";
 import {DelegateHistoryList} from "@/components/delegate-history-list";
 
 export const dynamic="force-dynamic";
 export default async function DelegateHistoryPage(){
- const {user}=await getAuth();
+ const {user}=await getPortalViewerAuth();
  if(!user)redirect("/login");
  let data:Awaited<ReturnType<typeof loadDelegateHistory>>;
  try{data=await loadDelegateHistory(user.id);}

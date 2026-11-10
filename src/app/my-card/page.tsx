@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {BookOpen,IdCard,Users} from "lucide-react";
 import {getMyDelegateData} from "@/lib/delegate-page";
-import {getAuth} from "@/lib/auth";
+import {getPortalViewerAuth} from "@/lib/auth";
 import {getPortalCongressContext} from "@/lib/active-congress";
 import {MyDelegateCards} from "@/components/my-delegate-cards";
 import {PortalCongressPicker} from "@/components/portal-congress-picker";
@@ -11,7 +11,7 @@ import {redirect} from "next/navigation";
 export const dynamic="force-dynamic";
 
 export default async function MyCardPage(){
- const {user}=await getAuth();
+ const {user}=await getPortalViewerAuth();
  if(!user)redirect("/login");
  let context:Awaited<ReturnType<typeof getPortalCongressContext>>;
  try{context=await getPortalCongressContext(user.id);}

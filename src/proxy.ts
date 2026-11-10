@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 export async function proxy(request: NextRequest) {
-    const key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    // Public pages and the login handler do not need an extra JWT verification.
+  // This keeps the first-visit surge from consuming unnecessary auth requests.
+  const path=request.nextUrl.pathname;
+  if(path==="/"||path==="/login"||path==="/preview"||path==="/api/auth/login")
+    return NextResponse.next({request});
+  const key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !key) {
     const pathname=request.nextUrl.pathname;
     if(pathname.startsWith("/api/")){

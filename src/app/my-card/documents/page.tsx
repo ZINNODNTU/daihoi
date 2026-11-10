@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {BookOpen,ShieldCheck} from "lucide-react";
-import {getAuth} from "@/lib/auth";
+import {getPortalViewerAuth} from "@/lib/auth";
 import {redirect} from "next/navigation";
 import {getPortalCongressContext} from "@/lib/active-congress";
 import {createAdminClient} from "@/lib/supabase/admin";
@@ -10,7 +10,7 @@ import type {DocRow} from "@/lib/types";
 
 export const dynamic="force-dynamic";
 export default async function DelegateDocumentsPage(){
- const {user}=await getAuth();
+ const {user}=await getPortalViewerAuth();
  if(!user)redirect("/login");
  let context:Awaited<ReturnType<typeof getPortalCongressContext>>;
  try{context=await getPortalCongressContext(user.id);}

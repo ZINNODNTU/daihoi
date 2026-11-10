@@ -61,7 +61,7 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
     <nav aria-label="Chức năng đại biểu" className="hidden items-center gap-0.5 lg:flex">
      {visibleLinks.map(({href,label,icon:Icon})=>{
       const active=path===href;
-      return <Link key={href} href={href} aria-current={active?"page":undefined}
+      return <Link key={href} href={href} prefetch={false} aria-current={active?"page":undefined}
        className={"inline-flex min-h-11 items-center gap-1.5 rounded-[10px] px-2.5 text-[11px] font-bold transition "+
         (active?"bg-[#e6f2f9] text-[#007fae]":"text-[#5c7891] hover:bg-[#f1f5f9]")}>
        <Icon size={16} strokeWidth={active?2.2:1.75}/>{label}
@@ -98,7 +98,7 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
     className="fixed inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-40 rounded-2xl border border-[#d6e4ec] bg-white p-3 shadow-[0_14px_50px_rgba(22,48,71,.18)] lg:hidden print:hidden">
     <p className="px-3 pb-2 pt-1 text-[11px] font-extrabold uppercase tracking-wider text-[#70899b]">Chức năng khác</p>
     <div className="grid gap-1">{moreLinks.map(({href,label,icon:Icon},index)=><Link
-     ref={index===0?firstMoreLink:undefined} key={href} href={href}
+     ref={index===0?firstMoreLink:undefined} key={href} href={href} prefetch={false}
      aria-current={path===href?"page":undefined} onClick={()=>setMoreOpen(false)}
      className={"flex min-h-12 items-center gap-3 rounded-xl px-3 text-[13px] font-bold "+
       (path===href?"bg-[#e6f2f9] text-[#007fae]":"text-[#365872] hover:bg-[#f2f7fa]")}>
@@ -110,7 +110,7 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
    className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-0.5 border-t border-[#dce5ee] bg-white/98 px-1.5 pb-[max(.55rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-7px_26px_rgba(18,45,76,.075)] lg:hidden print:hidden">
    {primaryLinks.map(({href,mobile,icon:Icon})=>{
     const active=path===href;
-    return <Link key={href} href={href} aria-current={active?"page":undefined}
+    return <Link key={href} href={href} prefetch={false} aria-current={active?"page":undefined}
      className={"flex min-h-[59px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[9px] px-0.5 text-center text-[9px] font-bold transition "+
       (active?"bg-[#e6f2f9] text-[#007fae]":"text-[#6f879e] hover:bg-[#f1f6fa]")}>
      <Icon size={19} strokeWidth={active?2.1:1.7}/>

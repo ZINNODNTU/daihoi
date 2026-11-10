@@ -195,12 +195,12 @@ export function MyDelegateCards({items}:{items:PortalDelegate[]}){
      </select>
     </label>}
    {currentDelegate&&<section aria-label="Thao tác nhanh đại biểu" className="grid grid-cols-2 gap-2.5 lg:hidden print:hidden">
-     <Link href="/my-card/checkin" className="flex min-h-[72px] items-center gap-3 rounded-xl bg-[#087fae] px-3.5 text-white shadow-sm">
+     <Link href="/my-card/checkin" prefetch={false} className="flex min-h-[72px] items-center gap-3 rounded-xl bg-[#087fae] px-3.5 text-white shadow-sm">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/15"><Camera size={21}/></span>
       <span className="min-w-0"><span className="block text-[13px] font-bold">Điểm danh</span><span className="mt-0.5 block text-[11px] text-[#d9eef8]">Quét QR phiên</span></span>
      </Link>
      <Link href={"/my-card/seats"+(currentSession?"?sessionId="+encodeURIComponent(currentSession.id):"")}
-      className="flex min-h-[72px] items-center gap-3 rounded-xl border border-[#cbdfe9] bg-white px-3.5 text-[#235c77] shadow-sm">
+      prefetch={false} className="flex min-h-[72px] items-center gap-3 rounded-xl border border-[#cbdfe9] bg-white px-3.5 text-[#235c77] shadow-sm">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#e9f3f9]"><Armchair size={21}/></span>
       <span className="min-w-0"><span className="block text-[13px] font-bold">Ghế của tôi</span><span className="mt-0.5 block truncate text-[11px] text-[#6d8ea0]">{currentSession?.seat?.code||"Xem sơ đồ"}</span></span>
      </Link>
@@ -208,7 +208,7 @@ export function MyDelegateCards({items}:{items:PortalDelegate[]}){
       {([{href:"/my-card/documents"+selectedQuery,label:"Tài liệu",icon:BookOpen},
         {href:"/my-card/bch"+selectedQuery,label:"Ứng viên BCH",icon:Users},
         {href:"/my-card/history",label:"Lịch sử",icon:History}] as const)
-       .map(({href,label,icon:Icon})=><Link key={href} href={href}
+       .map(({href,label,icon:Icon})=><Link key={href} href={href} prefetch={false}
         className="flex min-h-[64px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg bg-[#f4f8fb] px-1 text-center text-[11px] font-bold leading-[1.35] text-[#365d74]">
         <Icon size={19} strokeWidth={1.8}/><span>{label}</span>
        </Link>)}
@@ -235,7 +235,7 @@ export function MyDelegateCards({items}:{items:PortalDelegate[]}){
     </button>
    </div>
    <div className="grid gap-2.5 sm:grid-cols-3 lg:grid-cols-1">
-    {actions.map(({href,icon:Icon,label,detail},index)=><Link key={href} href={href}
+    {actions.map(({href,icon:Icon,label,detail},index)=><Link key={href} href={href} prefetch={false}
      className={"group flex min-h-[78px] items-center gap-3.5 rounded-[14px] border px-4 py-3.5 transition hover:-translate-y-0.5 hover:shadow-md "+
       (index===0?"border-[#0d719d] bg-[#0d719d] text-white shadow-[0_12px_28px_rgba(16,113,106,.17)]":
        "border-[#d7e4e8] bg-white text-[#284e60] shadow-sm")}>
