@@ -844,3 +844,45 @@
  .bch-swipe-card{transition:none!important;}
  .bch-swipe-root *{scroll-behavior:auto!important;}
 }
+
+/* Fullscreen projector: keep header, metrics and footer on screen; scroll each pane independently. */
+.projection-stage:fullscreen {
+ height:100dvh;max-height:100dvh;width:100vw;
+ display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;
+ overflow:hidden;
+}
+.projection-stage:fullscreen .projection-operations {min-height:0;overflow:hidden;}
+.projection-stage:fullscreen [data-projection-column="welcome-and-qr"] {
+ min-height:0;overflow-y:auto;overscroll-behavior:contain;
+ scrollbar-width:thin;gap:10px;
+}
+.projection-stage:fullscreen [data-projection-section="seat-map"] {
+ min-height:0;overflow:hidden;display:flex;flex-direction:column;
+}
+.projection-stage:fullscreen .projection-seating-map {min-height:0;max-height:100%;}
+.projection-stage:fullscreen .projection-seating-map > div:nth-last-child(2) {
+ min-height:0;overflow:auto;
+}
+.projection-stage:fullscreen .projection-welcome--compact .projection-arrival {
+ min-height:0;gap:12px;padding:12px 14px;
+}
+.projection-stage:fullscreen .projection-welcome--compact .projection-portrait {
+ width:clamp(78px,11vh,110px);
+}
+.projection-stage:fullscreen .projection-welcome--compact .projection-delegate-name {
+ font-size:clamp(20px,2.1cqw,32px);
+}
+.projection-stage:fullscreen [data-projection-section="session-qr"] > div {
+ padding:12px;
+}
+.projection-stage:fullscreen .projection-qr-clickable {
+ width:clamp(120px,20vh,185px)!important;
+}
+.projection-stage:fullscreen [data-projection-section="arrival-queue"] {flex-shrink:0;}
+@container (max-width:899px) {
+ .projection-operations {grid-template-columns:minmax(0,1fr);}
+ .projection-qr-clickable {width:clamp(174px,50cqw,255px);}
+}
+@media (max-height:700px) {
+ .projection-stage:fullscreen .projection-qr-clickable {width:clamp(112px,19vh,165px)!important;}
+}

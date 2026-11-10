@@ -92,6 +92,6 @@ test("Loại Đại hội điều khiển logo ở quản trị, thẻ, màn hì
 
 test("Màn chiếu làm mới sơ đồ định kỳ thay vì giữ dữ liệu ghế cũ 2 phút",()=>{
  const live=read("../src/components/use-attendance-live.ts");
- assert.match(live,/\},20000\);/);
+ assert.match(live,/\},10000\);/);
  assert.doesNotMatch(live,/\},120000\);/);
 });

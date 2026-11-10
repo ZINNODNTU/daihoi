@@ -206,7 +206,7 @@ export function SessionQrScreen({congressId,sessions,initialSessionId,congressNa
       style={{width:(summary?.percentage??0)+"%"}}/>
     </div>
    </div>
-    <div className="projection-operations relative min-w-0 items-stretch gap-4 p-3 sm:gap-5 sm:p-5 xl:p-6" data-projection-section="attendance-operations" data-projection-layout="welcome-qr-left-seating-right">
+    <div className="projection-operations relative min-h-0 min-w-0 items-stretch gap-4 p-3 sm:gap-5 sm:p-5 xl:p-6" data-projection-section="attendance-operations" data-projection-layout="welcome-qr-left-seating-right">
      <div className="flex min-w-0 flex-col gap-4 sm:gap-5" data-projection-column="welcome-and-qr">
       <div className="min-w-0" data-projection-section="latest-delegate">
        {welcomeView}

@@ -13,6 +13,7 @@ import {
 import type {Delegate,AttendanceSession,Checkin} from "@/lib/types";
 import {currentSessionCheckins,type SeatPlacement} from "@/lib/attendance-seating";
 import {RecentCheckinCard} from "@/components/recent-checkin-card";
+import {startTrackedScanner,trackedBoxStyle} from "@/lib/fast-qr-camera";
 
 type Props={
  congressId:string;delegates:Delegate[];sessions:AttendanceSession[];
@@ -44,6 +45,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
  const [checkins,setCheckins]=useState(initialCheckins);
  const [tab,setTab]=useState<Tab>(canScan?"qr":"history");
  const [camera,setCamera]=useState(false);
+ const [tracked,setTracked]=useState<ReturnType<typeof trackedBoxStyle>|null>(null);
  const [cameraDevices,setCameraDevices]=useState<{deviceId:string;label:string}[]>([]);
  const [selectedCamera,setSelectedCamera]=useState("");
  const [busy,setBusy]=useState(false);
@@ -62,6 +64,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
  const videoRef=useRef<HTMLVideoElement|null>(null);
  const controlsRef=useRef<{stop():void}|null>(null);
  const scanLock=useRef(false);
+ const cameraGeneration=useRef(0);
  const lastQr=useRef<{token:string;time:number}>({token:"",time:0});
  const session=sessions.find(s=>s.id===sessionId);
  const windowStatus=session?getWindowStatus(session,new Date(clock)):"not-configured";
@@ -112,7 +115,8 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
     return()=>{window.removeEventListener("keydown",onEscape);document.body.style.overflow=priorOverflow;};
   },[review]);
  function stopCamera(){
-  controlsRef.current?.stop();controlsRef.current=null;setCamera(false);
+  cameraGeneration.current++;
+  controlsRef.current?.stop();controlsRef.current=null;setCamera(false);setTracked(null);
  }
  function selectFallback(d:Delegate,method:Fallback){
   stopCamera();
@@ -188,36 +192,39 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
  }
  async function startCamera(deviceId=selectedCamera){
   if(!allowed)return setFlash({type:"error",text:"Phiên chưa mở hoặc đã hết thời gian điểm danh."});
-  setFlash(null);lastQr.current={token:"",time:0};scanLock.current=false;setCamera(true);
-  void refreshCameras();
+  if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia)
+   return setFlash({type:"error",text:"Camera yêu cầu HTTPS hoặc localhost. Hãy dùng điểm danh thủ công nếu cần."});
+  setFlash(null);setTracked(null);
+  lastQr.current={token:"",time:0};scanLock.current=false;setCamera(true);
+  const generation=++cameraGeneration.current;
   try{
-   await new Promise(resolve=>setTimeout(resolve,120));
+   await new Promise(resolve=>setTimeout(resolve,100));
+   if(generation!==cameraGeneration.current)return;
    if(!videoRef.current)throw new Error("Camera chưa sẵn sàng.");
-   const {BrowserMultiFormatReader}=await import("@zxing/browser");
-   const reader=new BrowserMultiFormatReader();
-   const onDecode=(result:{getText():string}|undefined|null)=>{
-    if(!result||scanLock.current)return;
-    const value=result.getText().trim();
-    if(value.startsWith("dh1.")||value.startsWith("dh2.")||value.startsWith("dh3.")){
-     if(value===lastQr.current.token&&Date.now()-lastQr.current.time<8000)return;
-     lastQr.current={token:value,time:Date.now()};scanLock.current=true;
-     void submit("qr",value);
-    }else if(barcodePattern.test(value.toUpperCase())){
-     scanLock.current=true;readBarcode(value);
-    }else{
-     if(value!==lastQr.current.token||Date.now()-lastQr.current.time>8000){
-      lastQr.current={token:value,time:Date.now()};
+   const control=await startTrackedScanner({
+    video:videoRef.current,deviceId,allowBarcode:true,onTrack:box=>setTracked(box?trackedBoxStyle(box,videoRef.current):null),
+    onResult:value=>{
+     if(scanLock.current)return;
+     const token=value.trim();
+     if(token.startsWith("dh1.")||token.startsWith("dh2.")||token.startsWith("dh3.")){
+      if(token===lastQr.current.token&&Date.now()-lastQr.current.time<8000)return;
+      lastQr.current={token,time:Date.now()};scanLock.current=true;
+      void submit("qr",token);
+     }else if(barcodePattern.test(token.toUpperCase())){
+      scanLock.current=true;readBarcode(token);
+     }else if(token!==lastQr.current.token||Date.now()-lastQr.current.time>8000){
+      lastQr.current={token,time:Date.now()};
       setFlash({type:"error",text:"Mã quét không thuộc hệ thống Đại hội này."});
      }
     }
-   };
-   controlsRef.current=deviceId?
-    await reader.decodeFromVideoDevice(deviceId,videoRef.current,onDecode):
-    await reader.decodeFromConstraints({video:{facingMode:{ideal:"environment"}},audio:false},videoRef.current,onDecode);
+   });
+   if(generation!==cameraGeneration.current){control.stop();return;}
+   controlsRef.current=control;
    void refreshCameras();
   }catch{
+   if(generation!==cameraGeneration.current)return;
    stopCamera();
-   setFlash({type:"error",text:"Không mở được camera. Hãy dùng HTTPS, cho phép quyền camera hoặc dùng phương thức thủ công."});
+   setFlash({type:"error",text:"Không mở được camera. Hãy cho phép camera trên HTTPS hoặc dùng điểm danh dự phòng."});
   }
  }
  function openEditor(kind:"create"|"edit"){
@@ -392,6 +399,9 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
      {camera?<div className="relative rounded-xl overflow-hidden bg-[#0b243a]">
        <video ref={videoRef} autoPlay playsInline muted className="aspect-[4/3] w-full bg-[#0b243a] object-cover sm:aspect-video"/>
        <div className="absolute inset-[15%] border-2 border-[#42e1c9] rounded-xl pointer-events-none"/>
+       {tracked&&<div aria-hidden="true" className="pointer-events-none absolute rounded-lg border-[3px] border-[#4fff95] bg-[#4fff95]/10 shadow-[0_0_20px_#50e6a855]"
+        style={tracked}/>}
+       <p className="absolute bottom-2 left-2 rounded-md bg-black/55 px-2 py-1 text-[11px] font-semibold text-white">{tracked?"Đã nhận diện mã":"Đang tự động lấy nét và tìm mã..."}</p>
       </div>:
       <div className="rounded-xl bg-gradient-to-br from-[#edf8f6] to-[#f1f8fc] px-4 py-10 sm:py-12">
        <Camera size={58} className="mx-auto text-[#31aab0]"/>

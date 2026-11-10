@@ -138,6 +138,8 @@ export function ProjectionSeatingMap({data,congressId,compact=false,featuredDele
   const lastDelegateId=featuredDelegateId||data?.checkins[0]?.delegate_id||"";
   const latestSeatId=data?.assignments.find(a=>a.delegate_id===lastDelegateId)?.seat_id||"";
   const people=new Map((data?.delegates||[]).map(d=>[d.id,d]));
+  const seated=new Set((data?.assignments||[]).map(a=>a.delegate_id));
+  const missingSeat=(data?.checkins||[]).filter(c=>people.has(c.delegate_id)&&!seated.has(c.delegate_id)).length;
   return <section className="projection-seating-map flex h-full min-w-0 flex-col overflow-hidden rounded-[20px] border border-white/15 bg-[#1b3048] shadow-[0_12px_34px_rgba(2,13,27,.13)]">
    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-6">
     <div>
@@ -161,6 +163,10 @@ export function ProjectionSeatingMap({data,congressId,compact=false,featuredDele
      </span>)}
     <span className="text-[11px] text-[#a9c4ce]">Viền tím: khách mời</span>
    </div>
+   {missingSeat>0&&<div role="status" className="mx-4 mb-3 rounded-xl border border-[#f0c77b]/40 bg-[#7a5521]/30 px-3 py-2 text-[11px] leading-5 text-[#ffe3a8] sm:mx-6">
+    {missingSeat} đại biểu đã điểm danh nhưng chưa được gán ghế trong sơ đồ phiên này. Ghế chỉ đổi màu khi có phân công hợp lệ.
+    <Link href={"/congresses/"+congressId+"/seating"} className="ml-2 font-extrabold underline underline-offset-2">Xếp ghế trong quản trị</Link>
+   </div>}
    {!layout?<div className="flex flex-col items-center justify-center gap-3 px-5 py-12 text-center text-[#bed4dc]">
     <Armchair size={34}/>
     <p className="text-[13px] font-semibold">Phiên này chưa được gắn sơ đồ hội trường.</p>

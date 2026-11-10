@@ -73,7 +73,8 @@ test("Mỗi chức năng có một route riêng và thanh điều hướng đi�
  assert.match(history,/loadDelegateHistory/);
  const scanner=content("../src/components/delegate-checkin-scanner.tsx");
  assert.match(scanner,/BrowserQRCodeReader/);
- assert.match(scanner,/decodeFromVideoDevice/);
+ assert.match(scanner,/startTrackedScanner/);
+  assert.match(content("../src/lib/fast-qr-camera.ts"),/decodeFromConstraints/);
  assert.match(scanner,/listVideoInputDevices/);
  assert.match(scanner,/delegate-camera-select/);
  assert.match(scanner,/\/api\/attendance\/self-checkin/);
@@ -82,7 +83,7 @@ test("Mỗi chức năng có một route riêng và thanh điều hướng đi�
  const btc=content("../src/components/attendance-client.tsx");
  assert.match(btc,/btc-camera-select/);
  assert.match(btc,/BrowserMultiFormatReader.listVideoInputDevices/);
- assert.match(btc,/decodeFromVideoDevice/);
+ assert.match(btc,/startTrackedScanner/);
 });
 
 test("Đăng nhập từ thiết bị khác dùng API cùng origin và cookie theo HTTP/HTTPS",()=>{

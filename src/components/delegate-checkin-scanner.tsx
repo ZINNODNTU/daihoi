@@ -4,11 +4,13 @@ import {useRouter} from "next/navigation";
 import Link from "next/link";
 import {Camera,CameraOff,CheckCircle2,ClipboardPaste,ImagePlus,LoaderCircle,RefreshCw,ShieldCheck,ScanLine,AlertCircle} from "lucide-react";
 import {parseSessionCheckinCode,type ParsedSessionCode} from "@/lib/delegate-session-scanner";
+import {startTrackedScanner,trackedBoxStyle} from "@/lib/fast-qr-camera";
 
 type Result={ok:true;already?:boolean;sessionName:string;delegate:{full_name:string};checkin?:{checked_in_at:string}};
 export function DelegateCheckinScanner(){
  const router=useRouter();
  const [camera,setCamera]=useState(false);
+ const [tracked,setTracked]=useState<ReturnType<typeof trackedBoxStyle>|null>(null);
  const [devices,setDevices]=useState<{deviceId:string;label:string}[]>([]);
  const [selectedCamera,setSelectedCamera]=useState("");
  const [listingCameras,setListingCameras]=useState(false);
@@ -27,7 +29,7 @@ export function DelegateCheckinScanner(){
  function stopCamera(){
   controlsRef.current?.stop();
   controlsRef.current=null;
-  setCamera(false);
+  setCamera(false);setTracked(null);
  }
  async function checkin(scanned:ParsedSessionCode){
   if(busyRef.current)return;
@@ -89,7 +91,7 @@ export function DelegateCheckinScanner(){
    return;
   }
   locked.current=false;
-  setCamera(true);
+  setTracked(null);setCamera(true);
   void refreshCameras();
  },[refreshCameras]);
  useEffect(()=>{
@@ -104,21 +106,16 @@ export function DelegateCheckinScanner(){
    try{
     const video=videoRef.current;
     if(!video)throw new Error("Không tìm thấy vùng xem camera.");
-    const {BrowserQRCodeReader}=await import("@zxing/browser");
-   const reader=new BrowserQRCodeReader();
-    const onDecode=(value:{getText():string}|undefined|null)=>{
-     if(!value||locked.current)return;
-     const code=parseSessionCheckinCode(value.getText());
-     if(!code){
-      setError("QR không hợp lệ. Hướng camera vào mã điểm danh của phiên.");
-      return;
+    const controls=await startTrackedScanner({
+     video,deviceId:selectedCamera,onTrack:box=>setTracked(box?trackedBoxStyle(box,videoRef.current):null),
+     onResult:value=>{
+      if(locked.current)return;
+      const code=parseSessionCheckinCode(value);
+      if(!code){setError("QR không hợp lệ. Hướng camera vào mã điểm danh của phiên.");return;}
+      locked.current=true;
+      void checkin(code);
      }
-     locked.current=true;
-     void checkin(code);
-    };
-    const controls=selectedCamera?
-     await reader.decodeFromVideoDevice(selectedCamera,video,onDecode):
-     await reader.decodeFromConstraints({video:{facingMode:{ideal:"environment"}},audio:false},video,onDecode);
+    });
     if(cancelled){controls.stop();return;}
     controlsRef.current=controls;
     // Labels are populated by browsers only after camera permission is granted.
@@ -174,6 +171,8 @@ export function DelegateCheckinScanner(){
     <video ref={videoRef} autoPlay muted playsInline aria-label="Camera quét mã QR điểm danh"
      className="aspect-[4/3] w-full max-h-[48dvh] sm:max-h-[60dvh] bg-[#102b3b] object-cover"/>
     <div aria-hidden="true" className="pointer-events-none absolute inset-[13%] rounded-2xl border-2 border-[#e1bf7b]/75 shadow-[0_0_0_100px_rgba(5,27,40,.15)]"/>
+    {tracked&&<div aria-hidden="true" className="pointer-events-none absolute rounded-lg border-[3px] border-[#56eba4] bg-[#56eba4]/10 shadow-[0_0_20px_#56eba477]"
+     style={tracked}/>}
     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#09293c] to-transparent px-4 pb-4 pt-10 text-center text-xs font-semibold text-white">
      Đưa mã QR của phiên vào khung hình
     </div>

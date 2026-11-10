@@ -33,6 +33,18 @@ export function useAttendanceLive(congressId:string,sessionId:string){
   let channel:ReturnType<ReturnType<typeof createClient>["channel"]>|null=null;
   const seen=new Set<string>();
   const queue:LiveCheckin[]=[];
+  const warmed=new Set<string>();
+  const preload=(rows:LiveCheckin[])=>{
+   if(!snapshot)return;
+   for(const row of rows.slice(0,5)){
+    const person=snapshot.delegates.find(x=>x.id===row.delegate_id);
+    if(!person?.photo_path||warmed.has(person.id))continue;
+    warmed.add(person.id);
+    const img=new window.Image();
+    img.src="/api/delegates/"+encodeURIComponent(person.id)+"/photo?w=160";
+    if(warmed.size>40)warmed.delete(warmed.values().next().value!);
+   }
+  };
   const realtimeConfigured=process.env.NEXT_PUBLIC_ATTENDANCE_REALTIME_ENABLED==="true";
   const base=new URLSearchParams({congressId,sessionId});
   function nextWelcome(){
@@ -60,6 +72,7 @@ export function useAttendanceLive(congressId:string,sessionId:string){
    snapshot={...previous,checkins:[...fresh,...previous.checkins]
     .sort(SORT_NEWEST).slice(0,1000),refreshedAt:new Date().toISOString()};
    setData(snapshot);
+   preload(ordered);
    queue.push(...ordered);
    queue.sort((a,b)=>a.checked_in_at.localeCompare(b.checked_in_at)||a.id.localeCompare(b.id));
    setWaiting([...queue]);
@@ -83,6 +96,7 @@ export function useAttendanceLive(congressId:string,sessionId:string){
     }
     cursor=cursor||next.refreshedAt;
     setFeatured(next.checkins[0]||null);
+    preload(next.checkins.slice(0,2));
     setData(next);
    }else{
     accept(next.checkins);
@@ -156,7 +170,7 @@ export function useAttendanceLive(congressId:string,sessionId:string){
   const snapshotTimer=setInterval(()=>{
    if(active&&document.visibilityState!=="hidden"&&snapshot)
     void full().catch(e=>setError(e instanceof Error?e.message:"Không tải được sơ đồ mới."));
-  },20000);
+  },10000);
   const visible=()=>{
    if(document.visibilityState==="visible"){
     nextWelcome(); // Do not skip greetings while projector tab was hidden.
