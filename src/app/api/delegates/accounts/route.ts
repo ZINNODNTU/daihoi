@@ -4,6 +4,7 @@ import {NextResponse} from "next/server";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {getAuth,hasRole} from "@/lib/auth";
 import {toSupabaseAuthEmail} from "@/lib/login-identity";
+import {writeSystemLog} from "@/lib/system-log";
 
 export const runtime="nodejs";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -131,6 +132,10 @@ export async function POST(request:Request){
    for(const id of ids)if(!found.has(id))
     errors.push({id,name:"",reason:"Không tìm thấy đại biểu đang hoạt động."});
   }
+  if(created.length||linkedExisting)
+   await writeSystemLog({level:"info",source:"auth",event:"delegate.accounts_provisioned",
+    message:"Quản trị đã cấp hoặc liên kết tài khoản đại biểu.",actorId:user.id,congressId,
+    context:{operation:"delegate.provision",endpoint:"/api/delegates/accounts",httpMethod:"POST"}});
   return NextResponse.json({created,linkedExisting,errors},{
    headers:{"Cache-Control":"no-store","Pragma":"no-cache"}
   });

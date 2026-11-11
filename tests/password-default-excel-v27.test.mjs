@@ -48,6 +48,7 @@ function fixture({userId=staffAdmin,canManage=true,staff=false,delegateExists=tr
   if(name==="@/lib/auth")return {getAuth:async()=>({user:userId?{id:userId}:null,supabase:{}}),
    hasRole:async()=>canManage};
   if(name==="@/lib/supabase/admin")return {createAdminClient:()=>db};
+  if(name==="@/lib/system-log")return {writeSystemLog:async()=>""};
   throw Error("Unexpected import "+name);
  },m,m.exports);
  return {POST:m.exports.POST,calls};
@@ -89,7 +90,7 @@ test("Client không được đặt mật khẩu tùy ý; phiên không đủ qu
 test("Excel danh sách hiển thị cột mật khẩu cấp/reset trong phiên; không đoán mật khẩu cũ",()=>{
  const ui=read("../src/components/delegate-accounts-client.tsx");
  assert.match(ui,/Mật khẩu vừa cấp\/reset/);
- assert.match(ui,/const known=new Map\(issued\.map/);
+ assert.match(ui,/const known=new Map\(\(includePasswords\?issued:\[\]\)\.map/);
  assert.match(ui,/known\.get\(d\.id\)\|\|""/);
  assert.match(ui,/Không đọc được mật khẩu hiện tại/);
  assert.match(ui,/DEFAULT_PASSWORD="Abc@123456"/);

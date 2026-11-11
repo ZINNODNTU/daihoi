@@ -4,7 +4,7 @@ import {FormEvent,useEffect,useMemo,useState} from "react";
 import Image from "next/image";
 import {
  BookOpen,Camera,Download,Edit3,FileSpreadsheet,GraduationCap,RefreshCw,UserRound,
- Plus,Search,Trash2,UserRoundPlus,Users,X
+ Plus,Search,Trash2,UserRoundPlus,Users,X,GripVertical,ArrowUp,ArrowDown
 } from "lucide-react";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
 import {sortBchCandidates,validateBchInput,
@@ -73,6 +73,7 @@ export function BchCandidatesClient({
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState(initialError);
  const [notice,setNotice]=useState("");
+ const [dragId,setDragId]=useState<string|null>(null);
  const [photoTarget,setPhotoTarget]=useState<PhotoTarget|null>(null);
  const [pendingPhoto,setPendingPhoto]=useState<Blob|null>(null);
  const [pendingPhotoPreview,setPendingPhotoPreview]=useState<string|null>(null);
@@ -134,6 +135,44 @@ export function BchCandidatesClient({
    .join(" ").toLocaleLowerCase("vi").includes(search.toLocaleLowerCase("vi"))
  ),[sorted,search]);
  const maxOrder=sorted.reduce((max,c)=>Math.max(max,c.display_order),0);
+ const canReorder=canManage&&!busy&&!search.trim();
+ async function persistOrder(ordered:BchCandidate[]){
+  if(!canReorder||ordered.length!==sorted.length)return;
+  const previous=candidates;
+  setCandidates(ordered.map((item,index)=>({...item,display_order:index+1})));
+  setBusy(true);setError("");setNotice("");
+  try{
+   const response=await fetch("/api/bch-candidates/reorder",{
+    method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({congressId,orderedIds:ordered.map(item=>item.id)})
+   });
+   const body=await response.json();
+   if(!response.ok)throw new Error(body.error||"Không lưu được thứ tự.");
+   setNotice("Đã lưu thứ tự nhân sự BCH. File Excel và trang đại biểu sẽ theo thứ tự mới.");
+  }catch(err){
+   setCandidates(previous);
+   setError(err instanceof Error?err.message:"Không lưu được thứ tự; đã khôi phục thứ tự trước đó.");
+  }finally{setBusy(false);setDragId(null);}
+ }
+ function moveCandidate(id:string,delta:number){
+  if(!canReorder)return;
+  const index=sorted.findIndex(item=>item.id===id);
+  const target=index+delta;
+  if(index<0||target<0||target>=sorted.length)return;
+  const ordered=[...sorted];
+  [ordered[index],ordered[target]]=[ordered[target],ordered[index]];
+  void persistOrder(ordered);
+ }
+ function dropCandidate(targetId:string){
+  if(!dragId||dragId===targetId||!canReorder){setDragId(null);return;}
+  const ordered=[...sorted];
+  const source=ordered.findIndex(item=>item.id===dragId);
+  const target=ordered.findIndex(item=>item.id===targetId);
+  if(source<0||target<0){setDragId(null);return;}
+  const [moved]=ordered.splice(source,1);
+  ordered.splice(target,0,moved);
+  void persistOrder(ordered);
+ }
  function reset(){
   setShowForm(false);setEditing(null);setForm(initial);
   setPendingPhoto(null);setPendingPhotoPreview(null);setSelectedDelegateId("");
@@ -342,6 +381,9 @@ export function BchCandidatesClient({
     <div>
      <h2 className="text-[16px] font-extrabold text-[#294f68]">Bảng trích ngang nhân sự</h2>
      <p className="mt-1 text-xs text-[#8396a4]">Tổng cộng {sorted.length} người · Hiển thị {visible.length} kết quả</p>
+      {canManage&&<p className="mt-1 text-[11px] text-[#4e8197]">
+       {search?"Xóa bộ lọc tìm kiếm để sắp xếp thứ tự.":"Kéo thả hàng để sắp xếp; trên điện thoại dùng nút Lên / Xuống."}
+      </p>}
     </div>
     <div className="relative w-full sm:w-[305px]">
      <Search size={16} className="absolute left-3 top-3 text-[#93a6b2]"/>
@@ -358,14 +400,31 @@ export function BchCandidatesClient({
       <th>Năm vào Đoàn</th><th>Chức vụ hiện tại</th>
       {canManage&&<th>Thao tác</th>}
      </tr></thead>
-     <tbody>{visible.map(item=><tr key={item.id}>
-      <td className="text-center font-bold text-[#577d94]">{sorted.findIndex(c=>c.id===item.id)+1}</td>
+     <tbody>{visible.map(item=><tr key={item.id}
+       draggable={canReorder}
+       onDragStart={event=>{if(!canReorder)return;setDragId(item.id);event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",item.id);}}
+       onDragOver={event=>{if(dragId&&canReorder)event.preventDefault();}}
+       onDrop={event=>{event.preventDefault();dropCandidate(item.id);}}
+       onDragEnd={()=>setDragId(null)}
+       className={dragId===item.id?"bg-[#e9f4f9] opacity-60":dragId?"hover:bg-[#e7f3f8]":""}>
+      <td className="text-center font-bold text-[#577d94]">
+        <span className="inline-flex items-center gap-1.5">
+         {canManage&&<GripVertical size={16} aria-label={"Kéo để sắp xếp "+item.full_name} className={canReorder?"cursor-grab text-[#678ba2]":"text-[#c2d0d9]"}/>}
+         {sorted.findIndex(c=>c.id===item.id)+1}
+        </span>
+       </td>
       <td><BchPortrait candidate={item}/></td>
       <td className="min-w-[175px] font-bold text-[#214d6a]">{item.full_name}</td>
       <td>{item.birth_year}</td><td>{item.hometown}</td>
       <td>{item.ethnicity}</td><td>{item.education_level}</td>
       <td>{item.union_join_year}</td><td>{item.current_position}</td>
       {canManage&&<td><div className="flex flex-wrap gap-1.5">
+       <button type="button" title="Đưa lên một vị trí" aria-label={"Chuyển "+item.full_name+" lên"}
+        className="btn btn-secondary !min-h-8 !px-2 !text-xs" disabled={!canReorder||sorted[0]?.id===item.id}
+        onClick={()=>moveCandidate(item.id,-1)}><ArrowUp size={15}/></button>
+       <button type="button" title="Đưa xuống một vị trí" aria-label={"Chuyển "+item.full_name+" xuống"}
+        className="btn btn-secondary !min-h-8 !px-2 !text-xs" disabled={!canReorder||sorted.at(-1)?.id===item.id}
+        onClick={()=>moveCandidate(item.id,1)}><ArrowDown size={15}/></button>
        <button type="button" aria-label={"Thêm hoặc sửa ảnh "+item.full_name}
         className="btn btn-secondary !min-h-8 !px-2 !text-xs"
         onClick={()=>setPhotoTarget({kind:"existing",candidate:item})} disabled={busy}>
@@ -398,6 +457,12 @@ export function BchCandidatesClient({
       <div className="col-span-2"><dt className="text-[#8397a5]">Chức vụ hiện tại</dt><dd className="mt-1 font-semibold text-[#3e5a6c]">{item.current_position}</dd></div>
      </dl>
      {canManage&&<div className="mt-4 flex flex-wrap gap-2 border-t border-[#e3edf1] pt-3">
+       <button type="button" disabled={!canReorder||sorted[0]?.id===item.id}
+        className="btn btn-secondary flex-1 justify-center" onClick={()=>moveCandidate(item.id,-1)}>
+        <ArrowUp size={15}/> Lên</button>
+       <button type="button" disabled={!canReorder||sorted.at(-1)?.id===item.id}
+        className="btn btn-secondary flex-1 justify-center" onClick={()=>moveCandidate(item.id,1)}>
+        <ArrowDown size={15}/> Xuống</button>
       <button type="button" disabled={busy} className="btn btn-secondary flex-1 justify-center"
        onClick={()=>setPhotoTarget({kind:"existing",candidate:item})}><Camera size={15}/>{item.photo_path?"Sửa ảnh":"Thêm ảnh"}</button>
       <button type="button" disabled={busy} className="btn btn-secondary flex-1 justify-center" onClick={()=>edit(item)}><Edit3 size={15}/>Sửa</button>

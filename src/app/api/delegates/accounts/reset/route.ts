@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {writeSystemLog} from "@/lib/system-log";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -53,6 +54,9 @@ export async function POST(request:Request){
    target_id:delegateId,details:{userId:delegate.auth_user_id,policy:"default"}
   });
   if(auditError)console.error("delegate password reset audit failure",auditError.code);
+  await writeSystemLog({level:"warning",source:"auth",event:"delegate.password_reset",
+   message:"Quản trị đã đặt lại mật khẩu đại biểu.",congressId,actorId:user.id,
+   context:{operation:"delegate.password_reset",endpoint:"/api/delegates/accounts/reset",httpMethod:"POST"}});
   return NextResponse.json({
    ok:true,id:delegate.id,name:delegate.full_name,email:delegate.login_email,
    password,changedAt:new Date().toISOString()

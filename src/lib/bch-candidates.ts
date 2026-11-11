@@ -49,3 +49,10 @@ export function sortBchCandidates(items:BchCandidate[]){
  return [...items].sort((a,b)=>a.display_order-b.display_order||
   a.full_name.localeCompare(b.full_name,"vi")||a.id.localeCompare(b.id));
 }
+/** Validate reorder payload before invoking the all-or-nothing SQL RPC. */
+export function validateBchReorder(ids:unknown):ids is string[]{
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+ return Array.isArray(ids)&&ids.length>0&&ids.length<=500&&
+  ids.every(id=>typeof id==="string"&&uuid.test(id))&&
+  new Set(ids.map(id=>id.toLowerCase())).size===ids.length;
+}

@@ -83,7 +83,8 @@ test("Hồ sơ và Excel lưu giới tính, ngày sinh; chỉnh sửa do admin t
  assert.match(ui,/name="birth_date"/);
  assert.match(ui,/name="gender"/);
  assert.match(ui,/Giới tính","Ngày sinh/);
- assert.match(ui,/Sửa giới tính \/ ngày sinh/);
+ assert.match(ui,/Sửa hồ sơ \/ chức vụ/);
+ assert.match(ui,/Sửa đơn vị \/ chức vụ/);
  assert.match(ui,/method:"PATCH"/);
  const api=read("../src/app/api/delegates/route.ts");
  assert.match(api,/gender:normalizeGender\(item\.gender\)/);

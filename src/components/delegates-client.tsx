@@ -49,6 +49,8 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
  const [demographicsTarget,setDemographicsTarget]=useState<Delegate|null>(null);
  const [editGender,setEditGender]=useState("");
  const [editBirthDate,setEditBirthDate]=useState("");
+ const [editUnit,setEditUnit]=useState("");
+ const [editPosition,setEditPosition]=useState("");
  const [pendingPhotoPreview,setPendingPhotoPreview]=useState<string|null>(null);
  useEffect(()=>()=>{if(pendingPhotoPreview)URL.revokeObjectURL(pendingPhotoPreview);},[pendingPhotoPreview]);
  async function uploadPhoto(delegateId:string,photo:Blob){
@@ -203,6 +205,8 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   setDemographicsTarget(delegate);
   setEditGender(delegate.gender||"");
   setEditBirthDate(delegate.birth_date||"");
+  setEditUnit(delegate.unit||"");
+  setEditPosition(delegate.position||"");
   setError("");
  }
  async function updateDemographics(e:FormEvent<HTMLFormElement>){
@@ -213,12 +217,12 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    const response=await fetch("/api/delegates",{
     method:"PATCH",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({congressId,delegateId:demographicsTarget.id,
-     gender:editGender,birth_date:editBirthDate})
+     gender:editGender,birth_date:editBirthDate,unit:editUnit,position:editPosition})
    });
    const result=await response.json();
    if(!response.ok)throw new Error(result.error||"Không cập nhật được hồ sơ.");
    setDemographicsTarget(null);
-   setSuccess("Đã cập nhật giới tính và ngày sinh của "+demographicsTarget.full_name+".");
+   setSuccess("Đã cập nhật hồ sơ, đơn vị và chức vụ của "+demographicsTarget.full_name+".");
    router.refresh();
   }catch(e){setError(e instanceof Error?e.message:"Không cập nhật được hồ sơ.");}
   finally{setBusy(false);}
@@ -312,7 +316,9 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       <div className="flex h-[54px] w-10 items-center justify-center rounded-lg bg-[#f0f5f8] text-[#9aafbc]"><UserRound size={22}/></div>}</td>
      <td className="font-bold text-[#006d9e]">{d.code}</td><td className="font-bold">{d.full_name}</td>
      <td><span className="font-semibold">{d.student_id||"—"}</span><span className="block break-all text-[11px] text-[#627c8a]">{d.login_email||""}</span></td>
-     <td className="hide-mobile">{d.unit}<span className="block text-[11px] text-[#627c8a]">{d.position||""}</span></td>
+     <td className="hide-mobile">{d.unit||"Chưa cập nhật"}<span className="block text-[11px] text-[#627c8a]">{d.position||""}</span>
+      {canManage&&<button type="button" className="mt-1 text-[11px] font-bold text-[#007fae] underline underline-offset-2"
+       onClick={()=>openDemographics(d)}>Sửa đơn vị / chức vụ</button>}</td>
      <td><span className="badge badge-gray">{kindLabel(d.delegate_type)}</span></td>
       <td className="text-xs">{genderLabel(d.gender)}
        <span className="block text-[#627c8a]">{birthLabel(d.birth_date)}</span>
@@ -345,7 +351,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       <p className="mt-1 text-[11px] text-[#687f91]">{d.login_email||"Khách mời không có tài khoản"} · {d.auth_user_id?"Đã cấp tài khoản":"Chưa cấp tài khoản"}</p>
      <div className="mobile-record-actions">
       {canManage&&<button type="button" className="btn btn-secondary" disabled={busy}
-       onClick={()=>openDemographics(d)}>Sửa giới tính / ngày sinh</button>}
+       onClick={()=>openDemographics(d)}>Sửa hồ sơ / chức vụ</button>}
       {canManage&&<button type="button" className="btn btn-secondary" disabled={busy}
        onClick={()=>setPhotoTarget({kind:"existing",delegate:d})}><Camera size={17}/>{d.photo_path?"Sửa ảnh":"Thêm ảnh"}</button>}
       <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>void openCard(d)}>
@@ -359,12 +365,18 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     <div role="dialog" aria-modal="true" aria-label={"Cập nhật nhân khẩu học "+demographicsTarget.full_name}
      className="w-full max-w-[460px] rounded-[18px] border border-[#d7e4eb] bg-white p-5 shadow-2xl sm:p-7">
      <div className="flex items-start justify-between gap-3">
-      <div><h2 className="text-[18px] font-extrabold text-[#213f5b]">Thông tin đại biểu</h2>
+      <div><h2 className="text-[18px] font-extrabold text-[#213f5b]">Chỉnh sửa hồ sơ đại biểu</h2>
        <p className="mt-1 text-xs text-[#668297]">{demographicsTarget.full_name}</p></div>
       <button type="button" onClick={()=>setDemographicsTarget(null)} aria-label="Đóng chỉnh sửa"
        className="rounded-lg bg-[#edf4f8] p-2 text-[#3c6c82]"><X size={19}/></button>
      </div>
      <form className="mt-5 space-y-4" onSubmit={e=>void updateDemographics(e)}>
+      <label className="block"><span className="label">Đơn vị</span>
+       <input className="field" maxLength={200} value={editUnit} onChange={e=>setEditUnit(e.target.value)}
+        placeholder="Khoa, chi đoàn, lớp hoặc cơ quan"/></label>
+      <label className="block"><span className="label">Chức vụ</span>
+       <input className="field" maxLength={160} value={editPosition} onChange={e=>setEditPosition(e.target.value)}
+        placeholder="Bí thư, Phó Bí thư, Ủy viên..."/></label>
       <label className="block"><span className="label">Giới tính</span>
        <select className="field" value={editGender} onChange={e=>setEditGender(e.target.value)}>
         <option value="">Chưa cung cấp</option><option value="male">Nam</option>
@@ -373,7 +385,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       <label className="block"><span className="label">Ngày tháng năm sinh</span>
        <input className="field" type="date" min="1900-01-01" value={editBirthDate}
         onChange={e=>setEditBirthDate(e.target.value)}/></label>
-      <p className="text-xs leading-6 text-[#748d9c]">Thông tin được sử dụng để phân tích chất lượng đại biểu đã điểm danh.</p>
+      <p className="text-xs leading-6 text-[#748d9c]">Đơn vị và chức vụ được đồng bộ trên hồ sơ và thẻ đại biểu; giới tính và ngày sinh phục vụ thống kê.</p>
       {error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
       <div className="flex flex-wrap justify-end gap-2">
        <button type="button" className="btn btn-secondary" disabled={busy}

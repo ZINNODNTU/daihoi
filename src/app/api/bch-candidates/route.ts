@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 import {validateBchInput} from "@/lib/bch-candidates";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {writeSystemLog} from "@/lib/system-log";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -63,6 +64,9 @@ export async function POST(request:Request){
    console.error("bch candidate insert failed",error.code);
    return fail("Không lưu được nhân sự. Kiểm tra cấu hình Supabase BCH v8.",500);
   }
+  await writeSystemLog({level:"info",source:"api",event:"bch.candidate_created",
+   message:"Quản trị đã thêm nhân sự giới thiệu BCH.",actorId:auth.user.id,congressId,
+   context:{operation:"bch.create",endpoint:"/api/bch-candidates",httpMethod:"POST"}});
   return NextResponse.json({candidate:data},{status:201,headers:{"Cache-Control":"no-store"}});
  }catch{return fail("Dữ liệu gửi lên không hợp lệ.",400);}
 }
@@ -81,6 +85,9 @@ export async function PATCH(request:Request){
    .eq("id",id).eq("congress_id",congressId).select().maybeSingle();
   if(error)return fail("Không thể cập nhật hồ sơ nhân sự.",500);
   if(!data)return fail("Không tìm thấy hồ sơ nhân sự trong Đại hội.",404);
+  await writeSystemLog({level:"info",source:"api",event:"bch.candidate_updated",
+   message:"Quản trị đã sửa nhân sự giới thiệu BCH.",actorId:auth.user.id,congressId,
+   context:{operation:"bch.update",endpoint:"/api/bch-candidates",httpMethod:"PATCH"}});
   return NextResponse.json({candidate:data},{headers:{"Cache-Control":"no-store"}});
  }catch{return fail("Dữ liệu gửi lên không hợp lệ.",400);}
 }
@@ -102,6 +109,9 @@ export async function DELETE(request:Request){
     .from("delegate-photos").remove([expected,expected.replace(/\.jpg$/i,"-96.jpg"),expected.replace(/\.jpg$/i,"-160.jpg")]);
    if(cleanupError)console.error("bch photo cleanup failed",cleanupError.name);
   }
+  await writeSystemLog({level:"warning",source:"api",event:"bch.candidate_deleted",
+   message:"Quản trị đã xóa nhân sự giới thiệu BCH.",actorId:auth.user.id,congressId,
+   context:{operation:"bch.delete",endpoint:"/api/bch-candidates",httpMethod:"DELETE"}});
   return NextResponse.json({ok:true},{headers:{"Cache-Control":"no-store"}});
  }catch{return fail("Dữ liệu gửi lên không hợp lệ.",400);}
 }

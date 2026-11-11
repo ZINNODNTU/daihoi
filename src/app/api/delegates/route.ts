@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 import {normalizeGender,normalizeBirthDate} from "@/lib/delegate-demographics";
+import {writeSystemLog} from "@/lib/system-log";
 
 export const runtime="nodejs";
 const studentIdPattern=/^[A-Za-z0-9][A-Za-z0-9._-]{3,31}$/;
@@ -62,16 +63,29 @@ export async function PATCH(request:Request){
    return reply("Mã Đại hội hoặc đại biểu không hợp lệ.",400);
   if(!(await hasRole(supabase,user.id,congressId,"admin")))
    return reply("Không có quyền cập nhật đại biểu.",403);
-  // Demographics-only editing: prevents unauthorized changes to the QR and seat identities.
-  if(!body||!("gender" in body)||!("birth_date" in body))
-   return reply("Thiếu giới tính hoặc ngày sinh.",400);
-  const gender=normalizeGender(body.gender);
-  const birth_date=normalizeBirthDate(body.birth_date);
+  // Allow only profile attributes; QR, seat identity and authentication stay unchanged.
+  const allowed=new Set(["congressId","delegateId","gender","birth_date","unit","position"]);
+  if(!body||typeof body!=="object"||Object.keys(body).some(key=>!allowed.has(key)))
+   return reply("Trường thông tin cập nhật không hợp lệ.",400);
+  const patch:Record<string,string|null>={};
+  if("gender" in body)patch.gender=normalizeGender(body.gender);
+  if("birth_date" in body)patch.birth_date=normalizeBirthDate(body.birth_date);
+  for(const [field,max] of [["unit",200],["position",160]] as const){
+   if(!(field in body))continue;
+   if(typeof body[field]!=="string"||body[field].trim().length>max||
+      /[\u0000-\u001f\u007f]/.test(body[field]))
+    return reply((field==="unit"?"Đơn vị":"Chức vụ")+" không hợp lệ (tối đa "+max+" ký tự).",400);
+   patch[field]=body[field].trim().replace(/\s+/g," ");
+  }
+  if(!Object.keys(patch).length)return reply("Chưa chọn thông tin cần chỉnh sửa.",400);
   const {data,error}=await supabase.from("delegates")
-   .update({gender,birth_date}).eq("congress_id",congressId)
-   .eq("id",delegateId).select("id,gender,birth_date").maybeSingle();
-  if(error)return reply("Không lưu được thông tin. Kiểm tra migration v15.",500);
+   .update(patch).eq("congress_id",congressId)
+   .eq("id",delegateId).select("id,unit,position,gender,birth_date").maybeSingle();
+  if(error)return reply("Không lưu được hồ sơ đại biểu. Kiểm tra phân quyền và cấu hình cơ sở dữ liệu.",500);
   if(!data)return reply("Không tìm thấy hồ sơ đại biểu trong Đại hội.",404);
+  await writeSystemLog({level:"info",source:"api",event:"delegate.profile_updated",
+   message:"Quản trị đã cập nhật hồ sơ đại biểu.",actorId:user.id,congressId,
+   context:{operation:"delegate.update",endpoint:"/api/delegates",httpMethod:"PATCH"}});
   return NextResponse.json({ok:true,delegate:data},{headers:{"Cache-Control":"no-store"}});
  }catch(e){
   return reply(e instanceof Error&&/Giới tính|Ngày sinh/.test(e.message)?
