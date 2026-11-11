@@ -28,7 +28,7 @@ export default async function DelegateBchPage(){
  return <div className="mx-auto max-w-[1140px]">
   <DelegatePageHeading eyebrow="NHÂN SỰ / BAN CHẤP HÀNH"
    title="Nhân sự giới thiệu BCH"
-   description={"Danh sách ứng viên BCH của "+congress.name+". Vuốt ngang để xem từng hồ sơ."}
+   description={"Danh sách ứng viên BCH của "+congress.name+". Máy tính hiển thị toàn bộ hồ sơ dạng flashcard; điện thoại vuốt ngang để xem từng người."}
    icon={Users}/>
   {error?<DelegateUnavailable message="Chưa thể tải danh sách ứng viên BCH."/>:
    candidates.length?<DelegateBchCarousel items={candidates} initialCongressId={congressId}/>:

@@ -2,6 +2,14 @@
 
 Trang trong menu Đại hội: **Trích ngang nhân sự BCH**.
 
+## Giao diện xem nhân sự BCH trên cổng đại biểu (bản cập nhật desktop)
+
+- Tại `/my-card/bch`, màn hình **từ 1024 px** hiển thị **tất cả ứng viên trong một lưới flashcard**: hai cột ở cỡ laptop, ba cột ở màn hình lớn, mỗi card có ảnh, họ tên, chức vụ và đầy đủ các trường trích ngang. Danh sách giữ đúng `display_order` của BTC; không phân trang hay che bớt hồ sơ.
+- Trên điện thoại và tablet nhỏ hơn 1024 px, giữ bộ thẻ vuốt trái/phải `react-swipeable-cards`, nút Trước/Tiếp và tính năng chuyển nhanh.
+- Bộ lọc theo Đại hội, tìm theo tên/chức vụ cùng áp dụng cho cả hai dạng giao diện; số lượng kết quả phản ánh chính xác các hồ sơ đang hiển thị.
+- Ảnh trên lưới desktop tải khi cuộn đến vùng nhìn thấy để tránh tải đồng loạt; ảnh lấy qua API đã phân quyền, không công khai bucket.
+- Chỉ thay đổi giao diện: không cần migration Supabase mới; cần phát hành bản build Next.js mới để xem trên website.
+
 ## Các trường dữ liệu (bắt buộc)
 
 Họ tên, Năm sinh, Quê quán, Dân tộc, Trình độ, Năm vào Đoàn,

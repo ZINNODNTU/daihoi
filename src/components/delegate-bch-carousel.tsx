@@ -40,7 +40,10 @@
     </div>
     <p className="mt-3 text-[12px] font-semibold text-[#577c91]" role="status">{filtered.length} / {items.length} ứng viên</p>
    </section>
-   {filtered.length?<BchCandidateSlides key={congressId+"_"+query} items={filtered}/>:
+   {filtered.length?<>
+    <div className="lg:hidden"><BchCandidateSlides key={congressId+"_"+query} items={filtered}/></div>
+    <div className="hidden lg:block"><BchCandidateGrid items={filtered}/></div>
+   </>:
     <div className="rounded-2xl border border-[#dae6ee] bg-white p-7 text-center">
      <p className="text-[14px] font-bold text-[#42657a]">Không tìm thấy ứng viên phù hợp.</p>
      <button type="button" className="mt-3 min-h-11 rounded-xl border border-[#cbdfe9] px-4 text-xs font-bold text-[#176b93]"
@@ -58,14 +61,14 @@
    ["Năm vào Đoàn",String(candidate.union_join_year||"—")]
   ];
   return <article aria-label={"Hồ sơ "+candidate.full_name}
-   className="w-full min-w-0 overflow-hidden rounded-[20px] border border-[#cbdde8] bg-white shadow-[0_12px_30px_rgba(23,59,85,.11)]">
+   className="flex h-full w-full min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#cbdde8] bg-white shadow-[0_12px_30px_rgba(23,59,85,.11)]">
    <header className="relative overflow-hidden bg-[#172a48] px-4 pb-11 pt-5 text-center text-white sm:px-5 sm:pt-6">
     <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-36 w-36 rounded-full border-[25px] border-white/[.04]"/>
     <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#e2bf7f]">HỒ SƠ TRÍCH NGANG</p>
     <h2 className="mt-2 text-[14px] font-extrabold leading-6 text-white sm:text-[15px]">NHÂN SỰ GIỚI THIỆU BCH</h2>
     <p className="mx-auto mt-1 max-w-[310px] text-[10px] leading-5 text-[#bed2df]">{candidate.congressName}</p>
    </header>
-   <div className="relative -mt-8 px-3 pb-5 text-center sm:px-5 sm:pb-6">
+   <div className="relative -mt-8 flex flex-1 flex-col px-3 pb-5 text-center sm:px-5 sm:pb-6">
     <div className="mx-auto flex h-[152px] w-[114px] overflow-hidden rounded-[11px] border-[4px] border-white bg-[#e9f1f6] shadow-[0_8px_24px_rgba(20,50,70,.16)] sm:h-[169px] sm:w-[127px]">
      {candidate.photo_path?<Image unoptimized loading={foreground?"eager":"lazy"}
       src={"/api/bch-candidates/"+candidate.id+"/photo?w=160"}
@@ -82,7 +85,7 @@
       <dd className="min-w-0 break-words font-bold leading-5 text-[#385971]">{value}</dd>
      </div>)}
     </dl>
-    <div className="mt-4 flex items-center justify-between gap-2 text-[10px] font-semibold text-[#91a5b1]">
+    <div className="mt-auto flex items-center justify-between gap-2 pt-4 text-[10px] font-semibold text-[#91a5b1]">
      <span className="inline-flex items-center gap-1"><MapPin size={13}/> Đại hội</span>
      <span className="inline-flex items-center gap-1"><GraduationCap size={13}/> Hồ sơ giới thiệu</span>
     </div>
@@ -159,7 +162,33 @@
   </SwipeableCards.Cards>;
  }
 
- function BchCandidateSlides({items}:{items:Candidate[]}){
+ function BchCandidateGrid({items}:{items:Candidate[]}){
+   return <section aria-label="Toàn bộ hồ sơ ứng viên BCH" className="min-w-0 space-y-5">
+    <div className="flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-[#dae6ee] bg-white px-5 py-4">
+     <div>
+      <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#748c9e]">DANH SÁCH TRÍCH NGANG</p>
+      <h2 className="mt-1 text-[19px] font-extrabold text-[#1d3f60]">Toàn bộ {items.length} ứng viên BCH</h2>
+     </div>
+     <p className="max-w-[380px] text-right text-[12px] leading-5 text-[#71899b]">
+      Tất cả flashcard được hiển thị đồng thời theo thứ tự do Ban Tổ chức sắp xếp.
+     </p>
+    </div>
+    <ol className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2 xl:grid-cols-3 xl:gap-6">
+     {items.map((candidate,index)=><li key={candidate.id} className="flex min-w-0 flex-col gap-2">
+      <div className="flex items-center justify-between px-1 text-[11px] font-bold text-[#577c91]">
+       <span className="tabular-nums">HỒ SƠ {String(index+1).padStart(2,"0")}</span>
+       <span className="tabular-nums">{index+1} / {items.length}</span>
+      </div>
+      <div className="min-w-0 flex-1"><CandidateProfile candidate={candidate} foreground={false}/></div>
+     </li>)}
+    </ol>
+    <p className="text-center text-[11px] leading-5 text-[#8398a6]">
+     Thông tin do Ban Tổ chức giới thiệu và cung cấp; danh sách không phải kết quả bầu BCH.
+    </p>
+   </section>;
+  }
+
+  function BchCandidateSlides({items}:{items:Candidate[]}){
   const [active,setActive]=useState(0);
   const [previewDirection,setPreviewDirection]=useState<HorizontalDirection>("left");
   const pending=useRef<HorizontalDirection|null>(null);
