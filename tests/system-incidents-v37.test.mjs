@@ -10,6 +10,10 @@ test("V37 migration creates server-only aggregate with atomic grouping",()=>{
  assert.match(sql,/create table if not exists public\.system_incidents/i);
  assert.match(sql,/fingerprint text not null unique/i);
  assert.match(sql,/revoke all on public\.system_incidents from public, anon, authenticated/i);
+ assert.match(sql,/create schema if not exists daihoi_private/i);
+ assert.match(sql,/grant usage on schema daihoi_private to service_role/i);
+ assert.match(sql,/grant execute on function daihoi_private\.system_log_assign_fingerprint\(\) to service_role/i);
+ assert.match(sql,/grant execute on function daihoi_private\.system_log_aggregate_incident\(\) to service_role/i);
  assert.match(sql,/grant select,insert,update on public\.system_incidents to service_role/i);
  assert.match(sql,/alter table public\.system_incidents enable row level security/i);
  assert.match(sql,/on conflict \(fingerprint\) do update set/i);

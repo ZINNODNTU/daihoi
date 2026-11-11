@@ -8,6 +8,8 @@
      "start": "next start",
      "lint": "eslint",
      "docs:check": "node --test tests/docs-structure.test.mjs",
+     "test:db": "node --test tests/system-migrations-integration.test.mjs",
+     "prepare:production-logs": "node scripts/prepare-production-logs.mjs",
      "readiness": "node scripts/readiness.mjs",
      "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
      "admin:promote": "node scripts/grant-super-admin.mjs",
@@ -39,6 +41,7 @@
      "write-excel-file": "4.1.1"
    },
    "devDependencies": {
+     "@electric-sql/pglite": "0.5.16",
      "@tailwindcss/turbopack": "^4",
      "@types/jsbarcode": "^3.11.4",
      "@types/node": "^20",

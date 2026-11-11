@@ -1,5 +1,6 @@
 -- V36: Internal system observability, separate from immutable audit_logs.
 -- Run on the correct Supabase project after database backup.
+begin;
 create table if not exists public.system_logs (
   id uuid primary key default gen_random_uuid(),
   occurred_at timestamptz not null default now(),
@@ -35,7 +36,9 @@ create index if not exists system_logs_unresolved_idx
 -- No direct access for browser clients. The authenticated Next.js API
 -- checks congress administration scope BEFORE using its server-only key.
 alter table public.system_logs enable row level security;
-revoke all on public.system_logs from anon, authenticated;
+revoke all on public.system_logs from public, anon, authenticated;
 grant select, insert, update on public.system_logs to service_role;
 comment on table public.system_logs is
  'Redacted technical events, managed server-side only. Retain 30 days unless policy requires otherwise.';
+commit;
+notify pgrst, 'reload schema';

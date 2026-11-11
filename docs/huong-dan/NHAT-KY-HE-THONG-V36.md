@@ -39,6 +39,7 @@ Kiểm thử với tài khoản super_admin, admin theo Đại hội và tài kh
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`
+- `npm run test:db` (chạy migration V26/V36/V37 thực tế trên PostgreSQL WASM; không cần tài khoản Supabase)
 
 Log có 4 level: `critical`, `error`, `warning`, `info`. Event key ổn định (ví dụ `attendance.checkin_write_failed`), source, optional congress_id, request_id, status_code, context có allowlist. Không ghi stack traces thô; stack gốc có thể tra cứu riêng trong hệ thống observability chuyên dụng nếu cần và đã cấu hình bảo vệ phù hợp.
 

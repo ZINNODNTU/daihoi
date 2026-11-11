@@ -1,10 +1,16 @@
 -- V37: Issue grouping inspired by Sentry/HyperDX, without extra servers.
 -- Prerequisite: V36 system_logs. Apply ONLY after backing up the intended project.
+-- Trigger functions live in a non-exposed schema. All writes use service_role.
+begin;
 do $$ begin
  if to_regclass('public.system_logs') is null then
   raise exception 'Apply upgrade-system-observability-v36.sql before V37';
  end if;
 end $$;
+
+create schema if not exists daihoi_private;
+revoke all on schema daihoi_private from public, anon, authenticated;
+grant usage on schema daihoi_private to service_role;
 
 alter table public.system_logs add column if not exists fingerprint text;
 alter table public.system_logs add column if not exists release text;
@@ -50,7 +56,7 @@ grant select,insert,update on public.system_incidents to service_role;
 -- No SELECT / INSERT / UPDATE / DELETE through the browser; authenticated
 -- users must go through Next.js APIs that check per-congress role.
 
-create or replace function private.system_log_assign_fingerprint()
+create or replace function daihoi_private.system_log_assign_fingerprint()
 returns trigger language plpgsql set search_path = '' as $$
 begin
  new.fingerprint := pg_catalog.md5(pg_catalog.concat_ws('|',
@@ -64,12 +70,13 @@ begin
  return new;
 end;
 $$;
-revoke all on function private.system_log_assign_fingerprint() from public;
+revoke all on function daihoi_private.system_log_assign_fingerprint() from public, anon, authenticated;
+grant execute on function daihoi_private.system_log_assign_fingerprint() to service_role;
 drop trigger if exists system_logs_fingerprint_before_insert on public.system_logs;
 create trigger system_logs_fingerprint_before_insert before insert on public.system_logs
-for each row execute function private.system_log_assign_fingerprint();
+for each row execute function daihoi_private.system_log_assign_fingerprint();
 
-create or replace function private.system_log_aggregate_incident()
+create or replace function daihoi_private.system_log_aggregate_incident()
 returns trigger language plpgsql set search_path = '' as $$
 begin
  if new.level = 'info' then return new; end if;
@@ -116,11 +123,14 @@ begin
  return new;
 end;
 $$;
-revoke all on function private.system_log_aggregate_incident() from public;
+revoke all on function daihoi_private.system_log_aggregate_incident() from public, anon, authenticated;
+grant execute on function daihoi_private.system_log_aggregate_incident() to service_role;
 drop trigger if exists system_logs_aggregate_after_insert on public.system_logs;
 create trigger system_logs_aggregate_after_insert after insert on public.system_logs
-for each row execute function private.system_log_aggregate_incident();
+for each row execute function daihoi_private.system_log_aggregate_incident();
 
 -- Existing V36 logs are not reprocessed automatically. The first new
 -- matching log after applying V37 creates an incident. The underlying raw
 -- event history remains available for analysis.
+commit;
+notify pgrst, 'reload schema';

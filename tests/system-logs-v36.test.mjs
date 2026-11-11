@@ -22,7 +22,7 @@ test("Migration uses server-only system_logs, RLS, indexes and restricted grants
  const sql=read("supabase/upgrade-system-observability-v36.sql");
  assert.match(sql,/create table if not exists public\.system_logs/i);
  assert.match(sql,/alter table public\.system_logs enable row level security/i);
- assert.match(sql,/revoke all on public\.system_logs from anon, authenticated/i);
+ assert.match(sql,/revoke all on public\.system_logs from public, anon, authenticated/i);
  assert.match(sql,/grant select, insert, update on public\.system_logs to service_role/i);
  assert.match(sql,/system_logs_congress_time_idx/i);
  assert.match(sql,/resolution in \('open','investigating','resolved'\)/);

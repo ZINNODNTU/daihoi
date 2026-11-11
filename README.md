@@ -37,6 +37,7 @@ Trên Windows, thay `cp` bằng `Copy-Item .env.example .env.local`. Cấu hình
 npm run docs:check
 npm run lint
 npm run build
+npm run test:db
 node --test tests/*.test.mjs
 npm run readiness
 ```
@@ -53,7 +54,7 @@ npm run readiness
 - **Nghiệp vụ:** [Quy trình Đại hội](docs/nghiep-vu/NGHIEP-VU-DAI-HOI.md).
 - **Giao diện:** [Responsive UI](docs/giao-dien/RESPONSIVE-UI.md).
 - **Quy ước đóng góp:** [Chuẩn tài liệu](docs/QUY-UOC.md).
-- **Giám sát lỗi hệ thống:** [System Logs V36](docs/huong-dan/NHAT-KY-HE-THONG-V36.md), [Error & Incident Monitoring V37](docs/huong-dan/ERROR-INCIDENT-MONITORING-V37.md).
+- **Giám sát lỗi hệ thống:** [System Logs V36](docs/huong-dan/NHAT-KY-HE-THONG-V36.md), [Error & Incident Monitoring V37](docs/huong-dan/ERROR-INCIDENT-MONITORING-V37.md), [kích hoạt production V38](docs/huong-dan/KICH-HOAT-SYSTEM-LOGS-V38.md).
 
 **Mục lục đầy đủ:** [docs/README.md](docs/README.md). **Lịch sử README cũ:** [snapshot 09/11/2026](docs/lich-su/README-GOC-2026-11-09.md).
 

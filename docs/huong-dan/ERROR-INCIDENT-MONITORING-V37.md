@@ -47,4 +47,6 @@ Không copy source của repository ngoài. Giữ giải pháp tối giản trê
 - Cửa sổ đếm 5 phút là cửa sổ được neo từ lần đầu trong khoảng, không phải rolling histogram tuyệt đối. Badge lỗi lặp chỉ là tín hiệu cần điều tra, không tự xác định nguyên nhân.
 - Cấu hình retention raw khoảng 30 ngày và incident đã giải quyết 90 ngày chỉ sau khi phê duyệt chính sách, không tự xóa dữ liệu production.
 - Không ghi log cho page view, check-in thành công hay thao tác bình thường, để giảm chi phí cho 200 người truy cập.
-- QA: node --test tests/system-incidents-v37.test.mjs; node --test tests/*.test.mjs; npm run lint; npm run build; npm run check:production-schema.
+- QA: `npm run test:db` dùng PGlite/PostgreSQL độc lập để chạy thật migration V26, V36, V37, kiểm tra fingerprint, reopen, RLS/GRANT và idempotence. Không truy cập production hoặc dữ liệu đại biểu.
+- QA tiếp: `node --test tests/*.test.mjs`, `npm run lint`, `npm run build`, `npm run check:production-schema`.
+- V37 dùng schema kỹ thuật `daihoi_private` riêng, để không thay đổi quyền của schema `private` nếu ứng dụng khác đang sử dụng.
