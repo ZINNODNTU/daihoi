@@ -14,7 +14,7 @@ export default async function DocumentsPage({params}:{params:Promise<{id:string}
   </section>;
  const canManage=await hasRole(supabase,user.id,id,"admin");
  const {data,error}=await createAdminClient().from("documents").select("*")
-  .eq("congress_id",id).order("created_at",{ascending:false}).limit(800);
+  .eq("congress_id",id).order("display_order",{ascending:true}).order("created_at",{ascending:false}).limit(800);
  if(error){
   console.error("documents list failed",error.code);
   return <section role="alert" className="card p-6 text-sm text-red-700">

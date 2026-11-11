@@ -32,6 +32,7 @@ const gates=[
  ["delegate-portal","delegates","is_active,login_email"],
  ["delegate-demographics-v15","delegates","gender,birth_date"],
  ["delegate-documents-v14","documents","id,congress_id,delegate_visible,drive_file_id"],
+  ["document-management-v43","documents","id,congress_id,display_order"],
  ["bch","bch_candidates","id,congress_id,full_name,photo_path"],
  ["seating-v6","seating_layouts","id,congress_id,grid_rows,grid_columns,version"],
  ["seating-v6","seats","id,congress_id,layout_id,seat_type"],

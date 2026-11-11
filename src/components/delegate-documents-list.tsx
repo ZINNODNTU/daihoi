@@ -24,7 +24,9 @@ export function DelegateDocumentsList({docs,congresses,initialCongressId=""}:{
  const visible=useMemo(()=>{
   const q=normalize(query);
   return docs.filter(doc=>(!congressId||doc.congress_id===congressId)&&
-   (!q||normalize(doc.file_name+" "+(names.get(doc.congress_id)||"")).includes(q)));
+   (!q||normalize(doc.file_name+" "+(names.get(doc.congress_id)||"")).includes(q)))
+    .sort((a,b)=>(a.display_order??1000000)-(b.display_order??1000000)||
+     b.created_at.localeCompare(a.created_at)||b.id.localeCompare(a.id));
  },[docs,congressId,names,query]);
  function changeCongress(value:string){setCongressId(value);setLimit(24);}
  return <section aria-label="Thư viện tài liệu được công bố" className="overflow-hidden rounded-[18px] border border-[#dbe6ee] bg-white shadow-sm">

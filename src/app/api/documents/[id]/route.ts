@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {googleDriveFileUrl,googleDrivePreviewUrl} from "@/lib/drive-links";
+import {writeSystemLog} from "@/lib/system-log";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -42,4 +43,38 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
   response.headers.set("Referrer-Policy","no-referrer");
   return response;
  }catch{return fail(404,"Liên kết Google Drive của tài liệu không hợp lệ.");}
+}
+
+// Gỡ tài liệu khỏi danh mục Đại hội. Không xóa tệp gốc Google Drive:
+// tránh mất dữ liệu hoặc ảnh hưởng đến các liên kết được BTC chia sẻ.
+export async function DELETE(request:Request,{params}:{params:Promise<{id:string}>}){
+ try{
+  const {id}=await params;
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+   return fail(400,"Mã tài liệu không hợp lệ.");
+  const origin=request.headers.get("origin");
+  if(origin&&new URL(origin).host!==request.headers.get("host"))
+   return fail(403,"Nguồn yêu cầu không hợp lệ.");
+  const {supabase,user}=await getAuth();
+  if(!user)return fail(401,"Vui lòng đăng nhập.");
+  const payload=await request.json().catch(()=>null);
+  const congressId=payload?.congressId;
+  if(typeof congressId!=="string"||
+   !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(congressId))
+   return fail(400,"Đại hội không hợp lệ.");
+  if(!(await hasRole(supabase,user.id,congressId,"admin")))
+   return fail(403,"Chỉ quản trị Đại hội được gỡ tài liệu.");
+  const db=createAdminClient();
+  const {data:removed,error}=await db.from("documents").delete()
+   .eq("id",id).eq("congress_id",congressId)
+   .select("id,file_name").maybeSingle();
+  if(error)return fail(503,"Chưa gỡ được tài liệu. Vui lòng thử lại.");
+  if(!removed)return fail(404,"Không tìm thấy tài liệu trong Đại hội này.");
+  await writeSystemLog({level:"info",source:"documents",event:"documents.removed",
+   message:"Quản trị đã gỡ tài liệu khỏi thư viện Đại hội; file Drive gốc được giữ lại.",
+   congressId,actorId:user.id,context:{operation:"documents.remove"}});
+  return NextResponse.json({ok:true,removedId:removed.id,driveFilePreserved:true},{
+   headers:{"Cache-Control":"private, no-store"}
+  });
+ }catch{return fail(503,"Không thể gỡ tài liệu. Vui lòng thử lại.");}
 }

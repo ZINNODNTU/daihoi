@@ -2,7 +2,7 @@
 
 import {ChangeEvent,useCallback,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
-import {CloudUpload,ExternalLink,FileImage,FileSpreadsheet,FileText,FolderOpen,Search,ShieldCheck,RefreshCw,Cloud,AlertCircle,CheckCircle2,Presentation} from "lucide-react";
+import {CloudUpload,ExternalLink,FileImage,FileSpreadsheet,FileText,FolderOpen,Search,ShieldCheck,RefreshCw,Cloud,AlertCircle,CheckCircle2,Presentation,ArrowUp,ArrowDown,GripVertical,Trash2} from "lucide-react";
 import type {DocRow} from "@/lib/types";
 import {GoogleDrivePdfViewer} from "@/components/google-drive-pdf-viewer";
 
@@ -26,6 +26,11 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
   const [driveStatus,setDriveStatus]=useState<DriveStatus|null>(null);
   const [checkingDrive,setCheckingDrive]=useState(false);
   const [uploadProgress,setUploadProgress]=useState("");
+  const [orderOverride,setOrderOverride]=useState<string[]|null>(null);
+  const [removedIds,setRemovedIds]=useState<string[]>([]);
+  const [ordering,setOrdering]=useState(false);
+  const [removingId,setRemovingId]=useState<string|null>(null);
+  const [dragId,setDragId]=useState<string|null>(null);
   const checkDrive=useCallback(async()=>{
     setCheckingDrive(true);
     try{
@@ -38,13 +43,75 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
     finally{setCheckingDrive(false);}
   },[congressId]);
   useEffect(()=>{if(canManage)queueMicrotask(()=>void checkDrive());},[canManage,checkDrive]);
+  const visibleDocs=useMemo(()=>{
+    const active=docs.filter(doc=>!removedIds.includes(doc.id));
+    const positions=new Map(orderOverride?.map((id,index)=>[id,index])||[]);
+    return active.sort((a,b)=>
+      (positions.get(a.id)??(orderOverride?900000+(a.display_order??1000000):(a.display_order??1000000)))-
+      (positions.get(b.id)??(orderOverride?900000+(b.display_order??1000000):(b.display_order??1000000)))||
+      b.created_at.localeCompare(a.created_at)||b.id.localeCompare(a.id));
+  },[docs,orderOverride,removedIds]);
   const isPublished=(doc:DocRow)=>visibilityOverrides[doc.id]??(doc.delegate_visible===true);
-  const publishedCount=docs.filter(doc=>isPublished(doc)).length;
-  const unpublished=docs.filter(doc=>!isPublished(doc));
+  const publishedCount=visibleDocs.filter(doc=>isPublished(doc)).length;
+  const unpublished=visibleDocs.filter(doc=>!isPublished(doc));
   const filtered=useMemo(()=>{
     const q=query.trim().toLocaleLowerCase("vi");
-    return docs.filter(doc=>doc.file_name.toLocaleLowerCase("vi").includes(q));
-  },[docs,query]);
+    return visibleDocs.filter(doc=>doc.file_name.toLocaleLowerCase("vi").includes(q));
+  },[visibleDocs,query]);
+  const canReorder=canManage&&!ordering&&!removingId&&!busy&&!sharing&&!query.trim()&&visibleDocs.length>1;
+
+  async function reorderDocument(id:string,target:string){
+    if(!canReorder||id===target)return;
+    const before=visibleDocs.map(item=>item.id);
+    const next=before.filter(item=>item!==id);
+    const targetIndex=next.indexOf(target);
+    if(targetIndex<0)return;
+    const position=targetIndex+(before.indexOf(id)<before.indexOf(target)?1:0);
+    next.splice(position,0,id);
+    setDragId(null);
+    setOrderOverride(next);setOrdering(true);setNotice(null);
+    try{
+      const response=await fetch("/api/documents/reorder",{
+        method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({congressId,orderedIds:next})
+      });
+      const result=await response.json();
+      if(!response.ok)throw new Error(result.error||"Không lưu được thứ tự tài liệu.");
+      setNotice({type:"success",message:"Đã lưu thứ tự tài liệu; trang đại biểu sẽ hiển thị theo thứ tự này."});
+      router.refresh();
+    }catch(error){
+      setOrderOverride(before);
+      setNotice({type:"error",message:error instanceof Error?error.message:"Không thể sắp xếp tài liệu."});
+    }finally{setOrdering(false);}
+  }
+
+  function moveDocument(id:string,delta:number){
+    if(!canReorder)return;
+    const position=visibleDocs.findIndex(item=>item.id===id);
+    const target=visibleDocs[position+delta];
+    if(target)void reorderDocument(id,target.id);
+  }
+
+  async function removeDocument(doc:DocRow){
+    if(!canManage||busy||ordering||sharing||removingId)return;
+    if(!window.confirm("Gỡ tài liệu “"+doc.file_name+"” khỏi Đại hội? Đại biểu sẽ không còn thấy tài liệu này. Tệp gốc trên Google Drive vẫn được giữ lại."))return;
+    setRemovingId(doc.id);setNotice(null);
+    try{
+      const response=await fetch("/api/documents/"+doc.id,{
+        method:"DELETE",headers:{"Content-Type":"application/json"},
+        credentials:"same-origin",body:JSON.stringify({congressId})
+      });
+      const result=await response.json();
+      if(!response.ok)throw new Error(result.error||"Không thể gỡ tài liệu.");
+      setRemovedIds(items=>[...items,doc.id]);
+      setOrderOverride(null);
+      if(previewDoc?.id===doc.id)setPreviewDoc(null);
+      setNotice({type:"success",message:"Đã gỡ tài liệu khỏi Đại hội. Tệp gốc trên Google Drive vẫn được giữ lại."});
+      router.refresh();
+    }catch(error){
+      setNotice({type:"error",message:error instanceof Error?error.message:"Không thể gỡ tài liệu."});
+    }finally{setRemovingId(null);}
+  }
 
   async function toggleShare(doc:DocRow){
     if(sharing)return;
@@ -178,11 +245,11 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
       <input aria-label="Chọn tài liệu để tải lên" type="file" multiple disabled={busy||driveStatus?.ready===false} className="sr-only" accept=".pdf,application/pdf" onChange={e=>void upload(e)}/>
     </label>}
 
-    {canManage&&docs.length>0&&<section className="rounded-2xl border border-[#cbdfe9] bg-white p-4 sm:p-5">
+    {canManage&&visibleDocs.length>0&&<section className="rounded-2xl border border-[#cbdfe9] bg-white p-4 sm:p-5">
              <div className="flex flex-wrap items-center justify-between gap-3">
          <div>
            <h2 className="text-[15px] font-extrabold text-[#234e65]">Công bố tài liệu cho đại biểu</h2>
-           <p className="mt-1 text-[12px] font-bold text-[#507e90]">{publishedCount}/{docs.length} tệp đã công bố · {unpublished.length} tệp nội bộ</p>
+           <p className="mt-1 text-[12px] font-bold text-[#507e90]">{publishedCount}/{visibleDocs.length} tệp đã công bố · {unpublished.length} tệp nội bộ</p>
          </div>
          {unpublished.length>0&&<button type="button" disabled={sharing!==null||busy}
            onClick={()=>void publishAll()}
@@ -192,7 +259,7 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
        </div>
       <p className="mt-2 text-[12px] leading-6 text-[#7894a2]">Khi bật công bố, hệ thống đồng thời cấp quyền “Người có đường liên kết được xem” trên Google Drive. Liên kết có thể được chuyển tiếp; chỉ công bố tài liệu được phép chia sẻ.</p>
       <div className="mt-4 grid gap-2 md:grid-cols-2">
-       {docs.map(doc=><label key={doc.id} className="flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-[#e2ebee] bg-[#f9fbfc] px-3 py-3">
+       {visibleDocs.map(doc=><label key={doc.id} className="flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-[#e2ebee] bg-[#f9fbfc] px-3 py-3">
         <input type="checkbox" checked={isPublished(doc)} disabled={sharing!==null}
          onChange={()=>void toggleShare(doc)} aria-label={"Cho đại biểu xem "+doc.file_name}
          className="h-4 w-4 shrink-0 accent-[#087da9]"/>
@@ -205,11 +272,14 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
     </section>}
     <section className="card overflow-hidden">
       <div className="flex flex-col gap-4 border-b border-[#eaf0f2] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div className="flex items-center gap-3"><span className="rounded-xl bg-[#e7f5f1] p-2.5 text-[#0a8680]"><FolderOpen size={22}/></span><div><h2 className="section-title">Thư viện tài liệu</h2><p className="helper mt-1">{docs.length} tệp trong Đại hội</p></div></div>
+        <div className="flex items-center gap-3"><span className="rounded-xl bg-[#e7f5f1] p-2.5 text-[#0a8680]"><FolderOpen size={22}/></span><div><h2 className="section-title">Thư viện tài liệu</h2><p className="helper mt-1">{visibleDocs.length} tệp trong Đại hội</p></div></div>
         <label className="relative block w-full sm:max-w-[300px]"><span className="sr-only">Tìm kiếm tài liệu</span><Search size={18} className="absolute left-3.5 top-3.5 text-[#8da1af]"/><input type="search" className="field pl-11!" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Tìm tên tài liệu..."/></label>
       </div>
 
-      {filtered.length?
+      {canManage&&visibleDocs.length>1&&<p className="border-b border-[#eaf0f4] bg-[#f6fafc] px-5 py-2 text-[11px] font-semibold text-[#50788f]">
+        {query?"Xóa bộ lọc tìm kiếm để sắp xếp tài liệu.":ordering?"Đang lưu thứ tự tài liệu...":"Kéo thả tài liệu để thay đổi thứ tự, hoặc sử dụng các nút Lên / Xuống. File Google Drive gốc vẫn được giữ khi gỡ tài liệu."}
+       </p>}
+       {filtered.length?
       <>
         <div className="divide-y divide-[#eaf0f4]">
          {filtered.map(doc=>{
@@ -223,19 +293,45 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
            {doc.mime_type==="application/pdf"?<FileText size={18} className="shrink-0 text-[#7c9bab] group-hover:text-[#1480aa]"/>:
             <ExternalLink size={18} className="shrink-0 text-[#7c9bab] group-hover:text-[#1480aa]"/>}
           </>;
-          const className="group flex w-full min-w-0 items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-[#f3f9fc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#147aa5] sm:px-6";
-          return doc.mime_type==="application/pdf"?
-           <button type="button" key={doc.id} onClick={()=>setPreviewDoc(doc)}
-            aria-label={"Xem PDF "+doc.file_name+" ngay trên website"} className={className}>{label}</button>:
-           <a key={doc.id} href={"/api/documents/"+doc.id} target="_blank" rel="noopener noreferrer"
-            aria-label={"Mở tài liệu "+doc.file_name+" trên Google Drive"} className={className}>{label}</a>;
+          const className="group flex min-w-0 flex-1 items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-[#f3f9fc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#147aa5] sm:px-6";
+          const position=visibleDocs.findIndex(item=>item.id===doc.id);
+          return <div key={doc.id} draggable={canReorder}
+           onDragStart={event=>{if(!canReorder)return;setDragId(doc.id);event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",doc.id);}}
+           onDragOver={event=>{if(dragId&&canReorder)event.preventDefault();}}
+           onDrop={event=>{event.preventDefault();if(dragId&&canReorder)void reorderDocument(dragId,doc.id);}}
+           onDragEnd={()=>setDragId(null)}
+           className={"flex min-w-0 flex-col transition sm:flex-row sm:items-center "+(dragId===doc.id?"bg-[#e7f3f8] opacity-70":dragId?"hover:bg-[#f1f8fc]":"")}>
+           {canManage&&<span className="inline-flex shrink-0 items-center gap-1.5 px-4 pt-3 text-[11px] font-extrabold tabular-nums text-[#64839a] sm:py-3 sm:pl-5 sm:pr-0">
+            <GripVertical size={16} aria-label={"Kéo để sắp xếp "+doc.file_name} className={canReorder?"cursor-grab":"opacity-40"}/>
+            {String(position+1).padStart(2,"0")}
+           </span>}
+           {doc.mime_type==="application/pdf"?
+            <button type="button" onClick={()=>setPreviewDoc(doc)}
+             aria-label={"Xem PDF "+doc.file_name+" ngay trên website"} className={className}>{label}</button>:
+            <a href={"/api/documents/"+doc.id} target="_blank" rel="noopener noreferrer"
+             aria-label={"Mở tài liệu "+doc.file_name+" trên Google Drive"} className={className}>{label}</a>}
+           {canManage&&<div className="flex shrink-0 items-center justify-end gap-1.5 px-4 pb-3 sm:py-3 sm:pl-0 sm:pr-5">
+            <button type="button" aria-label={"Chuyển "+doc.file_name+" lên"} title="Đưa lên một vị trí"
+             disabled={!canReorder||position===0} onClick={()=>moveDocument(doc.id,-1)}
+             className="btn btn-secondary !min-h-9 !px-2 disabled:opacity-35"><ArrowUp size={15}/></button>
+            <button type="button" aria-label={"Chuyển "+doc.file_name+" xuống"} title="Đưa xuống một vị trí"
+             disabled={!canReorder||position===visibleDocs.length-1} onClick={()=>moveDocument(doc.id,1)}
+             className="btn btn-secondary !min-h-9 !px-2 disabled:opacity-35"><ArrowDown size={15}/></button>
+            <button type="button" aria-label={"Gỡ tài liệu "+doc.file_name} title="Gỡ khỏi Đại hội (giữ file trên Google Drive)"
+             disabled={busy||ordering||sharing!==null||removingId!==null}
+             onClick={()=>void removeDocument(doc)}
+             className="btn !min-h-9 !border-red-200 !bg-red-50 !px-3 !text-red-700 hover:!bg-red-100 disabled:opacity-35">
+             <Trash2 size={15}/><span className="text-[11px] font-bold">Gỡ</span>
+            </button>
+           </div>}
+          </div>;
          })}
         </div>
       </>:
       <div className="empty-state">
         <FolderOpen size={34} className="mx-auto text-[#91b6ba]"/>
-        <p className="mt-4 font-semibold">{docs.length?"Không tìm thấy tài liệu":"Chưa có tài liệu nào"}</p>
-        <p className="helper mx-auto mt-2 max-w-md">{docs.length?"Thử tìm bằng tên khác.":"Tài liệu sẽ hiển thị khi Ban Tổ chức tải lên và cấu hình kết nối lưu trữ."}</p>
+        <p className="mt-4 font-semibold">{visibleDocs.length?"Không tìm thấy tài liệu":"Chưa có tài liệu nào"}</p>
+        <p className="helper mx-auto mt-2 max-w-md">{visibleDocs.length?"Thử tìm bằng tên khác.":"Tài liệu sẽ hiển thị khi Ban Tổ chức tải lên và cấu hình kết nối lưu trữ."}</p>
       </div>}
     </section>
 

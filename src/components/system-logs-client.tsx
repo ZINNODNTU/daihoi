@@ -1,8 +1,9 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
 import {SystemIncidentsPanel} from "@/components/system-incidents-panel";
+import {SystemLogInsights} from "@/components/system-log-insights";
 import {Activity,AlertTriangle,CheckCircle2,ChevronLeft,ChevronRight,ClipboardCopy,
- Clock3,Filter,RefreshCw,Search,ShieldAlert,Terminal,TriangleAlert} from "lucide-react";
+ Clock3,Download,Filter,RefreshCw,Search,ShieldAlert,Terminal,TriangleAlert} from "lucide-react";
 
 type Level="critical"|"error"|"warning"|"info";
 type Resolution="open"|"investigating"|"resolved";
@@ -59,6 +60,7 @@ export function SystemLogsClient(){
  const [congressId,setCongressId]=useState("");
  const [draft,setDraft]=useState("");
  const [query,setQuery]=useState("");
+ const [requestId,setRequestId]=useState("");
  const [page,setPage]=useState(0);
  const [expanded,setExpanded]=useState("");
  const [updating,setUpdating]=useState("");
@@ -70,6 +72,7 @@ export function SystemLogsClient(){
  if(resolution)params.set("resolution",resolution);
  if(congressId)params.set("congressId",congressId);
  if(query)params.set("q",query);
+ if(requestId)params.set("requestId",requestId);
 
  useEffect(()=>{
   let active=true;
@@ -122,6 +125,11 @@ export function SystemLogsClient(){
  },[updating]);
 
  const metrics=payload?.metrics||EMPTY_METRICS;
+ const downloadUrl="/api/system-logs/export?"+params.toString();
+ const selectSource=(value:string)=>{
+  if(!["auth","attendance","documents","seating","frontend","api"].includes(value))return;
+  setSource(value);setPage(0);setExpanded("");
+ };
  const logs=payload?.logs||[];
  const pages=payload?Math.ceil(payload.total/payload.pageSize):0;
  const resetPage=()=>{setPage(0);setExpanded("");};
@@ -139,11 +147,14 @@ export function SystemLogsClient(){
       Theo dõi lỗi ứng dụng, truy vết request, xác định sự cố và ghi nhận trạng thái khắc phục. Tự cập nhật mỗi 15 giây khi trang đang mở.
      </p>
     </div>
-    <button type="button" onClick={()=>setRefreshKey(n=>n+1)} disabled={refreshing}
+    <div className="flex flex-wrap items-center gap-2">
+     <a href={downloadUrl} download className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-[12px] font-bold text-white hover:bg-white/20"><Download size={16}/> Xuất CSV</a>
+     <button type="button" onClick={()=>setRefreshKey(n=>n+1)} disabled={refreshing}
      className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-[12px] font-bold text-white hover:bg-white/20 disabled:opacity-60">
      <RefreshCw size={16} className={refreshing?"animate-spin":""}/> Làm mới
     </button>
    </div>
+    </div>
   </section>
 
   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -168,6 +179,8 @@ export function SystemLogsClient(){
   {error&&<div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[12px] leading-6 text-rose-800">
    {error}
   </div>}
+
+  <SystemLogInsights period={period} congressId={congressId} refreshKey={refreshKey} onSource={selectSource}/>
 
   <SystemIncidentsPanel key={congressId+":"+period} congressId={congressId} period={period}/>
 
@@ -215,10 +228,16 @@ export function SystemLogsClient(){
       className="field w-full pl-10" placeholder="Tìm mã sự kiện, ví dụ attendance.checkin_failed"/>
     </label>
     <button type="submit" className="btn btn-primary min-h-11 justify-center">Tìm sự kiện</button>
-    {(query||level||source||resolution||congressId)&&<button type="button"
-     onClick={()=>{setDraft("");setQuery("");setLevel("");setSource("");setResolution("");setCongressId("");resetPage();}}
+    {(query||level||source||resolution||congressId||requestId)&&<button type="button"
+     onClick={()=>{setDraft("");setQuery("");setLevel("");setSource("");setResolution("");setCongressId("");setRequestId("");resetPage();}}
      className="btn btn-secondary min-h-11 justify-center">Xóa lọc</button>}
    </form>
+   {requestId&&<div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#d6e7f3] bg-[#f1f8fd] px-3 py-2 text-[11px] text-[#355d7b]">
+    <strong>Đang truy vết Request ID:</strong> <code className="break-all">{requestId}</code>
+    <button type="button" className="ml-auto rounded border border-[#c5dbea] bg-white px-2 py-1 font-bold hover:bg-[#eaf3f8]"
+     onClick={()=>{setRequestId("");resetPage();}}>Bỏ lọc</button>
+   </div>}
+   <p className="mt-3 text-[10px] leading-5 text-[#8193a6]">Xuất CSV theo bộ lọc hiện tại, tối đa 2.000 sự kiện/lần. Dữ liệu đã được ẩn thông tin nhạy cảm.</p>
   </section>
 
   <section aria-label="Danh sách nhật ký" className="overflow-hidden rounded-2xl border border-[#e1e7ef] bg-white">
@@ -262,9 +281,12 @@ export function SystemLogsClient(){
         <div><span className="text-[#8290a1]">Request ID</span>
          <div className="mt-1 flex items-center gap-2">
           <span className="break-all font-mono text-[#334e67]">{item.request_id||"—"}</span>
-          {item.request_id&&<button type="button" title="Sao chép Request ID" aria-label="Sao chép Request ID"
+          {item.request_id&&<><button type="button" title="Sao chép Request ID" aria-label="Sao chép Request ID"
            onClick={()=>{void navigator.clipboard?.writeText(item.request_id||"");}} className="rounded p-1 hover:bg-[#e5ebf1]">
-           <ClipboardCopy size={15}/></button>}
+           <ClipboardCopy size={15}/></button>
+           <button type="button" title="Truy vết các sự kiện có cùng Request ID"
+            onClick={()=>{setRequestId(item.request_id||"");resetPage();}}
+            className="rounded-md border border-[#cddce7] bg-white px-2 py-1 text-[10px] font-bold text-[#426780] hover:bg-[#eaf3f8]">Truy vết</button></>}
          </div>
         </div>
         <div><span className="text-[#8290a1]">HTTP / Thời gian</span>

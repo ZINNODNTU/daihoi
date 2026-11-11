@@ -23,9 +23,9 @@ export default async function DelegateDocumentsPage(){
  if(!congress)return <DelegateUnavailable message="Không có quyền xem tài liệu Đại hội này."/>;
  const db=createAdminClient();
  const result=await db.from("documents")
-  .select("id,congress_id,file_name,mime_type,byte_size,drive_file_id,created_at,delegate_visible")
+  .select("id,congress_id,file_name,mime_type,byte_size,drive_file_id,created_at,delegate_visible,display_order")
   .eq("congress_id",congressId).eq("delegate_visible",true)
-  .order("created_at",{ascending:false}).limit(500);
+  .order("display_order",{ascending:true}).order("created_at",{ascending:false}).limit(500);
  const docs=(result.data||[]) as DocRow[];
  return <div className="mx-auto max-w-[950px]">
   <DelegatePageHeading eyebrow="THƯ VIỆN ĐẠI HỘI" title="Tài liệu Đại hội"

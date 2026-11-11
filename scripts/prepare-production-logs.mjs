@@ -19,7 +19,8 @@ const files=[
  "upgrade-seating-reusable-templates-v26.sql",
  "upgrade-system-observability-v36.sql",
  "upgrade-system-incidents-v37.sql",
- "upgrade-bch-order-v39.sql"
+ "upgrade-bch-order-v39.sql",
+ "upgrade-document-management-v43.sql"
 ];
 const statements=files.map((name)=>{
  const sql=readFileSync(resolve("supabase",name),"utf8").trim();
@@ -30,14 +31,14 @@ const statements=files.map((name)=>{
 const folder=join(process.env.LOCALAPPDATA||homedir(),"DAIHOI","production-migrations");
 mkdirSync(folder,{recursive:true});
 const suffix=new Date().toISOString().replace(/[:.]/g,"-");
-const path=join(folder,"daihoi-"+project+"-V26-V36-V37-V39-"+suffix+".sql");
+const path=join(folder,"daihoi-"+project+"-V26-V36-V37-V39-V43-"+suffix+".sql");
 const notice=[
  "-- DAIHOI PRODUCTION DATABASE UPGRADE",
  "-- TARGET PROJECT: "+project,
  "-- Verify target project in Supabase Dashboard before executing.",
  "-- BACKUP REQUIRED: This file contains real DDL and is NOT executed by the generator.",
  "-- Execute in SQL Editor with privileges for CREATE TABLE/TRIGGER/SCHEMA.",
- "-- These migrations are idempotent and must stay in V26 -> V36 -> V37 -> V39 order.",
+ "-- These migrations are idempotent and must stay in V26 -> V36 -> V37 -> V39 -> V43 order.",
  ""
 ].join("\n");
 writeFileSync(path,notice+statements.join("\n\n")+"\n",{flag:"wx",encoding:"utf8",mode:0o600});

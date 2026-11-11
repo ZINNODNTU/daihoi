@@ -24,11 +24,12 @@ export async function GET(request:Request){
   const resolution=params.get("resolution")||"";
   const period=params.get("period")||"24h";
   const q=(params.get("q")||"").trim();
+  const requestId=params.get("requestId")||"";
   const page=Number(params.get("page")||0);
   if(congressId&&!UUID.test(congressId)||
    level&&!LEVELS.includes(level)||source&&!SOURCES.includes(source)||
    resolution&&!RESOLUTIONS.includes(resolution)||!PERIODS[period]||
-   !Number.isInteger(page)||page<0||page>50||
+   !Number.isInteger(page)||page<0||page>50||requestId&&!UUID.test(requestId)||
    q.length>60||q&&!/^[a-zA-Z0-9_.:-]+$/.test(q))return fail("Bộ lọc không hợp lệ.",400);
   if(congressId&&!access.superAdmin&&!access.congressIds.includes(congressId))
    return fail("Bạn không có quyền xem nhật ký của Đại hội này.",403);
@@ -45,6 +46,7 @@ export async function GET(request:Request){
   if(source)rowsQuery=rowsQuery.eq("source",source);
   if(resolution)rowsQuery=rowsQuery.eq("resolution",resolution);
   if(q)rowsQuery=rowsQuery.ilike("event","%"+q+"%");
+  if(requestId)rowsQuery=rowsQuery.eq("request_id",requestId);
 
   const metricsSince=new Date(Date.now()-86400000).toISOString();
   let errorCount=db.from("system_logs").select("id",{count:"exact",head:true})

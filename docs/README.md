@@ -18,6 +18,7 @@
 | **Gom nhóm lỗi, theo dõi tái phát và bắt exception tự động (V37)** | [Error & Incident Monitoring V37](huong-dan/ERROR-INCIDENT-MONITORING-V37.md) — cần migration V36 trước V37 |
 | **Đưa System Logs vào production (V38)** | [Checklist kích hoạt V38](huong-dan/KICH-HOAT-SYSTEM-LOGS-V38.md) — backup, SQL, Vercel và smoke test |
 | **Sửa hồ sơ đại biểu, xuất mật khẩu sau reset, kéo thả BCH và log thao tác admin (V39)** | [Bản vá quản trị V39](huong-dan/BAN-VA-QUAN-TRI-V39.md) — cần migration V39 và các migration log V36/V37 |
+    | **Biểu đồ log, lọc theo Request ID, xuất CSV và quản lý/xóa/sắp xếp tài liệu V43–V44** | [Observability & Document Management V44](huong-dan/OBSERVABILITY-VA-TAI-LIEU-V44.md) — cần migration V43 cho tài liệu |
 | Điều hành điểm danh và mã QR | [QR theo phiên và barcode](tinh-nang/diem-danh/DIEM-DANH-QR-PHIEN-VA-BARCODE.md) |
 | Trình chiếu realtime, hàng chờ, tối ưu ảnh và dữ liệu đại biểu | [Tối ưu realtime và hiệu năng V19](huong-dan/TOI-UU-HIEU-NANG-REALTIME-V19.md) |
 | **Một tài khoản nhiều Đại hội, tự đổi ảnh/hồ sơ và khách mời** | [Hướng dẫn tài khoản và khách mời V20](huong-dan/TAI-KHOAN-DA-DAI-HOI-KHACH-MOI-V20.md) |

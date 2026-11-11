@@ -14,4 +14,4 @@ export type Checkin={
  id:string;congress_id:string;session_id:string;delegate_id:string;
  method:"qr"|"manual"|"barcode";qr_scope:"fixed"|"session"|null;checked_in_by:string;checked_in_at:string;note:string|null;
 };
-export type DocRow={id:string;congress_id:string;file_name:string;mime_type:string;byte_size:number;drive_file_id:string;created_at:string;delegate_visible?:boolean};
+export type DocRow={id:string;congress_id:string;file_name:string;mime_type:string;byte_size:number;drive_file_id:string;created_at:string;delegate_visible?:boolean;display_order?:number};
