@@ -18,7 +18,7 @@ export type SeatingLayout={
 };
 export type SeatAssignment={seat_id:string;layout_id:string;delegate_id:string;assigned_at:string};
 export type SeatingDelegate={id:string;code:string;full_name:string;unit:string;is_active:boolean;delegate_type?:"official"|"alternate"|"guest"};
-export type SeatingSession={id:string;name:string;status:string};
+export type SeatingSession={id:string;name:string;status:string;seating_layout_id:string|null};
 export type GeneratedSection={
   zone:string;startRow:string;rowCount:number;seatsPerRow:number;
   startX:number;startY:number;aisleAfter:number;

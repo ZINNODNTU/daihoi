@@ -158,6 +158,9 @@ export function SeatingClient({congressId,canManage}:Props){
   const seatsByCode=useMemo(()=>new Map(seats.map(s=>[s.code.toUpperCase(),s])),[seats]);
   const occupiedByDelegate=useMemo(()=>new Map(activeAssignments.map(a=>[a.delegate_id,a.seat_id])),[activeAssignments]);
   const checkedIn=useMemo(()=>new Set(data?.checkedInDelegateIds||[]),[data?.checkedInDelegateIds]);
+  const activeSession=data?.sessions.find(s=>s.id===sessionId);
+  const appliedLayout=data?.layouts.find(l=>l.id===activeSession?.seating_layout_id);
+  const differsFromSession=Boolean(activeSession&&data?.layout&&activeSession.seating_layout_id!==data.layout.id);
   const selectedSeat=seats.find(s=>s.id===selectedSeatId)||null;
   const gridSize:SeatGridSize={rows:gridRows,columns:gridColumns};
   const selectedDelegate=selectedSeat?delegatesById.get(assignments.get(selectedSeat.id)||""):null;
@@ -383,7 +386,28 @@ export function SeatingClient({congressId,canManage}:Props){
     }finally{setWorking(false);}
   }
 
-  async function applyAssignments(items:{seatId:string;delegateId:string|null}[],assignMode:"merge"|"replace"="merge"){
+  async function applyLayoutToSession(){
+    if(!canManage||working||loading||!data?.layout||dirty||!sessionId)return;
+    const active=data.sessions.find(s=>s.id===sessionId);
+    if(!active||active.seating_layout_id===data.layout.id)return;
+    if(!window.confirm('Gắn sơ đồ "'+data.layout.title+'" cho phiên "'+active.name+'"?\n'+
+      "Tất cả đại biểu và màn hình điểm danh sẽ nhìn thấy sơ đồ này. Ghế phải được phân trong sơ đồ được chọn."))return;
+    setWorking(true);setError("");setNotice("");
+    try{
+      const response=await fetch("/api/attendance-sessions",{
+       method:"PATCH",headers:{"Content-Type":"application/json"},credentials:"same-origin",
+       cache:"no-store",body:JSON.stringify({congressId,sessionId,
+        seatingLayoutId:data.layout.id,expectedSeatingLayoutId:active.seating_layout_id})
+      });
+      const result=await response.json() as {ok?:boolean;error?:string};
+      if(!response.ok||!result.ok)throw new Error(result.error||"Không thể áp dụng sơ đồ.");
+      await load(data.layout.id,sessionId);
+      setNotice('Đã áp dụng sơ đồ "'+data.layout.title+'" cho phiên "'+active.name+
+       '". Cả trang quản trị, cổng đại biểu và màn hình điểm danh dùng chung sơ đồ (bộ nhớ đệm cập nhật sau 10–15 giây).');
+    }catch(reason){setError(reason instanceof Error?reason.message:"Không thể đồng bộ sơ đồ.");}
+    finally{setWorking(false);}
+   }
+   async function applyAssignments(items:{seatId:string;delegateId:string|null}[],assignMode:"merge"|"replace"="merge"){
     if(dirty||!data?.layout||data.layout.id!==layoutId){
       setError("Hãy lưu sơ đồ trước khi chọn người ngồi.");return;
     }
@@ -540,6 +564,40 @@ export function SeatingClient({congressId,canManage}:Props){
     </div>}
 
     {!loading&&<>
+      <section aria-label="Đồng bộ sơ đồ theo phiên" className={"rounded-2xl border p-4 sm:p-5 "+(
+       differsFromSession?"border-[#e7c98b] bg-[#fffaf0]":"border-[#b9ded3] bg-[#f1faf6]")}>
+       <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+         <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#6a8898]">NGUỒN DỮ LIỆU CHUNG / BTC · ĐẠI BIỂU · MÀN HÌNH ĐIỂM DANH</p>
+         <h2 className="mt-1 text-[17px] font-extrabold text-[#214359]">Sơ đồ đang áp dụng cho phiên</h2>
+         {activeSession?<p className="mt-2 text-[12px] leading-6 text-[#5c7887]">
+          <b>{activeSession.name}</b> · {appliedLayout?<span className="font-bold text-[#176f6e]">{appliedLayout.title}</span>:
+           <span className="font-bold text-[#b77a2a]">Chưa gắn sơ đồ</span>}
+         </p>:<p className="mt-2 text-[12px] text-[#8a7b6a]">Chưa có phiên Đại hội. Hãy tạo phiên và chọn sơ đồ trước khi đại biểu truy cập.</p>}
+        </div>
+        {activeSession&&appliedLayout&&data?.layout?.id!==appliedLayout.id&&<button type="button"
+         disabled={working||loading} onClick={()=>void load(appliedLayout.id,sessionId)}
+         className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#aecdd2] bg-white px-3 text-[12px] font-bold text-[#1c6d7f]">
+         <RefreshCw size={16}/> Xem sơ đồ của phiên
+        </button>}
+       </div>
+       {differsFromSession&&<div className="mt-3 rounded-xl border border-[#e8d1a0] bg-white p-3 text-[12px] leading-6 text-[#926524]">
+        <strong>Đang xem bản thiết kế khác sơ đồ phiên.</strong> Sơ đồ này chưa được áp dụng cho đại biểu và màn hình điểm danh.
+        {canManage&&<button type="button" disabled={working||dirty||!data?.layout} onClick={()=>void applyLayoutToSession()}
+         className="mt-3 flex min-h-11 items-center gap-2 rounded-lg bg-[#0c7893] px-4 text-[12px] font-extrabold text-white disabled:opacity-50">
+         <CheckCircle2 size={17}/> Áp dụng sơ đồ đang xem cho phiên &ldquo;{activeSession?.name}&rdquo;
+        </button>}
+        {dirty&&<span className="mt-2 block">Hãy lưu sơ đồ trước khi áp dụng.</span>}
+       </div>}
+       {!differsFromSession&&activeSession&&appliedLayout&&<p className="mt-2 text-[11px] font-semibold text-[#2d8065]">
+        ✓ Sơ đồ đang xem khớp sơ đồ phiên. Vị trí cá nhân được lấy từ phân ghế của sơ đồ này.
+       </p>}
+       {activeSession&&!appliedLayout&&data?.layout&&canManage&&<button type="button"
+        disabled={working||dirty} onClick={()=>void applyLayoutToSession()}
+        className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#0c7893] px-4 text-[12px] font-extrabold text-white disabled:opacity-50">
+        <CheckCircle2 size={17}/> Gắn sơ đồ này cho phiên
+       </button>}
+      </section>
       {canManage&&<section aria-label="Quản lý sơ đồ đã tạo" className="rounded-2xl border border-[#d4e3eb] bg-white p-4 shadow-sm sm:p-6">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
@@ -696,7 +754,7 @@ export function SeatingClient({congressId,canManage}:Props){
             <span className="label">Đối chiếu điểm danh phiên</span>
             <select className="field" value={sessionId} onChange={e=>{
               if(dirty&&!window.confirm("Đổi phiên sẽ tải lại sơ đồ và bỏ thay đổi chưa lưu."))return;
-              void load(data?.layout?.id||undefined,e.target.value);
+              void load(undefined,e.target.value);
             }} disabled={working||!data?.sessions.length}>
               {!data?.sessions.length&&<option value="">Chưa có phiên</option>}
               {data?.sessions.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}

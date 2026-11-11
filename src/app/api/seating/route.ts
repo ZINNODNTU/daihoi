@@ -49,17 +49,26 @@ export async function GET(request:Request){
         .eq("congress_id",congressId).order("updated_at",{ascending:false}).limit(30),
       db.from("delegates").select("id,code,full_name,unit,is_active,delegate_type")
         .eq("congress_id",congressId).order("code").limit(1000),
-      db.from("attendance_sessions").select("id,name,status,created_at")
+      db.from("attendance_sessions").select("id,name,status,created_at,seating_layout_id")
         .eq("congress_id",congressId).order("created_at",{ascending:false}).limit(100)
     ]);
     if(layoutsResult.error)return databaseProblem(layoutsResult.error);
     if(delegatesResult.error||sessionsResult.error)return fail("Không tải được dữ liệu đại biểu hoặc phiên.",500);
     const layouts=layoutsResult.data||[];
+    const availableSessions=sessionsResult.data||[];
+    const requestedSessionId=query.get("sessionId");
+    const currentSession=availableSessions.find(s=>s.id===requestedSessionId)||
+      (!requestedSessionId?availableSessions[0]:null);
+    if(requestedSessionId&&!currentSession)
+      return fail("Phiên điểm danh không tồn tại trong Đại hội này.",404);
     const requestedLayout=query.get("layoutId");
-    const layout=layouts.find(l=>l.id===requestedLayout)||(!requestedLayout?layouts[0]:null);
+    // Session layout is authoritative across admin, delegates and attendance projection.
+    const layout=layouts.find(l=>l.id===requestedLayout)||
+      (!requestedLayout?layouts.find(l=>l.id===currentSession?.seating_layout_id)||
+        (!currentSession?layouts[0]:null):null);
     if(requestedLayout&&!layout)return fail("Không tìm thấy sơ đồ trong Đại hội này.",404);
-    const currentSessionId=query.get("sessionId")||sessionsResult.data?.[0]?.id||"";
-    const validSession=sessionsResult.data?.some(s=>s.id===currentSessionId);
+    const currentSessionId=currentSession?.id||"";
+    const validSession=Boolean(currentSession);
     const [seatsResult,assignmentsResult,checkinsResult]=await Promise.all([
       layout?db.from("seats").select("id,layout_id,congress_id,code,zone,row_label,seat_number,x,y,blocked,seat_type")
         .eq("layout_id",layout.id).eq("congress_id",congressId).order("y").order("x").limit(500)

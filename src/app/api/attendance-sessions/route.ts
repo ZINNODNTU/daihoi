@@ -87,6 +87,18 @@ export async function PATCH(request:Request){
   }
   const admin=createAdminClient();
   if(body.seatingLayoutId!==undefined){
+   // Compare-and-set: an organizer cannot overwrite a newly changed session map.
+   if(body.expectedSeatingLayoutId!==undefined){
+    const expected=body.expectedSeatingLayoutId;
+    if(expected!==null&&(typeof expected!=="string"||!uuid.test(expected)))
+     return NextResponse.json({error:"Sơ đồ đối chiếu không hợp lệ."},{status:400});
+    const {data:current,error:currentError}=await admin.from("attendance_sessions")
+     .select("seating_layout_id").eq("congress_id",congressId).eq("id",sessionId).maybeSingle();
+    if(currentError||!current)
+     return NextResponse.json({error:"Không xác minh được sơ đồ hiện tại."},{status:503});
+    if(current.seating_layout_id!==expected)
+     return NextResponse.json({error:"Sơ đồ phiên đã thay đổi từ thiết bị khác. Hãy tải lại trước khi áp dụng."},{status:409});
+   }
    const seating=await resolveSeatingLayout(admin,congressId,body.seatingLayoutId);
    if(seating.error)return NextResponse.json({error:seating.error},{status:400});
    update.seating_layout_id=seating.value;
