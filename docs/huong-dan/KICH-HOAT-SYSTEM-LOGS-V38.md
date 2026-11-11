@@ -18,7 +18,7 @@
 
 1. Xác nhận đang quản trị đúng Supabase project `pnxdxdagpeyqarucdphk` và backup/PITR có thể phục hồi.
 2. Trên máy tính của dự án, chạy `npm run prepare:production-logs`. Công cụ chỉ tạo SQL, không ghi database.
-3. Mở file trong `%LOCALAPPDATA%\DAIHOI\production-migrations`; nội dung gồm V26 → V36 → V37 theo đúng thứ tự.
+3. Mở file trong `%LOCALAPPDATA%\DAIHOI\production-migrations`; nội dung gồm V26 → V36 → V37 → V39 theo đúng thứ tự.
 4. Chạy toàn bộ file trong SQL Editor của `https://supabase.com/dashboard/project/pnxdxdagpeyqarucdphk/sql/new`.
 5. Chạy `npm run check:production-schema`: yêu cầu 18/18. Kiểm tra RLS, GRANT, trigger và thời điểm tạo bảng.
 6. Chọn Vercel workspace `dntu`, deploy preview từ repo, thử login admin và trang `/dashboard/system-logs`, thử ghi log và xử lý incident.
