@@ -23,7 +23,7 @@ type SeatingResponse={
   selectedSessionId:string;checkedInDelegateIds:string[];
 };
 type SeatMove={id:string;startX:number;startY:number;seatX:number;seatY:number;moved:boolean};
-type ReusableCongressLayout={id:string;congressId:string;congressName:string;title:string;gridRows:number;gridColumns:number};
+type ReusableCongressLayout={id:string;congressId:string;congressName:string;title:string;gridRows:number;gridColumns:number;alreadyUsedId?:string|null};
 type SeatingTemplate={id:string;title:string;stage_label:string;grid_rows:number;grid_columns:number;
   seat_count:number;visibility:"private"|"organization";organization_id:string;created_by:string;
   created_at:string;updated_at:string};
@@ -372,21 +372,23 @@ export function SeatingClient({congressId,canManage}:Props){
     if(!ensureCanChange())return;
     const source=reuseLayouts.find(item=>item.id===reuseLayoutId);
     if(!source){setReuseError("Hãy chọn một sơ đồ nguồn.");return;}
-    if(!window.confirm("Tạo sơ đồ mới từ \""+source.title+"\" của "+source.congressName+
-      "? Chỉ sao chép vị trí ghế; không sao chép phân công đại biểu."))return;
+    if(!source.alreadyUsedId&&!window.confirm("Dùng lại sơ đồ \""+source.title+"\" của "+source.congressName+
+      "? Hệ thống ưu tiên chọn sơ đồ đã có trong Đại hội hiện tại; nếu chưa có, sẽ tạo một bản ghế riêng để phân công độc lập. Tiếp tục?"))return;
     setReuseBusy(true);setReuseError("");setError("");setNotice("");
     try{
       const response=await fetch("/api/seating/reuse",{
         method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",
         body:JSON.stringify({congressId,sourceCongressId:source.congressId,sourceLayoutId:source.id})
       });
-      const result=await response.json() as {ok?:boolean;error?:string;layoutId?:string;seatCount?:number};
+      const result=await response.json() as {ok?:boolean;error?:string;layoutId?:string;seatCount?:number;reused?:boolean};
       if(!response.ok||!result.ok||!result.layoutId)
         throw new Error(result.error||"Không thể dùng lại sơ đồ nguồn.");
       await load(result.layoutId,sessionId);
       setMode("assign");setSelectedSeatId("");
-      setNotice("Đã sao chép "+result.seatCount+" ghế từ "+source.congressName+
-        ". Đây là sơ đồ độc lập, hãy phân ghế cho đại biểu của Đại hội hiện tại.");
+      setNotice(result.reused
+        ?"Đã mở lại sơ đồ có sẵn ("+result.seatCount+" ghế), không tạo sơ đồ mới. Phân ghế đang có được giữ nguyên."
+        :"Đã dùng bố trí từ "+source.congressName+" với "+result.seatCount+
+         " ghế. Đây là lần đầu Đại hội này dùng bố trí trên; các lần sau sẽ chọn lại, không tạo trùng.");
     }catch(reason){setReuseError(reason instanceof Error?reason.message:"Không sao chép được sơ đồ.");}
     finally{setReuseBusy(false);}
   }
@@ -414,6 +416,11 @@ export function SeatingClient({congressId,canManage}:Props){
     finally{setTemplateBusy(false);}
   }
 
+  function selectSavedLayout(id:string){
+    if(working||!ensureCanChange())return;
+    setMode("assign");setSelectedSeatId("");setError("");setNotice("");
+    void load(id,sessionId);
+  }
   function editSavedLayout(id:string){
     if(working||!ensureCanChange())return;
     setError("");setNotice("");
@@ -689,14 +696,20 @@ export function SeatingClient({congressId,canManage}:Props){
               </div>
               {layoutId===item.id&&!dirty&&<span className="shrink-0 rounded-lg bg-[#dceef8] px-2 py-1 text-[10px] font-extrabold text-[#1675a0]">Đang xem</span>}
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <button type="button"
+                className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-[#80beb4] bg-[#edf9f5] px-2 text-[11px] font-bold text-[#16685d] hover:bg-[#ddf3ed] disabled:opacity-50"
+                disabled={working} onClick={()=>selectSavedLayout(item.id)}
+                aria-label={"Dùng sơ đồ có sẵn: "+item.title}>
+                <Check size={15}/> Dùng
+              </button>
               <button type="button" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#bdd8e6] bg-[#eff7fc] px-3 text-[12px] font-bold text-[#176d94] hover:bg-[#deeff9] disabled:opacity-50"
                 disabled={working} onClick={()=>editSavedLayout(item.id)}>
-                <Move size={16}/> Sửa sơ đồ
+                <Move size={15}/> Sửa
               </button>
               <button type="button" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#f0cdcd] bg-[#fff7f6] px-3 text-[12px] font-bold text-[#a93d3d] hover:bg-[#ffeae7] disabled:opacity-50"
                 disabled={working} onClick={()=>void deleteSavedLayout(item)}>
-                <Trash2 size={16}/> Xóa
+                <Trash2 size={15}/> Xóa
               </button>
             </div>
           </article>)}
@@ -710,8 +723,8 @@ export function SeatingClient({congressId,canManage}:Props){
           </span>
           <div className="min-w-0 flex-1">
             <p className="eyebrow">Dùng lại sơ đồ không cần tạo từ đầu</p>
-            <h2 className="mt-1 text-[19px] font-bold text-[#234963]">Sao chép từ Đại hội khác</h2>
-            <p className="mt-1 text-[12px] leading-6 text-[#638198]">Lấy bố cục ghế từ Đại hội bạn quản trị, tạo sơ đồ mới tại Đại hội này. Mã ghế hiển thị được giữ, ID ghế được tạo mới; đại biểu và phân công không đi theo.</p>
+            <h2 className="mt-1 text-[19px] font-bold text-[#234963]">Dùng bố trí từ Đại hội khác</h2>
+            <p className="mt-1 text-[12px] leading-6 text-[#638198]">Ưu tiên sử dụng sơ đồ đã tồn tại; không tạo thêm sơ đồ trùng khi bấm nhiều lần. Nếu bố trí chưa có trong Đại hội này, hệ thống tạo một lần bản ghế riêng để giữ độc lập phân công và lịch sử điểm danh.</p>
           </div>
         </div>
         {reuseError&&<p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-[12px] text-red-800">{reuseError}</p>}
@@ -722,7 +735,7 @@ export function SeatingClient({congressId,canManage}:Props){
               disabled={working||reuseBusy||!reuseLayouts.length}
               onChange={e=>setReuseLayoutId(e.target.value)}>
               {!reuseLayouts.length&&<option value="">Chưa có sơ đồ từ Đại hội khác được quản trị</option>}
-              {reuseLayouts.map(item=><option key={item.id} value={item.id}>{item.congressName} · {item.title}</option>)}
+              {reuseLayouts.map(item=><option key={item.id} value={item.id}>{item.congressName} · {item.title}{item.alreadyUsedId?" · Đã sử dụng":""}</option>)}
             </select>
           </label>
           <div className="flex gap-2">
@@ -733,12 +746,12 @@ export function SeatingClient({congressId,canManage}:Props){
               disabled={!reuseLayoutId||working||reuseBusy}
               onClick={()=>void reuseFromAnotherCongress()}>
               {reuseBusy?<LoaderCircle size={17} className="animate-spin"/>:<Copy size={17}/>}
-              Dùng sơ đồ này
+              {reuseLayouts.find(item=>item.id===reuseLayoutId)?.alreadyUsedId?"Mở sơ đồ đã có":"Dùng bố trí này"}
             </button>
           </div>
         </div>
         <p className="mt-3 text-[11px] leading-5 text-[#708a9b]">
-          Không cần migration mới để sao chép sơ đồ đang có. Mỗi bản sao được chỉnh sửa và phân ghế riêng, không ảnh hưởng Đại hội nguồn.
+          Sơ đồ cũ trong cùng Đại hội: nhấn Dùng ở danh sách phía trên, không tạo mới. Sơ đồ từ Đại hội khác: chỉ tạo bản liên kết riêng ở lần đầu để giữ đúng ràng buộc Supabase. Việc chọn sơ đồ chưa tự đổi sơ đồ của phiên; dùng nút Áp dụng cho phiên khi cần.
           {!templateReady&&<span className="mt-1 block text-[#a46834]">Thư viện mẫu nâng cao chưa được kích hoạt trên Supabase; chức năng sao chép từ Đại hội khác vẫn dùng bình thường.</span>}
         </p>
       </section>}
