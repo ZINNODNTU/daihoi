@@ -26,12 +26,13 @@ test("Delegate document listing does not load seats or checkin history",()=>{
  assert.match(docs,/\.eq\("congress_id",congressId\)/);
  assert.match(file("../src/components/delegate-documents-list.tsx"),/\/api\/documents\//);
 });
-test("Photos use private uploaded thumbnails and QR decoder is lazy",()=>{
+test("Photos use private on-demand thumbnails and QR decoder is lazy",()=>{
  const photos=file("../src/app/api/delegates/[id]/photo/route.ts");
  const staff=file("../src/components/attendance-client.tsx");
  const delegate=file("../src/components/delegate-checkin-scanner.tsx");
- assert.match(photos,/\[96,160\]\.map/);
- assert.match(photos,/storage\.download\(sizePath\)/);
+ assert.match(photos,/readPortrait\(path,width\)/);
+ assert.match(photos,/getPortraitWidth/);
+ assert.doesNotMatch(photos,/\.upload\(path\.replace/);
  assert.match(photos,/await authorize\(id,"viewer"\)/);
  assert.match(staff,/await import\("@zxing\/browser"\)/);
  assert.match(delegate,/await import\("@zxing\/browser"\)/);

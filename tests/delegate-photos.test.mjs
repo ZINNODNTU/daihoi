@@ -32,9 +32,10 @@ test("API ảnh bắt buộc quyền và JPEG 600x800, kho riêng tư",()=>{
  assert.match(route,/authorize\(id,"admin"\)/);
  assert.match(route,/createAdminClient\(\)/);
  assert.match(route,/meta\.width!==600\|\|meta\.height!==800/);
- assert.match(route,/Cache-Control":"private, max-age=180/);
+ assert.match(route,/Cache-Control":"private, max-age=45/);
  assert.match(route,/authorize\(id,"viewer"\)/);
- assert.match(route,/invalidate\(path\)/);
+ assert.match(route,/invalidatePortrait\(path\)/);
+ assert.match(route,/removeDerivedPortraits\(path\)/);
  assert.match(route,/delegate-photos/);
 });
 test("Tách nền AI chạy trên trình duyệt và ảnh đầu ra nền trắng",()=>{

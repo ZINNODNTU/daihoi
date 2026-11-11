@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import sharp from "sharp";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {readPortrait,getPortraitWidth,invalidatePortrait,removeDerivedPortraits} from "@/lib/portrait-storage";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -47,26 +48,13 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
   const expected=expectedPath(auth.candidate.congress_id,id);
   // Never trust client-writable photo_path to load an arbitrary private file.
   if(auth.candidate.photo_path!==expected)return fail("Nhân sự chưa có ảnh chân dung.",404);
-  const size=new URL(request.url).searchParams.get("w");
-  const width=size==="96"?96:size==="160"?160:600;
-  const storage=createAdminClient().storage.from(BUCKET);
-  const variant=width===600?expected:expected.replace(/\.jpg$/i,"-"+width+".jpg");
-  const saved=await storage.download(variant);
-  let bytes:Uint8Array;
-  if(saved.data)bytes=new Uint8Array(await saved.data.arrayBuffer());
-  else{
-   // Fallback for BCH portraits uploaded before the precomputed thumbnails.
-   const {data,error}=await storage.download(expected);
-   if(error||!data)return fail("Không tải được ảnh nhân sự.",404);
-   const original=Buffer.from(await data.arrayBuffer());
-   bytes=width===600?new Uint8Array(original):
-    new Uint8Array(await sharp(original,{limitInputPixels:5_000_000})
-     .resize(width,Math.round(width*4/3),{fit:"cover"})
-     .jpeg({quality:78,mozjpeg:true}).toBuffer());
-  }
+   const width=getPortraitWidth(new URL(request.url).searchParams.get("w"));
+   const bytes=await readPortrait(expected,width);
+   if(!bytes)return fail("KhÃ´ng táº£i Ä‘Æ°á»£c áº£nh nhÃ¢n sá»±.",404);
   return new Response(new Uint8Array(bytes),{
    headers:{
-    "Content-Type":"image/jpeg","Cache-Control":"private, no-store",
+    "Content-Type":"image/jpeg","Cache-Control":"private, max-age=45",
+     "Vary":"Cookie",
     "X-Content-Type-Options":"nosniff","Content-Disposition":"inline",
     "Cross-Origin-Resource-Policy":"same-origin"
    }
@@ -88,10 +76,10 @@ export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}
   if(metadata.format!=="jpeg"||metadata.width!==600||metadata.height!==800)
    return fail("Ảnh phải có kích thước 600 × 800 px (tỷ lệ 3:4).",400);
   const encoded=await sharp(raw,{limitInputPixels:5_000_000})
-   .flatten({background:"#ffffff"}).jpeg({quality:85,mozjpeg:true}).toBuffer();
+   .flatten({background:"#ffffff"}).jpeg({quality:78,mozjpeg:true}).toBuffer();
   const path=expectedPath(auth.candidate.congress_id,id);
   const {error:uploadError}=await createAdminClient().storage.from(BUCKET).upload(
-   path,encoded,{contentType:"image/jpeg",cacheControl:"0",upsert:true}
+   path,encoded,{contentType:"image/jpeg",cacheControl:"60",upsert:true}
   );
   if(uploadError){
    console.error("bch photo upload failed",uploadError.name);
@@ -102,17 +90,9 @@ export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}
    .eq("id",id).eq("congress_id",auth.candidate.congress_id)
    .select("photo_path,updated_at").maybeSingle();
   if(updateError||!updated)return fail("Ảnh đã tải lên nhưng chưa liên kết được với hồ sơ BCH.",500);
-  const thumbs=await Promise.allSettled([96,160].map(async width=>{
-   const thumbnail=await sharp(encoded,{limitInputPixels:5_000_000})
-    .resize(width,Math.round(width*4/3),{fit:"cover"})
-    .jpeg({quality:78,mozjpeg:true}).toBuffer();
-   return createAdminClient().storage.from(BUCKET)
-    .upload(path.replace(/\.jpg$/i,"-"+width+".jpg"),thumbnail,{
-     contentType:"image/jpeg",cacheControl:"0",upsert:true
-    });
-  }));
-  if(thumbs.some(item=>item.status==="rejected"||
-   (item.status==="fulfilled"&&Boolean(item.value.error))))console.warn("bch thumbnail fallback required");
+   invalidatePortrait(path);
+   // Derivatives are reproducible from the master; do not retain 3 files.
+   await removeDerivedPortraits(path);
   return NextResponse.json({ok:true,photo_path:updated.photo_path,updated_at:updated.updated_at},{
    headers:{"Cache-Control":"private, no-store"}
   });

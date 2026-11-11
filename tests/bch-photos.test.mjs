@@ -22,7 +22,7 @@ test("BCH private photo endpoint permits administrators to upload and authorized
  assert.match(api,/db\.from\("bch_candidates"\)/);
  assert.match(api,/candidate\.photo_path!==expected/);
  assert.match(api,/private, no-store/);
- assert.match(api,/storage\.download\(expected\)/);
+ assert.match(api,/readPortrait\(expected,width\)/);
  assert.match(api,/expectedPath\(auth\.candidate\.congress_id,id\)/);
 });
 test("BCH photo upload validates JPEG dimensions and uses safe server re-encoding",()=>{
