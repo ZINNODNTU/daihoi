@@ -25,7 +25,8 @@
    assert.match(api,/auth\.admin\.updateUserById\(delegate\.auth_user_id,\{password\}\)/);
    assert.match(api,/profile\.data\?\.platform_role==="super_admin"/);
    assert.match(api,/\.in\("role",\["admin","checkin","secretary"\]\)/);
-   assert.match(api,/DEFAULT_DELEGATE_PASSWORD="Abc@123456"/);
+   assert.ok(api.includes('import {DEFAULT_DELEGATE_PASSWORD} from "@/lib/delegate-password-policy"'));
+   assert.match(read("../src/lib/delegate-password-policy.ts"),/DEFAULT_DELEGATE_PASSWORD="Abc@123456"/);
    assert.match(api,/const password=DEFAULT_DELEGATE_PASSWORD/);
    assert.doesNotMatch(api,/randomBytes|body\?\.password.*updateUserById/);
    assert.match(api,/delegate\.password_reset/);

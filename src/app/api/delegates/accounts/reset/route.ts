@@ -2,11 +2,11 @@ import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {writeSystemLog} from "@/lib/system-log";
+import {DEFAULT_DELEGATE_PASSWORD} from "@/lib/delegate-password-policy";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DEFAULT_DELEGATE_PASSWORD="Abc@123456";
 const fail=(error:string,status:number)=>NextResponse.json({error},{
  status,headers:{"Cache-Control":"private, no-store","Pragma":"no-cache"}
 });

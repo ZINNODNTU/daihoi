@@ -1,4 +1,4 @@
-import {randomBytes} from "node:crypto";
+import {DEFAULT_DELEGATE_PASSWORD} from "@/lib/delegate-password-policy";
 import {isSameDelegateIdentity} from "@/lib/delegate-identity";
 import {NextResponse} from "next/server";
 import {createAdminClient} from "@/lib/supabase/admin";
@@ -68,7 +68,9 @@ export async function POST(request:Request){
     if(existing){
      targetId=existing.id;
     }else{
-     issuedPassword=randomBytes(18).toString("base64url");
+     // Only freshly created Auth identities receive the default password.
+     // Never reset a pre-existing account when it joins another congress.
+     issuedPassword=DEFAULT_DELEGATE_PASSWORD;
      const {data:account,error:createError}=await db.auth.admin.createUser({
       email:authEmail,password:issuedPassword,email_confirm:true,
       user_metadata:{full_name:name,login_alias:email},app_metadata:{provisioned_by:"daihoi"}

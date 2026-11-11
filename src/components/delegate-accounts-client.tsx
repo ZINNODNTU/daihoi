@@ -4,9 +4,10 @@ import {useRouter} from "next/navigation";
 import {CheckCircle2,Download,Eye,EyeOff,FileSpreadsheet,KeyRound,LockKeyhole,Search,ShieldAlert,UserRoundPlus,Users} from "lucide-react";
 import type {Delegate} from "@/lib/types";
 import {DelegateAdminTabs} from "@/components/delegate-admin-tabs";
+import {DEFAULT_DELEGATE_PASSWORD} from "@/lib/delegate-password-policy";
 
 type Issued={id:string;name:string;email:string;password:string};
-const DEFAULT_PASSWORD="Abc@123456";
+const DEFAULT_PASSWORD=DEFAULT_DELEGATE_PASSWORD;
 const safe=(value:string)=>/^[=+@\-\t\r]/.test(value)?"'"+value:value;
 async function toExcel(name:string,headers:string[],rows:(string|number)[][]){
  const {default:writeExcelFile}=await import("write-excel-file/browser");
@@ -138,7 +139,7 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
    <div>
     <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#408ca1]">BẢO MẬT · TÀI KHOẢN ĐẠI BIỂU</p>
     <h1 className="page-title mt-2">Quản lý tài khoản đại biểu</h1>
-    <p className="page-description mt-2">Cấp tài khoản, reset về mật khẩu mặc định và xuất Excel gồm thông tin tài khoản cùng mật khẩu vừa cấp.</p>
+    <p className="page-description mt-2">Tài khoản đại biểu mới được cấp mật khẩu khởi tạo mặc định; admin có thể reset về mặc định và xuất Excel mật khẩu vừa cấp/reset.</p>
    </div>
    <div className="flex w-full flex-col items-start gap-1.5 sm:w-auto sm:items-end">
     <button type="button" disabled={busy} onClick={()=>void exportInventory(true)}
@@ -163,7 +164,7 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
      {busy?"Đang xử lý...":"Cấp "+eligible.length+" tài khoản"}
     </button>
    </div>
-   <p className="mt-2 text-xs leading-6 text-[#8199a4]">Chọn các đại biểu chưa có tài khoản (tối đa 100/lần). Excel cấp tài khoản mới có mật khẩu chính xác. Với tài khoản đã có, muốn biết mật khẩu để cấp lại thì dùng Reset về mặc định; hệ thống không thể đọc mật khẩu hiện tại.</p>
+   <p className="mt-2 text-xs leading-6 text-[#8199a4]">Chọn các đại biểu chưa có tài khoản (tối đa 100/lần). Mọi tài khoản vừa tạo mới đều dùng mật khẩu ban đầu Abc@123456 và Excel tải tự động sẽ chứa mật khẩu này. Tài khoản đã tồn tại không bị đổi mật khẩu khi tham gia Đại hội khác; muốn cấp lại cần Reset về mặc định. Yêu cầu đại biểu đổi mật khẩu sau đăng nhập.</p>
   </div>
   {notice&&<p role="status" className="rounded-xl border border-[#c9e7d8] bg-[#effaf5] px-4 py-3 text-[12px] font-semibold text-[#226e55]">{notice}</p>}
   {error&&<p role="alert" className="rounded-xl border border-[#f2d2c4] bg-[#fff5f0] px-4 py-3 text-[12px] font-semibold text-[#a04f38]">{error}</p>}

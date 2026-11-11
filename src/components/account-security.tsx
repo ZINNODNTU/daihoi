@@ -53,7 +53,7 @@ export function AccountSecurity(){
     <input type="checkbox" className="h-4 w-4 accent-[#007eb8]" checked={show} onChange={e=>setShow(e.target.checked)}/>
     {show?<EyeOff size={15}/>:<Eye size={15}/>} Hiện mật khẩu
    </label>
-   <p className="text-[12px] leading-6 text-[#8692a4]">Sử dụng mật khẩu riêng, dài ít nhất 12 ký tự. Không chia sẻ với người khác.</p>
+   <p className="text-[12px] leading-6 text-[#8692a4]">Nếu đang dùng mật khẩu mặc định do BTC cấp, hãy đổi sang mật khẩu riêng ngay. Mật khẩu mới cần ít nhất 12 ký tự; không chia sẻ với người khác.</p>
    {error&&<p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-[12px] leading-6 text-red-700">{error}</p>}
    {success&&<p role="status" className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-[12px] leading-6 text-green-700"><ShieldCheck size={17} className="mt-1 shrink-0"/>Đã đổi mật khẩu thành công. Hãy dùng mật khẩu mới từ lần đăng nhập tiếp theo.</p>}
    <button disabled={busy} type="submit" className="btn btn-primary min-h-[44px] justify-center !text-[13px]">
