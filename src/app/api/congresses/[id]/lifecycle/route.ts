@@ -23,7 +23,7 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
  if("error" in permission)return permission.error;
  try{
   const db=createAdminClient();
-  const [congress,delegates,bch,sessions,documents,seating,checkins,btc,layouts,sessionRows,assignments]=await Promise.all([
+  const [congress,delegates,bch,sessions,documents,seating,checkins,btc,layouts,sessionRows]=await Promise.all([
    db.from("congresses").select("id,name").eq("id",id).maybeSingle(),
    db.from("delegates").select("id",{count:"exact",head:true}).eq("congress_id",id),
    db.from("bch_candidates").select("id",{count:"exact",head:true}).eq("congress_id",id),
@@ -35,21 +35,30 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
    db.from("seating_layouts").select("id,title,updated_at").eq("congress_id",id)
     .order("updated_at",{ascending:false}).limit(50),
    db.from("attendance_sessions").select("id,name,status,seating_layout_id").eq("congress_id",id)
-    .order("created_at",{ascending:false}).limit(100),
-   db.from("seat_assignments").select("layout_id").eq("congress_id",id).limit(501)
+    .order("created_at",{ascending:false}).limit(100)
   ]);
   if(btc.error?.code==="PGRST205")return fail("Chưa cập nhật Supabase V45: thiếu bảng btc_accounts. Hãy chạy migration V45 trước V46.",503);
-  if([congress,delegates,bch,sessions,documents,seating,checkins,btc,layouts,sessionRows,assignments]
-    .some(item=>item.error)||(assignments.data?.length||0)>500)
+  if([congress,delegates,bch,sessions,documents,seating,checkins,btc,layouts,sessionRows]
+    .some(item=>item.error))
    return fail("Không đọc được thống kê hoặc dữ liệu sơ đồ. Kiểm tra Supabase/schema.",503);
   if(!congress.data)return fail("Đại hội không tồn tại.",404);
   const counts={delegates:delegates.count||0,bch:bch.count||0,sessions:sessions.count||0,
    documents:documents.count||0,seating:seating.count||0,checkins:checkins.count||0,btc:btc.count||0};
   const layoutNames=new Map((layouts.data||[]).map(l=>[l.id,l.title]));
+  // Count assignments per relevant layout server-side; do not truncate after 500 rows.
+  const layoutIds=[...new Set((sessionRows.data||[]).map(s=>s.seating_layout_id).filter((v):v is string=>Boolean(v)))];
+  const assignmentCounts=await Promise.all(layoutIds.map(async layoutId=>{
+   const result=await db.from("seat_assignments").select("seat_id",{count:"exact",head:true})
+    .eq("congress_id",id).eq("layout_id",layoutId);
+   return {layoutId,...result};
+  }));
+  if(assignmentCounts.some(result=>result.error))
+   return fail("Không đếm được phân ghế; vui lòng kiểm tra kết nối Supabase.",503);
+  const assignmentsByLayout=new Map(assignmentCounts.map(result=>[result.layoutId,result.count||0]));
   const sessionMaps=(sessionRows.data||[]).map(s=>({
    id:s.id,name:s.name,status:s.status,layoutId:s.seating_layout_id,
    layoutTitle:s.seating_layout_id?layoutNames.get(s.seating_layout_id)||null:null,
-   assigned:(assignments.data||[]).filter(a=>a.layout_id===s.seating_layout_id).length
+   assigned:assignmentsByLayout.get(s.seating_layout_id||"")||0
   }));
   const warnings:string[]=[];
   if(counts.seating&&sessionMaps.some(s=>!s.layoutId))

@@ -25,5 +25,5 @@ export const loadSharedSessionInfo=unstable_cache(
    .in("congress_id",ids).order("starts_at",{ascending:false}).limit(500);
   if(error)throw new Error("Không tải được phiên Đại hội.");
   return data||[];
- },["portal-shared-congress-sessions-v1"],{revalidate:10}
+ },["portal-shared-congress-sessions-v1"],{revalidate:10,tags:["daihoi-portal-sessions"]}
 );

@@ -1,4 +1,5 @@
 import {NextResponse} from "next/server";
+import {revalidateTag} from "next/cache";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {validateSeatDrafts,seatGridSizeValid,type SeatDraft} from "@/lib/seating";
@@ -193,6 +194,7 @@ export async function POST(request:Request){
         p_grid_rows:gridRows,p_grid_columns:gridColumns,p_seats:typed
       });
       if(error)return databaseProblem(error);
+      revalidateTag("daihoi-hall-geometry",{expire:0});
       return NextResponse.json({ok:true,version:data},{headers:noCache});
     }
     if(body.action==="assign"){
@@ -208,6 +210,7 @@ export async function POST(request:Request){
         p_actor:session.user.id,p_mode:mode,p_items:items
       });
       if(error)return databaseProblem(error);
+      revalidateTag("daihoi-hall-geometry",{expire:0});
       return NextResponse.json({ok:true,version:data},{headers:noCache});
     }
     return fail("Thao tác không được hỗ trợ.",400);

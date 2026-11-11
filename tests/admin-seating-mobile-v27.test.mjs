@@ -52,6 +52,7 @@ function makeMock({assignments=0,sessions=0,version=4,admin=true,user={id:actor}
  };
  const api=run(read("../src/app/api/seating/route.ts"),{
   "next/server":next,
+   "next/cache":{revalidateTag:()=>{}},
   "@/lib/auth":{
    getAuth:async()=>({user,supabase:{}}),
    hasRole:async()=>admin

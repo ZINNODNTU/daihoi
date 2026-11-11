@@ -30,7 +30,7 @@ export type MyHallMap={
   if(layoutResult.error||seatResult.error||seatResult.data?.length===501)
    throw new Error("Không thể tải đủ sơ đồ ghế cho phiên.");
   return {layout:layoutResult.data as HallLayout|null,seats:(seatResult.data||[]) as HallSeat[]};
- },["delegate-shared-hall-v1"],{revalidate:15});
+ },["delegate-shared-hall-v1"],{revalidate:15,tags:["daihoi-hall-geometry"]});
 
 // The session must belong to one of the caller's server-verified delegate profiles.
 // Only the physical map is returned: NEVER other delegates or their assignments.

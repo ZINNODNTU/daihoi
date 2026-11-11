@@ -3,7 +3,13 @@ import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {writeSystemLog} from "@/lib/system-log";
 import {validateWindowDetailed,type QrPolicy} from "@/lib/attendance-window";
+import {revalidateTag} from "next/cache";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function sameOrigin(request:Request){
+ const origin=request.headers.get("origin");
+ if(!origin)return true;
+ try{return new URL(origin).host===request.headers.get("host");}catch{return false;}
+}
 function policy(input:unknown):QrPolicy|null{
  return input==="fixed"||input==="session"||input==="both"?input:null;
 }
@@ -18,6 +24,7 @@ async function resolveSeatingLayout(admin:ReturnType<typeof createAdminClient>,
  return {value:data.id as string,error:null};
 }
 export async function POST(request:Request){
+ if(!sameOrigin(request))return NextResponse.json({error:"Nguồn yêu cầu không hợp lệ."},{status:403});
  try{
   const {supabase,user}=await getAuth();
   if(!user)return NextResponse.json({error:"Cần đăng nhập."},{status:401});
@@ -47,12 +54,14 @@ export async function POST(request:Request){
     context:{operation:"attendance_sessions.insert",dbCode:error.code||"unknown"}});
    return NextResponse.json({error:"Không tạo được phiên điểm danh."},{status:500});
   }
-  return NextResponse.json({ok:true,session:data});
+  revalidateTag("daihoi-portal-sessions",{expire:0});
+   return NextResponse.json({ok:true,session:data});
  }catch{
   return NextResponse.json({error:"Yêu cầu không hợp lệ."},{status:400});
  }
 }
 export async function PATCH(request:Request){
+ if(!sameOrigin(request))return NextResponse.json({error:"Nguồn yêu cầu không hợp lệ."},{status:403});
  try{
   const {supabase,user}=await getAuth();
   if(!user)return NextResponse.json({error:"Cần đăng nhập."},{status:401});
@@ -105,16 +114,27 @@ export async function PATCH(request:Request){
   }
   if(!Object.keys(update).length)
    return NextResponse.json({error:"Không có thông tin cập nhật."},{status:400});
-  const {data,error}=await admin.from("attendance_sessions")
-   .update(update).eq("id",sessionId).eq("congress_id",congressId)
-   .select("id,congress_id,name,status,starts_at,ends_at,qr_policy,seating_layout_id").maybeSingle();
+  let mutation=admin.from("attendance_sessions")
+    .update(update).eq("id",sessionId).eq("congress_id",congressId);
+   // Keep the compare-and-set predicate in the UPDATE itself, not just the pre-read.
+   const conditional=body.seatingLayoutId!==undefined&&body.expectedSeatingLayoutId!==undefined;
+   if(conditional){
+    mutation=body.expectedSeatingLayoutId===null
+     ?mutation.is("seating_layout_id",null)
+     :mutation.eq("seating_layout_id",body.expectedSeatingLayoutId);
+   }
+   const {data,error}=await mutation
+    .select("id,congress_id,name,status,starts_at,ends_at,qr_policy,seating_layout_id").maybeSingle();
+   if(!error&&!data&&conditional)
+    return NextResponse.json({error:"Sơ đồ phiên đã được người khác thay đổi. Vui lòng tải lại."},{status:409});
   if(error||!data){
    await writeSystemLog({level:"error",source:"attendance",event:"attendance.session_update_failed",
     message:"Không cập nhật được phiên điểm danh.",congressId,actorId:user.id,statusCode:500,
     context:{operation:"attendance_sessions.update",dbCode:error?.code||"unknown",sessionId}});
    return NextResponse.json({error:"Không cập nhật được phiên điểm danh."},{status:500});
   }
-  return NextResponse.json({ok:true,session:data});
+  revalidateTag("daihoi-portal-sessions",{expire:0});
+   return NextResponse.json({ok:true,session:data});
  }catch{
   return NextResponse.json({error:"Yêu cầu không hợp lệ."},{status:400});
  }
