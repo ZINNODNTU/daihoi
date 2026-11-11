@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {writeSystemLog} from "@/lib/system-log";
 import {validateWindowDetailed,type QrPolicy} from "@/lib/attendance-window";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function policy(input:unknown):QrPolicy|null{
@@ -40,7 +41,12 @@ export async function POST(request:Request){
    congress_id:congressId,name,status:"open",qr_policy:qrPolicy,
    seating_layout_id:seating.value,...checked.window
   }).select("id,congress_id,name,status,starts_at,ends_at,qr_policy,seating_layout_id").single();
-  if(error)return NextResponse.json({error:"Không tạo được phiên điểm danh."},{status:500});
+  if(error){
+   await writeSystemLog({level:"error",source:"attendance",event:"attendance.session_create_failed",
+    message:"Không tạo được phiên điểm danh.",congressId,actorId:user.id,statusCode:500,
+    context:{operation:"attendance_sessions.insert",dbCode:error.code||"unknown"}});
+   return NextResponse.json({error:"Không tạo được phiên điểm danh."},{status:500});
+  }
   return NextResponse.json({ok:true,session:data});
  }catch{
   return NextResponse.json({error:"Yêu cầu không hợp lệ."},{status:400});
@@ -90,7 +96,12 @@ export async function PATCH(request:Request){
   const {data,error}=await admin.from("attendance_sessions")
    .update(update).eq("id",sessionId).eq("congress_id",congressId)
    .select("id,congress_id,name,status,starts_at,ends_at,qr_policy,seating_layout_id").maybeSingle();
-  if(error||!data)return NextResponse.json({error:"Không cập nhật được phiên điểm danh."},{status:500});
+  if(error||!data){
+   await writeSystemLog({level:"error",source:"attendance",event:"attendance.session_update_failed",
+    message:"Không cập nhật được phiên điểm danh.",congressId,actorId:user.id,statusCode:500,
+    context:{operation:"attendance_sessions.update",dbCode:error?.code||"unknown",sessionId}});
+   return NextResponse.json({error:"Không cập nhật được phiên điểm danh."},{status:500});
+  }
   return NextResponse.json({ok:true,session:data});
  }catch{
   return NextResponse.json({error:"Yêu cầu không hợp lệ."},{status:400});

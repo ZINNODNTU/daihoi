@@ -15,6 +15,7 @@ Nền tảng quản lý và điều hành **nhiều Đại hội Đoàn TNCS H�
 | Phân tích | Báo cáo hiện diện; thống kê giới tính và tuổi **chỉ trên đại biểu đã điểm danh** |
 | Tài liệu | BTC upload lên Google Drive; đại biểu xem **icon + tên file**, nhấn để mở Drive |
 | Nhân sự BCH | Hồ sơ trích ngang, ảnh và giao diện flashcard để xem nhân sự |
+| Nhật ký hệ thống | System Logs trong admin, cảnh báo lỗi 24 giờ, lọc sự kiện, Request ID và quản lý tiến độ khắc phục (cần migration V36) |
 
 Các khả năng trong bảng phản ánh **mã nguồn hiện có**, không xác nhận rằng database production, Google Drive hay Vercel đã cấu hình hoặc nghiệm thu hoàn chỉnh.
 
@@ -52,6 +53,7 @@ npm run readiness
 - **Nghiệp vụ:** [Quy trình Đại hội](docs/nghiep-vu/NGHIEP-VU-DAI-HOI.md).
 - **Giao diện:** [Responsive UI](docs/giao-dien/RESPONSIVE-UI.md).
 - **Quy ước đóng góp:** [Chuẩn tài liệu](docs/QUY-UOC.md).
+- **Giám sát lỗi hệ thống:** [System Logs V36](docs/huong-dan/NHAT-KY-HE-THONG-V36.md).
 
 **Mục lục đầy đủ:** [docs/README.md](docs/README.md). **Lịch sử README cũ:** [snapshot 09/11/2026](docs/lich-su/README-GOC-2026-11-09.md).
 

@@ -24,5 +24,7 @@ jobs:
         run: npm ci
       - name: Run ESLint
         run: npm run lint
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
       - name: Run regression tests
         run: node --test tests/*.test.mjs

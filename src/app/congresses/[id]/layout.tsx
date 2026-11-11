@@ -24,5 +24,5 @@ export default async function CongressLayout({children,params}:{children:React.R
  const canCheckin=canManage||membershipResult.data?.role==="checkin";
  return <AppShell name={profile?.full_name||user.email||""} congressId={id}
   congressName={congress.name} congressKind={congress.kind} canManage={canManage} canViewBch={canViewBch}
-  canCheckin={canCheckin}>{children}</AppShell>;
+  canCheckin={canCheckin} canViewSystemLogs={canManage}>{children}</AppShell>;
 }

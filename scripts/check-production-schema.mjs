@@ -36,7 +36,8 @@ const gates=[
  ["seating-v6","seating_layouts","id,congress_id,grid_rows,grid_columns,version"],
  ["seating-v6","seats","id,congress_id,layout_id,seat_type"],
  ["seating-v6","seat_assignments","seat_id,delegate_id"],
- ["seating-reuse-v26","seating_templates","id,organization_id,created_by,visibility,seat_count"]
+ ["seating-reuse-v26","seating_templates","id,organization_id,created_by,visibility,seat_count"],
+  ["observability-v36","system_logs","id,occurred_at,level,source,event,resolution,request_id,congress_id"]
 ];
 let missing=0;
 console.log("Daihoi production schema gate — only metadata, no delegate rows");

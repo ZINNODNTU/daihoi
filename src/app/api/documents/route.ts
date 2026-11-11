@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import {deleteScriptDrive,scriptStorageSelected,shareScriptDrive,uploadScriptDrive} from "@/lib/google-apps-script";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {writeSystemLog} from "@/lib/system-log";
 import {
  DriveStorageError,getDriveToken,inspectDriveFolder,makeDriveFolder,
  uploadDriveFile,deleteDriveFile,setDriveLinkSharing
@@ -91,7 +92,10 @@ export async function POST(req:Request){
      googleFileId:uploadedId,code:cleanupError instanceof DriveStorageError?cleanupError.code:"unknown"
     });
    }
-   console.error("document db insert failed",error.code);
+   await writeSystemLog({level:"error",source:"documents",event:"documents.db_insert_failed",
+     message:"Tải lên Drive thành công nhưng ghi metadata vào Supabase thất bại.",
+     congressId,actorId:user.id,statusCode:500,
+     context:{operation:"documents.insert",dbCode:error.code||"unknown",service:storageMode}});
    return fail("Drive đã nhận tệp nhưng không lưu được thông tin vào Supabase. Kiểm tra bảng documents và quyền truy cập.",500);
   }
   let published=false;
@@ -116,7 +120,10 @@ export async function POST(req:Request){
       warning="Đã lưu tệp nội bộ, nhưng chưa đồng bộ được công bố. Hãy thử công bố lại trong danh sách tài liệu.";
      }else published=true;
     }catch(e){
-     console.error("document publication after upload failed",
+     await writeSystemLog({level:"warning",source:"documents",event:"documents.publish_failed",
+       message:"Không thể công bố tài liệu cho đại biểu.",congressId,actorId:user.id,statusCode:502,
+       context:{operation:"documents.publish",service:storageMode,errorName:e instanceof Error?e.name:"unknown"}});
+      console.error("document publication after upload failed",
       e instanceof DriveStorageError?e.code:"unknown");
      warning="Tệp đã lưu nội bộ. Google Drive chưa cấp được quyền xem; hãy kiểm tra cấu hình chia sẻ rồi công bố lại.";
     }
@@ -126,8 +133,17 @@ export async function POST(req:Request){
    });
  }catch(e){
   if(e instanceof DocumentValidationError)return fail(e.message,400);
-  if(e instanceof DriveStorageError)return fail(e.message,e.status);
-  console.error("document upload failed",e instanceof Error?e.name:"unknown");
+  if(e instanceof DriveStorageError){
+    if(e.status>=400)await writeSystemLog({
+     level:e.status>=500?"error":"warning",source:"documents",event:"documents.drive_service_failed",
+     message:"Google Drive trả về lỗi khi xử lý tài liệu.",congressId:uploadCongressId,statusCode:e.status,
+     context:{operation:"documents.POST",dbCode:e.code||"unknown",service:storageMode}
+    });
+    return fail(e.message,e.status);
+   }
+  await writeSystemLog({level:"error",source:"documents",event:"documents.upload_failed",
+    message:"Không thể tải tài liệu lên hệ thống lưu trữ.",statusCode:500,
+    congressId:uploadCongressId,context:{operation:"documents.POST",errorName:e instanceof Error?e.name:"unknown",service:storageMode}});
   return fail("Không thể tải tài liệu lên Google Drive. Vui lòng thử lại.",500);
  }
 }

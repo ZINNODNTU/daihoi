@@ -3,6 +3,7 @@ import {getAuth,hasRole} from "@/lib/auth";
 import {parseAndVerifyQr} from "@/lib/qr";
 import {getWindowStatus,isQrAllowed} from "@/lib/attendance-window";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {writeSystemLog} from "@/lib/system-log";
 export const runtime="nodejs";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const barcodePattern=/^DB[0-9A-F]{20}$/;
@@ -91,8 +92,10 @@ export async function POST(request:Request){
   if(error){
    for(const [key,message] of Object.entries(dbMessages))
     if(error.message.includes(key))return jsonError(message,409);
-   console.error("checkins.write failed",error.code);
-   return jsonError("Không ghi được điểm danh. Kiểm tra cấu hình máy chủ và Supabase.",500);
+   const requestId=await writeSystemLog({level:"error",source:"attendance",event:"attendance.checkin_write_failed",
+     message:"Không ghi được lượt điểm danh vào Supabase.",congressId,actorId:user.id,statusCode:500,
+     context:{operation:"checkins.insert",dbCode:error.code||"unknown",sessionId}});
+   return jsonError("Không ghi được điểm danh. Kiểm tra cấu hình máy chủ và Supabase.",500,{requestId});
   }
   return NextResponse.json({
    ok:true,checkin:data,
@@ -100,7 +103,9 @@ export async function POST(request:Request){
    method,qrScope
   },{headers:{"Cache-Control":"no-store"}});
  }catch(error){
-  console.error("checkins error",error instanceof Error?error.name:"unknown");
+  await writeSystemLog({level:"error",source:"attendance",event:"attendance.checkin_unexpected_error",
+    message:"Điểm danh gặp lỗi xử lý không mong đợi.",statusCode:500,
+    context:{operation:"checkins.POST",errorName:error instanceof Error?error.name:"unknown"}});
   return jsonError("Máy chủ chưa cấu hình hoặc dữ liệu gửi lên không hợp lệ.",500);
  }
 }

@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {getAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {writeSystemLog} from "@/lib/system-log";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -33,7 +34,12 @@ export async function GET(request:Request){
      .eq("congress_id",congressId).eq("session_id",sessionId)
      .gte("checked_in_at",new Date(since).toISOString())
      .order("checked_in_at",{ascending:true}).order("id",{ascending:true}).limit(500);
-    if(error)return fail("Không đọc được lượt điểm danh mới.",500);
+    if(error){
+      await writeSystemLog({level:"error",source:"attendance",event:"attendance.live_updates_failed",
+       message:"Không đọc được dữ liệu điểm danh mới.",congressId,actorId:user.id,statusCode:500,
+       context:{operation:"live.updates",dbCode:error.code||"unknown",sessionId}});
+      return fail("Không đọc được lượt điểm danh mới.",500);
+     }
     return NextResponse.json({checkins:data||[],refreshedAt:new Date().toISOString()},
      {headers:{"Cache-Control":"private, no-store"}});
    }
@@ -51,7 +57,10 @@ export async function GET(request:Request){
     .order("checked_in_at",{ascending:false}).limit(1000)
   ]);
   if(sessionResult.error||delegatesResult.error||layoutsResult.error||checkinsResult.error)
-   return fail("Không đồng bộ được dữ liệu điểm danh từ Supabase.",500);
+   {await writeSystemLog({level:"error",source:"attendance",event:"attendance.live_snapshot_failed",
+     message:"Không đồng bộ được toàn bộ dữ liệu màn hình điểm danh.",congressId,actorId:user.id,statusCode:500,
+     context:{operation:"live.snapshot",sessionId}});
+     return fail("Không đồng bộ được dữ liệu điểm danh từ Supabase.",500);}
   if(!sessionResult.data)return fail("Phiên không tồn tại trong Đại hội.",404);
   const layouts=layoutsResult.data||[];
   // Each attendance session explicitly selects its auditorium.
@@ -68,7 +77,10 @@ export async function GET(request:Request){
      .eq("congress_id",congressId).eq("layout_id",layout.id).limit(700)
    ]);
    if(seatResult.error||assignmentResult.error)
-    return fail("Không tải được sơ đồ ghế hoặc danh sách phân công.",500);
+    {await writeSystemLog({level:"error",source:"seating",event:"seating.live_snapshot_failed",
+      message:"Không tải được sơ đồ ghế phục vụ điểm danh.",congressId,actorId:user.id,statusCode:500,
+      context:{operation:"live.seating",sessionId}});
+      return fail("Không tải được sơ đồ ghế hoặc danh sách phân công.",500);}
    seats=seatResult.data||[];assignments=assignmentResult.data||[];
   }
   return NextResponse.json({
@@ -76,5 +88,10 @@ export async function GET(request:Request){
    checkins:checkinsResult.data||[],
    layouts,layout,seats,assignments,refreshedAt:new Date().toISOString()
   },{headers:{"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});
- }catch{return fail("Không thể tải bảng điều hành điểm danh.",500);}
+ }catch(e){
+  await writeSystemLog({level:"error",source:"attendance",event:"attendance.live_unexpected_error",
+   message:"Lỗi xử lý bảng điều hành điểm danh.",statusCode:500,
+   context:{operation:"attendance.live",errorName:e instanceof Error?e.name:"unknown"}});
+  return fail("Không thể tải bảng điều hành điểm danh.",500);
+ }
 }

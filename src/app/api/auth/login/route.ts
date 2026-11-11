@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {createServerClient} from "@supabase/ssr";
 import {toSupabaseAuthEmail} from "@/lib/login-identity";
+import {writeSystemLog} from "@/lib/system-log";
 
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
@@ -60,7 +61,12 @@ export async function POST(request:NextRequest){
    result=await supabase.auth.signInWithPassword({email:normalized,password});
   }
   if(result.error||!result.data.user){
-   if(result.error?.status===429)return fail("Hệ thống đang nhận nhiều lượt đăng nhập. Vui lòng đợi 15 giây rồi thử lại.",429);
+   if(result.error?.status===429){
+     await writeSystemLog({level:"warning",source:"auth",event:"auth.rate_limited",
+      message:"Supabase Auth giới hạn số lượt đăng nhập.",statusCode:429,
+      context:{operation:"signInWithPassword",endpoint:"/api/auth/login"}});
+     return fail("Hệ thống đang nhận nhiều lượt đăng nhập. Vui lòng đợi 15 giây rồi thử lại.",429);
+    }
    return fail("Tên đăng nhập hoặc mật khẩu không đúng.",401);
   }
   const id=result.data.user.id;
@@ -76,6 +82,9 @@ export async function POST(request:NextRequest){
   reply.cookies.getAll().forEach(cookie=>data.cookies.set(cookie));
   return data;
  }catch{
-  return fail("Không thể kết nối máy chủ xác thực. Kiểm tra mạng và thử lại.",503);
+  await writeSystemLog({level:"error",source:"auth",event:"auth.login_service_failed",
+    message:"Dịch vụ đăng nhập không hoạt động như mong đợi.",statusCode:503,
+    context:{operation:"signInWithPassword",endpoint:"/api/auth/login"}});
+   return fail("Không thể kết nối máy chủ xác thực. Kiểm tra mạng và thử lại.",503);
  }
 }

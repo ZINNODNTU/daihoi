@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Browser profiles/captures are generated diagnostics, not application source.
+    ".ai-bridge/**",
   ]),
 ]);
 

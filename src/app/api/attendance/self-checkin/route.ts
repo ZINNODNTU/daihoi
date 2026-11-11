@@ -3,6 +3,7 @@ import {getAuth} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {getWindowStatus,isQrAllowed} from "@/lib/attendance-window";
 import {verifySessionEntryQr} from "@/lib/session-entry-qr";
+import {writeSystemLog} from "@/lib/system-log";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -49,14 +50,21 @@ export async function POST(request:Request){
     delegate:{id:delegate.id,code:delegate.code,full_name:delegate.full_name,unit:delegate.unit},
     sessionName:session.name},{headers:{"Cache-Control":"private, no-store"}});
   if(error){
-   console.error("self checkin write",error.code);
-   return fail(error.message.includes("CHECKIN_OUTSIDE_WINDOW")?
-    "Phiên đã hết thời gian điểm danh.":error.message.includes("CHECKIN_QR_SCOPE_DENIED")?
-    "Phiên không chấp nhận QR theo phiên.":"Không ghi được điểm danh. Vui lòng liên hệ BTC.",409);
+   if(error.message.includes("CHECKIN_OUTSIDE_WINDOW"))return fail("Phiên đã hết thời gian điểm danh.",409);
+   if(error.message.includes("CHECKIN_QR_SCOPE_DENIED"))return fail("Phiên không chấp nhận QR theo phiên.",409);
+   const requestId=await writeSystemLog({level:"error",source:"attendance",event:"attendance.self_checkin_write_failed",
+    message:"Không ghi được điểm danh QR của đại biểu.",congressId:session.congress_id,actorId:user.id,
+    statusCode:500,context:{operation:"self-checkin.insert",dbCode:error.code||"unknown",sessionId}});
+   return fail("Không ghi được điểm danh. Vui lòng liên hệ BTC.",500,{requestId});
   }
   return NextResponse.json({ok:true,checkin,
    delegate:{id:delegate.id,code:delegate.code,full_name:delegate.full_name,unit:delegate.unit},
    sessionName:session.name
   },{headers:{"Cache-Control":"private, no-store"}});
- }catch{return fail("Yêu cầu điểm danh không hợp lệ. Vui lòng thử lại.",400);}
+ }catch(e){
+  await writeSystemLog({level:"error",source:"attendance",event:"attendance.self_checkin_unexpected_error",
+   message:"Điểm danh QR gặp lỗi xử lý.",statusCode:500,
+   context:{operation:"self-checkin.POST",errorName:e instanceof Error?e.name:"unknown"}});
+  return fail("Không thể xử lý điểm danh. Vui lòng thử lại.",500);
+ }
 }

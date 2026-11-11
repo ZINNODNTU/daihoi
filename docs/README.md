@@ -1,6 +1,6 @@
 # Tài liệu dự án Đại hội số
 
-> **Mục lục chính thức — cập nhật 10/11/2026.** Bắt đầu từ trang này khi phát triển, cấu hình hoặc vận hành hệ thống. Những tài liệu trong `lich-su/` là bản ghi phiên bản cũ, không phải hướng dẫn triển khai hiện hành.
+> **Mục lục chính thức — cập nhật 11/11/2026.** Bắt đầu từ trang này khi phát triển, cấu hình hoặc vận hành hệ thống. Những tài liệu trong `lich-su/` là bản ghi phiên bản cũ, không phải hướng dẫn triển khai hiện hành.
 
 Đại hội số là nền tảng điều hành nhiều Đại hội Đoàn/Hội với **Next.js, Supabase, Google Drive** và Vercel (khi triển khai). Phần tài liệu được tổ chức theo **mục đích sử dụng**, không chỉ theo mốc phiên bản.
 
@@ -14,6 +14,7 @@
 | Chuẩn bị cơ sở dữ liệu, phân quyền | [Checklist Supabase và các migration](huong-dan/SUPABASE-SETUP.md) |
 | Hiểu nghiệp vụ Đại hội và giới hạn sản phẩm | [Nghiệp vụ Đại hội số](nghiep-vu/NGHIEP-VU-DAI-HOI.md) |
 | **Công bố tài liệu lên cổng đại biểu, quyền Google Drive và trạng thái nội bộ (V35)** | [Đồng bộ tài liệu V35](huong-dan/DONG-BO-TAI-LIEU-DAI-BIEU-V35.md) |
+| **Nhật ký lỗi kỹ thuật cho quản trị viên, cảnh báo và phân quyền (V36)** | [System Logs V36](huong-dan/NHAT-KY-HE-THONG-V36.md) — code đã build, production còn thiếu bảng system_logs |
 | Điều hành điểm danh và mã QR | [QR theo phiên và barcode](tinh-nang/diem-danh/DIEM-DANH-QR-PHIEN-VA-BARCODE.md) |
 | Trình chiếu realtime, hàng chờ, tối ưu ảnh và dữ liệu đại biểu | [Tối ưu realtime và hiệu năng V19](huong-dan/TOI-UU-HIEU-NANG-REALTIME-V19.md) |
 | **Một tài khoản nhiều Đại hội, tự đổi ảnh/hồ sơ và khách mời** | [Hướng dẫn tài khoản và khách mời V20](huong-dan/TAI-KHOAN-DA-DAI-HOI-KHACH-MOI-V20.md) |

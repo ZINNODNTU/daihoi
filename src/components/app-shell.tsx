@@ -5,9 +5,10 @@ import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {
   Armchair,ArrowRight,BarChart3,ChartColumnIncreasing,ChevronDown,ChevronRight,ClipboardList,FileText,
-  LayoutGrid,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X,IdCard,CircleUserRound
+  LayoutGrid,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X,IdCard,CircleUserRound,ScrollText
 } from "lucide-react";
 import {BrandMark,type CongressKind} from "@/components/brand-mark";
+import {AdminErrorMonitor} from "@/components/admin-error-monitor";
 
 
 type NavItem={name:string;href:string;icon:typeof LayoutGrid};
@@ -20,13 +21,16 @@ type Props={
   canManage?:boolean;
   canViewBch?:boolean;
   canCheckin?:boolean;
+  canViewSystemLogs?:boolean;
 };
 
-export function AppShell({children,name,congressId,congressName,congressKind="doan",canManage=false,canViewBch=false,canCheckin=false}:Props){
+export function AppShell({children,name,congressId,congressName,congressKind="doan",canManage=false,canViewBch=false,canCheckin=false,canViewSystemLogs=false}:Props){
   const [mobile,setMobile]=useState(false);
   const path=usePathname();
   const [logoutError,setLogoutError]=useState("");
+  const [unresolvedLogs,setUnresolvedLogs]=useState(0);
   const overview:NavItem={name:"Tổng quan hệ thống",href:"/dashboard",icon:LayoutGrid};
+  const logs:NavItem={name:"Nhật ký hệ thống",href:"/dashboard/system-logs",icon:ScrollText};
   const myCard:NavItem={name:"Thẻ đại biểu của tôi",href:"/my-card",icon:IdCard};
   const myAccount:NavItem={name:"Tài khoản của tôi",href:"/account",icon:CircleUserRound};
   const congressItems:NavItem[]=congressId?[
@@ -48,7 +52,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
     {name:"Nhân sự BTC",href:"/congresses/"+congressId+"/team",icon:UserRoundCog},
     {name:"Cấu hình",href:"/congresses/"+congressId+"/settings",icon:Settings2}
   ]:[];
-  const items=[overview,myCard,myAccount,...congressItems,...adminItems];
+  const items=[overview,...(canViewSystemLogs?[logs]:[]),myCard,myAccount,...congressItems,...adminItems];
   const active=items.find(x=>x.href===path)||overview;
   const displayName=name.trim()||"Thành viên BTC";
   const avatar=displayName.charAt(0).toLocaleUpperCase("vi");
@@ -61,6 +65,22 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
     window.addEventListener("keydown",onKey);
     return()=>{document.body.style.overflow=old;window.removeEventListener("keydown",onKey);};
   },[mobile]);
+
+  useEffect(()=>{
+    if(!canViewSystemLogs)return;
+    let active=true;
+    async function refresh(){
+      try{
+        const response=await fetch("/api/system-logs/summary",{credentials:"same-origin",cache:"no-store"});
+        if(!response.ok)return;
+        const data=await response.json();
+        if(active&&Number.isInteger(data.unresolved24h))setUnresolvedLogs(data.unresolved24h);
+      }catch{/* Notifications are best-effort; never block the admin interface. */}
+    }
+    void refresh();
+    const timer=window.setInterval(()=>{if(document.visibilityState==="visible")void refresh();},60000);
+    return()=>{active=false;window.clearInterval(timer);};
+  },[canViewSystemLogs,path]);
 
   async function logout(){
     setLogoutError("");
@@ -79,11 +99,13 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
       className={"nav-item "+(current?"nav-item-active":"")}>
       <Icon size={18} strokeWidth={current?2.05:1.7}/>
       <span className="min-w-0 flex-1 truncate">{item.name}</span>
+      {item.href==="/dashboard/system-logs"&&unresolvedLogs>0&&<span title="Sự cố cần xử lý trong 24 giờ" className="min-w-5 rounded-full bg-[#a73a46] px-1.5 py-0.5 text-center text-[10px] font-bold text-white">{unresolvedLogs>99?"99+":unresolvedLogs}</span>}
       {current&&<span className="nav-active-mark" aria-hidden="true"/>}
     </Link>;
   }
 
   return <div className="app-layout min-h-dvh lg:flex">
+    <AdminErrorMonitor/>
     <a href="#noi-dung-chinh" className="skip-link">Bỏ qua điều hướng đến nội dung</a>
     {mobile&&<button type="button" aria-label="Đóng bảng điều hướng" onClick={()=>setMobile(false)}
       className="fixed inset-0 z-40 bg-[#0c1526]/65 backdrop-blur-[2px] lg:hidden"/>}
@@ -105,7 +127,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
       <div className="app-sidebar-scroll flex-1 overflow-y-auto px-3.5 pb-4">
         <div className="pt-7">
           <p className="sidebar-group-label">Hệ thống</p>
-          <nav aria-label="Hệ thống">{navLink(overview)}{navLink(myCard)}{navLink(myAccount)}</nav>
+          <nav aria-label="Hệ thống">{navLink(overview)}{canViewSystemLogs&&navLink(logs)}{navLink(myCard)}{navLink(myAccount)}</nav>
         </div>
 
         {congressId&&<>
