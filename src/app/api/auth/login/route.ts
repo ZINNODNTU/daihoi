@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {createServerClient} from "@supabase/ssr";
 import {toSupabaseAuthEmail} from "@/lib/login-identity";
+import {isStaffUser} from "@/lib/auth";
 import {writeSystemLog} from "@/lib/system-log";
 
 export const dynamic="force-dynamic";
@@ -70,12 +71,7 @@ export async function POST(request:NextRequest){
    return fail("Tên đăng nhập hoặc mật khẩu không đúng.",401);
   }
   const id=result.data.user.id;
-  const [profile,members]=await Promise.all([
-   supabase.from("profiles").select("platform_role").eq("id",id).maybeSingle(),
-   supabase.from("congress_members").select("role").eq("user_id",id)
-    .in("role",["admin","checkin","secretary"]).limit(1)
-  ]);
-  const staff=profile.data?.platform_role==="super_admin"||Boolean(members.data?.length);
+  const staff=await isStaffUser(supabase,id);
   // Newly issued cookies must accompany the same-origin HTTP response.
   const destination=staff?"/dashboard":"/my-card";
   const data=NextResponse.json({ok:true,destination},{headers});

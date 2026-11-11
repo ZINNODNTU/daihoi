@@ -5,7 +5,7 @@ import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {
   Armchair,ArrowRight,BarChart3,ChartColumnIncreasing,ChevronDown,ChevronRight,ClipboardList,FileText,
-  LayoutGrid,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X,IdCard,CircleUserRound,ScrollText
+  LayoutGrid,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X,CircleUserRound,ScrollText
 } from "lucide-react";
 import {BrandMark,type CongressKind} from "@/components/brand-mark";
 import {AdminErrorMonitor} from "@/components/admin-error-monitor";
@@ -31,7 +31,6 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
   const [unresolvedLogs,setUnresolvedLogs]=useState(0);
   const overview:NavItem={name:"Tổng quan hệ thống",href:"/dashboard",icon:LayoutGrid};
   const logs:NavItem={name:"Nhật ký hệ thống",href:"/dashboard/system-logs",icon:ScrollText};
-  const myCard:NavItem={name:"Thẻ đại biểu của tôi",href:"/my-card",icon:IdCard};
   const myAccount:NavItem={name:"Tài khoản của tôi",href:"/account",icon:CircleUserRound};
   const congressItems:NavItem[]=congressId?[
     {name:"Bảng điều hành",href:"/congresses/"+congressId,icon:BarChart3},
@@ -52,7 +51,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
     {name:"Nhân sự BTC",href:"/congresses/"+congressId+"/team",icon:UserRoundCog},
     {name:"Cấu hình",href:"/congresses/"+congressId+"/settings",icon:Settings2}
   ]:[];
-  const items=[overview,...(canViewSystemLogs?[logs]:[]),myCard,myAccount,...congressItems,...adminItems];
+  const items=[overview,...(canViewSystemLogs?[logs]:[]),myAccount,...congressItems,...adminItems];
   const active=items.find(x=>x.href===path)||overview;
   const displayName=name.trim()||"Thành viên BTC";
   const avatar=displayName.charAt(0).toLocaleUpperCase("vi");
@@ -127,7 +126,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
       <div className="app-sidebar-scroll flex-1 overflow-y-auto px-3.5 pb-4">
         <div className="pt-7">
           <p className="sidebar-group-label">Hệ thống</p>
-          <nav aria-label="Hệ thống">{navLink(overview)}{canViewSystemLogs&&navLink(logs)}{navLink(myCard)}{navLink(myAccount)}</nav>
+          <nav aria-label="Hệ thống">{navLink(overview)}{canViewSystemLogs&&navLink(logs)}{navLink(myAccount)}</nav>
         </div>
 
         {congressId&&<>

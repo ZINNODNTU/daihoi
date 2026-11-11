@@ -1,6 +1,5 @@
 import {NextResponse} from "next/server";
 import {getAuth} from "@/lib/auth";
-import {createAdminClient} from "@/lib/supabase/admin";
 export async function POST(request:Request) {
  try {
   const {supabase,user}=await getAuth();
@@ -26,8 +25,7 @@ export async function POST(request:Request) {
    venue:String(body.venue||"").slice(0,180)
   }).select("id,slug").single();
   if(result.error)return NextResponse.json({error:result.error.code==="23505"?"Đường dẫn đại hội đã tồn tại.":"Không tạo được đại hội."},{status:409});
-  const {error:memberError}=await createAdminClient().from("congress_members").insert({congress_id:result.data.id,user_id:user.id,role:"admin"});
-  if(memberError)console.error("Add creator to congress",memberError.code);
-  return NextResponse.json({ok:true,congress:result.data,warning:memberError?"Không thêm được quản trị viên.":undefined});
+  // Super Admin manages every congress via profiles; no duplicate BTC membership.
+   return NextResponse.json({ok:true,congress:result.data});
  } catch {return NextResponse.json({error:"Yêu cầu không hợp lệ."},{status:400});}
 }
