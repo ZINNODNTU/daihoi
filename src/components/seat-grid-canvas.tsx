@@ -8,12 +8,17 @@ import {
  rowLabelAt,seatGridCellIndex,seatGridSizeValid,
  type SeatDraft,type SeatGridPreset,type SeatGridSize,type SeatType
 } from "@/lib/seating";
+import type {SeatGridCommand} from "@/lib/seating-plan";
 
 type Tool="toggle"|"paint"|"erase"|"inspect";
 type Props={
  seats:SeatDraft[];assignedSeatIds:ReadonlySet<string>;
  stageLabel:string;selectedSeatId:string;editable:boolean;
  rows:number;columns:number;
+ delegateTotal:number;guestTotal:number;
+ undoCount:number;redoCount:number;
+ onUndo:()=>void;onRedo:()=>void;
+ onCommand:(command:SeatGridCommand)=>void;
  onResize:(size:SeatGridSize)=>void;
  onPaint:(row:number,column:number,active:boolean,seatType:SeatType)=>void;
  onSelect:(id:string)=>void;onPreset:(preset:SeatGridPreset,seatType:SeatType)=>void;
@@ -26,16 +31,22 @@ const commands:{tool:Tool;label:string;icon:typeof MousePointer2}[]=[
 ];
 export function SeatGridCanvas({
  seats,assignedSeatIds,stageLabel,selectedSeatId,editable,
- rows,columns,onResize,onPaint,onSelect,onPreset
+ rows,columns,delegateTotal,guestTotal,undoCount,redoCount,onUndo,onRedo,onCommand,
+ onResize,onPaint,onSelect,onPreset
 }:Props){
  const [tool,setTool]=useState<Tool>("toggle");
  const [seatType,setSeatType]=useState<SeatType>("delegate");
  const [draftRows,setDraftRows]=useState(String(rows));
  const [draftColumns,setDraftColumns]=useState(String(columns));
  const [sizeError,setSizeError]=useState("");
+ const [selectedRow,setSelectedRow]=useState(0);
+ const [selectedColumn,setSelectedColumn]=useState(0);
+ const [aisleColumns,setAisleColumns]=useState("");
+ const [batchError,setBatchError]=useState("");
  const stroke=useRef<{active:boolean,type:SeatType}|null>(null);
  const ignoreClick=useRef(false);
  const total=rows*columns;
+
  useEffect(()=>{
    const clear=()=>{stroke.current=null;};
    window.addEventListener("pointerup",clear);
@@ -58,6 +69,18 @@ export function SeatGridCanvas({
  const outsideCount=seats.length-cells.size;
  const guestCount=[...cells.values()].filter(s=>s.seatType==="guest").length;
  const assignedCount=[...cells.values()].filter(s=>assignedSeatIds.has(s.id)).length;
+ const availableDelegates=[...cells.values()].filter(s=>!s.blocked&&s.seatType!=="guest").length;
+ const availableGuests=[...cells.values()].filter(s=>!s.blocked&&s.seatType==="guest").length;
+ const missingDelegates=Math.max(0,delegateTotal-availableDelegates);
+ const missingGuests=Math.max(0,guestTotal-availableGuests);
+ function applyAisles(){
+   const values=aisleColumns.trim().split(/[,;\s]+/).filter(Boolean).map(Number);
+   if(!values.length||values.length>8||values.some(v=>!Number.isInteger(v)||v<1||v>columns)){
+     setBatchError("Nhập 1–8 số cột lối đi từ 1 đến "+columns+", cách nhau bằng dấu phẩy.");return;
+   }
+   setBatchError("");
+   onCommand({kind:"clear-aisles",columns:[...new Set(values.map(v=>v-1))]});
+ }
  function resize(){
    const next={rows:Number(draftRows),columns:Number(draftColumns)};
    if(!seatGridSizeValid(next)){
@@ -119,6 +142,61 @@ export function SeatGridCanvas({
        </p>
      </div>}
      {editable&&<>
+      <section aria-label="Bố trí ghế theo hàng cột" className="mt-4 rounded-xl border border-[#d9e5ec] bg-[#f8fbfd] p-3 sm:p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><h4 className="text-[13px] font-bold text-[#234d66]">Thiết kế theo hàng · cột</h4>
+            <p className="mt-1 text-[11px] text-[#688396]">Bấm nhãn hàng hoặc cột trên sơ đồ để chọn nhanh.</p></div>
+          <div className="flex gap-2">
+            <button type="button" disabled={!undoCount} onClick={onUndo} className="btn btn-secondary !min-h-9 !text-xs">
+              <RotateCcw size={14}/> Hoàn tác {undoCount>0?"("+undoCount+")":""}</button>
+            <button type="button" disabled={!redoCount} onClick={onRedo} className="btn btn-secondary !min-h-9 !text-xs">
+              <RotateCcw size={14} className="scale-x-[-1]"/> Làm lại</button>
+          </div>
+        </div>
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          <div className="rounded-lg border border-[#e1eaf0] bg-white p-3">
+            <label htmlFor="bulk-seat-row" className="text-[11px] font-bold text-[#365d76]">Hàng ghế</label>
+            <select id="bulk-seat-row" value={selectedRow} onChange={e=>setSelectedRow(Number(e.target.value))}
+              className="field mt-1.5 w-full">
+              {Array.from({length:rows},(_,r)=><option key={r} value={r}>Hàng {rowLabelAt("A",r)}</option>)}
+            </select>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button type="button" className="btn btn-secondary !min-h-9 !text-xs"
+                onClick={()=>onCommand({kind:"fill-row",row:selectedRow,seatType})}>Thêm ghế hàng</button>
+              <button type="button" className="btn btn-secondary !min-h-9 !text-xs"
+                onClick={()=>onCommand({kind:"clear-row",row:selectedRow})}>Chừa trống hàng</button>
+              <button type="button" className="btn btn-secondary !min-h-9 !text-xs"
+                onClick={()=>onCommand({kind:"guest-row",row:selectedRow})}>Hàng khách mời</button>
+              <button type="button" className="btn btn-secondary !min-h-9 !text-xs"
+                onClick={()=>onCommand({kind:"delegate-row",row:selectedRow})}>Hàng đại biểu</button>
+            </div>
+          </div>
+          <div className="rounded-lg border border-[#e1eaf0] bg-white p-3">
+            <label htmlFor="bulk-seat-column" className="text-[11px] font-bold text-[#365d76]">Cột lưới</label>
+            <select id="bulk-seat-column" value={selectedColumn} onChange={e=>setSelectedColumn(Number(e.target.value))}
+              className="field mt-1.5 w-full">
+              {Array.from({length:columns},(_,c)=><option key={c} value={c}>C{c+1}</option>)}
+            </select>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button type="button" className="btn btn-secondary !min-h-9 !text-xs"
+                onClick={()=>onCommand({kind:"fill-column",column:selectedColumn,seatType})}>Thêm ghế cột</button>
+              <button type="button" className="btn btn-secondary !min-h-9 !text-xs"
+                onClick={()=>onCommand({kind:"clear-column",column:selectedColumn})}>Chừa lối đi cột</button>
+            </div>
+            <label htmlFor="bulk-seat-aisles" className="mt-3 block text-[11px] font-bold text-[#365d76]">Lối đi nhiều cột</label>
+            <div className="mt-1.5 flex gap-2">
+              <input id="bulk-seat-aisles" className="field min-w-0 flex-1" placeholder="VD: 1, 13, 14"
+                value={aisleColumns} onChange={e=>{setAisleColumns(e.target.value);setBatchError("");}}/>
+              <button type="button" onClick={applyAisles} className="btn btn-primary !min-h-10 !text-xs">Áp dụng</button>
+            </div>
+            {batchError&&<p role="alert" className="mt-2 text-[11px] text-red-700">{batchError}</p>}
+          </div>
+        </div>
+        <p className="mt-3 text-[11px] leading-5 text-[#688396]">
+          Không xóa hoặc chuyển loại ghế đã phân công. Ghế tự đánh số lại trong từng hàng, bỏ qua ô trống.
+          Có thể Hoàn tác/Làm lại trước khi lưu.
+        </p>
+      </section>
        <div className="mt-4 flex flex-wrap items-center gap-2">
          <span className="text-xs font-bold text-[#455f75]">Loại ghế mới:</span>
          {([
@@ -166,14 +244,22 @@ export function SeatGridCanvas({
        </div>
        <div className="seat-grid-cells grid gap-[5px]" style={{gridTemplateColumns:"30px repeat("+columns+", 37px)"}}>
          <span aria-hidden="true"/>
-         {Array.from({length:columns},(_,column)=><span key={"header-"+column} aria-hidden="true"
-           className="flex h-6 items-center justify-center text-[10px] font-semibold tabular-nums text-[#8599aa]">
+         {Array.from({length:columns},(_,column)=><button key={"header-"+column}
+           type="button" disabled={!editable} aria-label={"Chọn cột C"+(column+1)}
+           aria-pressed={selectedColumn===column} onClick={()=>setSelectedColumn(column)}
+           className={"flex h-6 items-center justify-center rounded text-[10px] font-semibold tabular-nums "+
+             (editable&&selectedColumn===column?"bg-[#d7eaf5] text-[#095c87]":
+              "text-[#8599aa] "+(editable?"hover:bg-[#e7f4fb]":""))}>
              {"C"+(column+1)}
-         </span>)}
+         </button>)}
          {Array.from({length:rows},(_,row)=><Fragment key={row}>
-           <span className="flex h-[37px] items-center justify-center text-[11px] font-extrabold text-[#59768b]">
+           <button type="button" disabled={!editable} aria-label={"Chọn hàng "+rowLabelAt("A",row)}
+             aria-pressed={selectedRow===row} onClick={()=>setSelectedRow(row)}
+             className={"flex h-[37px] items-center justify-center rounded text-[11px] font-extrabold "+
+               (editable&&selectedRow===row?"bg-[#d7eaf5] text-[#095c87]":
+                "text-[#59768b] "+(editable?"hover:bg-[#e7f4fb]":""))}>
              {rowLabelAt("A",row)}
-           </span>
+           </button>
            {Array.from({length:columns},(_,column)=>{
              const index=row*columns+column,seat=cells.get(index);
              const occupied=!!seat&&assignedSeatIds.has(seat.id);
@@ -226,6 +312,16 @@ export function SeatGridCanvas({
        </p>
      </div>
    </div>
+   {(delegateTotal+guestTotal)>0&&<div className="grid gap-2 border-t border-[#e4ecf1] bg-white px-4 py-3 sm:grid-cols-2" aria-label="Đánh giá sức chứa">
+     <div className={"rounded-lg border px-3 py-2 text-xs "+(missingDelegates?"border-amber-200 bg-amber-50 text-amber-800":"border-emerald-100 bg-emerald-50 text-emerald-800")}>
+       <strong>Đại biểu:</strong> {availableDelegates} ghế khả dụng / {delegateTotal} người
+       {missingDelegates>0&&<strong className="ml-2">Thiếu {missingDelegates} ghế</strong>}
+     </div>
+     <div className={"rounded-lg border px-3 py-2 text-xs "+(missingGuests?"border-amber-200 bg-amber-50 text-amber-800":"border-emerald-100 bg-emerald-50 text-emerald-800")}>
+       <strong>Khách mời:</strong> {availableGuests} ghế khả dụng / {guestTotal} người
+       {missingGuests>0&&<strong className="ml-2">Thiếu {missingGuests} ghế</strong>}
+     </div>
+   </div>}
    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[#e3edf3] bg-white px-4 py-3 text-[11px] font-semibold text-[#648092]">
      <span>Ô trống: {total-cells.size}</span>
      <span className="text-[#17658c]">Ghế đại biểu: {cells.size-guestCount}</span>

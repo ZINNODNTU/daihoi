@@ -15,6 +15,7 @@ import {
   type SeatingSession,type ImportEntry,type ImportIssue,type SeatGridPreset,type SeatType,type SeatGridSize
 } from "@/lib/seating";
 import {SeatGridCanvas} from "@/components/seat-grid-canvas";
+import {applySeatGridCommand,type SeatGridCommand} from "@/lib/seating-plan";
 
 type SeatingResponse={
   layouts:SeatingLayout[];layout:SeatingLayout|null;seats:SeatDraft[];
@@ -80,6 +81,39 @@ export function SeatingClient({congressId,canManage}:Props){
   const drag=useRef<SeatMove|null>(null);
   const draggedClick=useRef("");
   const seatsSnapshot=useRef<SeatDraft[]>([]);
+  type SeatSnapshot={seats:SeatDraft[];rows:number;columns:number};
+  const history=useRef<{past:SeatSnapshot[];future:SeatSnapshot[]}>({past:[],future:[]});
+  const [historyCounters,setHistoryCounters]=useState({undo:0,redo:0});
+  function resetHistory(){
+    history.current={past:[],future:[]};
+    setHistoryCounters({undo:history.current.past.length,redo:history.current.future.length});
+  }
+  function rememberSeats(next:SeatDraft[]){
+    const previous=seatsSnapshot.current;
+    if(previous===next)return;
+    history.current.past=[...history.current.past.slice(-29),{seats:previous,rows:gridRows,columns:gridColumns}];
+    history.current.future=[];
+    setHistoryCounters({undo:history.current.past.length,redo:history.current.future.length});
+    seatsSnapshot.current=next;setSeats(next);
+  }
+  function undoSeats(){
+    if(!canManage||working||!history.current.past.length)return;
+    const previous=history.current.past.pop()!;
+    history.current.future.push({seats:seatsSnapshot.current,rows:gridRows,columns:gridColumns});
+    seatsSnapshot.current=previous.seats;setSeats(previous.seats);
+    setGridRows(previous.rows);setGridColumns(previous.columns);setDirty(true);
+    setSelectedSeatId("");setError("");setImportEntries([]);
+    setHistoryCounters({undo:history.current.past.length,redo:history.current.future.length});
+  }
+  function redoSeats(){
+    if(!canManage||working||!history.current.future.length)return;
+    const next=history.current.future.pop()!;
+    history.current.past.push({seats:seatsSnapshot.current,rows:gridRows,columns:gridColumns});
+    seatsSnapshot.current=next.seats;setSeats(next.seats);
+    setGridRows(next.rows);setGridColumns(next.columns);setDirty(true);
+    setSelectedSeatId("");setError("");setImportEntries([]);
+    setHistoryCounters({undo:history.current.past.length,redo:history.current.future.length});
+  }
   useEffect(()=>{seatsSnapshot.current=seats;},[seats]);
 
   const load=useCallback(async(requestedLayoutId?:string,requestedSessionId?:string)=>{
@@ -105,7 +139,7 @@ export function SeatingClient({congressId,canManage}:Props){
       const fixed=isGridMap?renumberGridSeats(next.seats,nextSize):next.seats;
       const needsSave=canManage&&(sizeOutdated||fixed.some((seat,index)=>
         seat.code!==next.seats[index].code||seat.seatNumber!==next.seats[index].seatNumber));
-      seatsSnapshot.current=fixed;setSeats(fixed);setSessionId(next.selectedSessionId||"");
+      seatsSnapshot.current=fixed;setSeats(fixed);resetHistory();setSessionId(next.selectedSessionId||"");
       setDesignSurface(!next.seats.length||next.seats.some(s=>seatGridCellIndex(s,nextSize)!==null)?"grid":"free");
       setDirty(needsSave);setImportEntries([]);setImportIssues([]);
       if(needsSave)setNotice("Đã đồng bộ kích thước lưới và số ghế thực tế (không đánh số lối đi). Nhấn Lưu sơ đồ để cập nhật trên cổng đại biểu và màn hình điểm danh.");
@@ -192,7 +226,7 @@ export function SeatingClient({congressId,canManage}:Props){
     setStageLabel(copy?stageLabel:"SÂN KHẤU");
     setGridRows(copy?gridRows:10);setGridColumns(copy?gridColumns:20);
     const freshSeats=copy?seats.map(s=>({...s,id:crypto.randomUUID()})):[];
-    seatsSnapshot.current=freshSeats;setSeats(freshSeats);
+    seatsSnapshot.current=freshSeats;setSeats(freshSeats);resetHistory();
     setDesignSurface(copy?designSurface:"grid");
     setDirty(true);setMode("edit");setSelectedSeatId("");setImportEntries([]);
     setNotice(copy?"Đã sao chép phần bố trí; danh sách phân ghế không được sao chép. Hãy lưu sơ đồ mới.":"Tạo khu vực và các hàng ghế, sau đó nhấn Lưu sơ đồ.");
@@ -200,7 +234,8 @@ export function SeatingClient({congressId,canManage}:Props){
   }
   function updateSeat(id:string,patch:Partial<SeatDraft>){
     const updated=seatsSnapshot.current.map(s=>s.id===id?{...s,...patch}:s);
-    seatsSnapshot.current=updated;setSeats(updated);
+    if(!drag.current?.moved)rememberSeats(updated);
+    else {seatsSnapshot.current=updated;setSeats(updated);}
     setDirty(true);setImportEntries([]);
   }
   function addSection(){
@@ -208,7 +243,7 @@ export function SeatingClient({congressId,canManage}:Props){
       const generated=generateSection(section,seats,()=>crypto.randomUUID());
       generated.forEach(seat=>{seat.seatType="delegate";});
       const updated=[...seatsSnapshot.current,...generated];
-      seatsSnapshot.current=updated;setSeats(updated);setDirty(true);setError("");setImportEntries([]);
+      rememberSeats(updated);setDirty(true);setError("");setImportEntries([]);
       setNotice("Đã tạo "+generated.length+" ghế. Nhấn Lưu sơ đồ để ghi vào Supabase.");
       const largestY=Math.max(...generated.map(s=>s.y));
       setSection(previous=>({...previous,zone:String.fromCharCode(Math.min(90,previous.zone.toUpperCase().charCodeAt(0)+1)),
@@ -230,8 +265,8 @@ export function SeatingClient({congressId,canManage}:Props){
     if(present)target.add(index);else target.delete(index);
     const result=setSeatGridCells(original,target,assignedSeatIds,()=>crypto.randomUUID(),gridSize,seatType);
     if(result.error){setError(result.error);return;}
-    seatsSnapshot.current=result.seats;
-    setSeats(result.seats);setDirty(true);setError("");setNotice("");setImportEntries([]);
+    rememberSeats(result.seats);
+    setDirty(true);setError("");setNotice("");setImportEntries([]);
     if(present)setSelectedSeatId(result.seats.find(seat=>seatGridCellIndex(seat,gridSize)===index)?.id||"");
     if(selectedSeatId&&!result.seats.some(seat=>seat.id===selectedSeatId))setSelectedSeatId("");
   }
@@ -247,17 +282,40 @@ export function SeatingClient({congressId,canManage}:Props){
     ))return;
     const result=setSeatGridCells(original,next,assignedSeatIds,()=>crypto.randomUUID(),gridSize,seatType);
     if(result.error){setError(result.error);return;}
-    seatsSnapshot.current=result.seats;
-    setSeats(result.seats);setDirty(true);setError("");
+    rememberSeats(result.seats);
+    setDirty(true);setError("");
     setSelectedSeatId("");setImportEntries([]);
     setNotice("Đã áp dụng mẫu "+(preset==="full"?"lấp đầy canvas":preset==="center-aisle"?"lối đi giữa":"lưới trống")+
       ". Nhấn Lưu sơ đồ để ghi vào Supabase.");
+  }
+  function runGridCommand(command:SeatGridCommand){
+    if(!canManage||working||!layoutId)return;
+    const original=seatsSnapshot.current;
+    const result=applySeatGridCommand(original,assignedSeatIds,gridSize,command,()=>crypto.randomUUID());
+    if(result.error){setError(result.error);return;}
+    const oldIds=new Set(original.map(seat=>seat.id));
+    const newIds=new Set(result.seats.map(seat=>seat.id));
+    const removed=original.filter(seat=>!newIds.has(seat.id)).length;
+    const added=result.seats.filter(seat=>!oldIds.has(seat.id)).length;
+    const retyped=result.seats.filter(seat=>{
+      const before=original.find(previous=>previous.id===seat.id);
+      return before&&(before.seatType||"delegate")!==(seat.seatType||"delegate");
+    }).length;
+    if(!removed&&!added&&!retyped)return;
+    if(removed&&!window.confirm(
+      "Thao tác sẽ xóa "+removed+" ghế chưa phân công khỏi sơ đồ. "+
+      "Có thể Hoàn tác trước khi lưu. Bạn có muốn tiếp tục?"
+    ))return;
+    rememberSeats(result.seats);
+    setDirty(true);setError("");setSelectedSeatId("");setImportEntries([]);
+    setNotice("Đã cập nhật kế hoạch ghế: thêm "+added+", xóa "+removed+
+      ", đổi loại "+retyped+" ghế. Kiểm tra lại rồi nhấn Lưu sơ đồ.");
   }
   function resizeGrid(size:SeatGridSize){
     if(!seatGridSizeValid(size)){setError("Canvas tối đa 500 ô, 25 hàng và 30 cột.");return;}
     if(gridRows===size.rows&&gridColumns===size.columns)return;
     const renumbered=renumberGridSeats(seatsSnapshot.current,size);
-    seatsSnapshot.current=renumbered;setSeats(renumbered);
+    rememberSeats(renumbered);
     setGridRows(size.rows);setGridColumns(size.columns);setDirty(true);
     setSelectedSeatId("");setError("");setImportEntries([]);
     setNotice("Đã đổi canvas thành "+size.rows+" hàng × "+size.columns+" cột. Ghế ngoài vùng mới được giữ lại.");
@@ -446,6 +504,11 @@ export function SeatingClient({congressId,canManage}:Props){
     const diffX=(event.clientX-gesture.startX)/zoom;
     const diffY=(event.clientY-gesture.startY)/zoom;
     if(Math.abs(diffX)+Math.abs(diffY)<3&&!gesture.moved)return;
+    if(!gesture.moved){
+      history.current.past=[...history.current.past.slice(-29),
+        {seats:seatsSnapshot.current,rows:gridRows,columns:gridColumns}];
+      history.current.future=[];setHistoryCounters({undo:history.current.past.length,redo:history.current.future.length});
+    }
     gesture.moved=true;
     updateSeat(id,{x:bounded(gesture.seatX+diffX),y:bounded(gesture.seatY+diffY)});
   }
@@ -817,9 +880,13 @@ export function SeatingClient({congressId,canManage}:Props){
             </div>}
           </div>
           {designSurface==="grid"
-            ?<SeatGridCanvas key={layoutId} seats={seats} assignedSeatIds={assignedSeatIds}
+            ?<SeatGridCanvas key={layoutId+"-"+gridRows+"x"+gridColumns} seats={seats} assignedSeatIds={assignedSeatIds}
                 stageLabel={stageLabel} selectedSeatId={selectedSeatId}
                 rows={gridRows} columns={gridColumns} onResize={resizeGrid}
+                delegateTotal={(data?.delegates||[]).filter(person=>person.is_active&&person.delegate_type!=="guest").length}
+                guestTotal={(data?.delegates||[]).filter(person=>person.is_active&&person.delegate_type==="guest").length}
+                undoCount={historyCounters.undo} redoCount={historyCounters.redo}
+                onUndo={undoSeats} onRedo={redoSeats} onCommand={runGridCommand}
                 editable={canManage&&mode==="edit"&&!working&&!!layoutId}
                 onPaint={patchGrid} onSelect={chooseSeat} onPreset={useGridPreset}/>
             :<>
@@ -941,15 +1008,15 @@ export function SeatingClient({congressId,canManage}:Props){
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button className="btn btn-secondary flex-1" type="button"
-                    disabled={!!selectedDelegate} onClick={()=>updateSeat(selectedSeat.id,{blocked:!selectedSeat.blocked})}>
+                    disabled={assignedSeatIds.has(selectedSeat.id)} onClick={()=>updateSeat(selectedSeat.id,{blocked:!selectedSeat.blocked})}>
                     {selectedSeat.blocked?<UnlockKeyhole size={16}/>:<LockKeyhole size={16}/>}
                     {selectedSeat.blocked?"Mở khóa ghế":"Khóa ghế"}
                   </button>
-                  <button type="button" className="btn btn-danger" disabled={!!selectedDelegate} onClick={()=>{
+                  <button type="button" className="btn btn-danger" disabled={assignedSeatIds.has(selectedSeat.id)} onClick={()=>{
                     if(!window.confirm("Xóa ghế "+selectedSeat.code+"?"))return;
                     const remaining=seatsSnapshot.current.filter(s=>s.id!==selectedSeat.id);
                      const fixed=designSurface==="grid"?renumberGridSeats(remaining,gridSize):remaining;
-                     seatsSnapshot.current=fixed;setSeats(fixed);setSelectedSeatId("");setDirty(true);
+                     rememberSeats(fixed);setSelectedSeatId("");setDirty(true);
                   }}><Trash2 size={17}/> Xóa</button>
                 </div>
                 {selectedDelegate&&<p className="helper">Muốn khóa hoặc xóa ghế, hãy bỏ phân công đại biểu trước.</p>}
