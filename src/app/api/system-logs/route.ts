@@ -35,7 +35,7 @@ export async function GET(request:Request){
   const db=createAdminClient();
   const since=new Date(Date.now()-PERIODS[period]).toISOString();
   let rowsQuery=db.from("system_logs")
-   .select("id,occurred_at,level,source,event,message,congress_id,actor_id,request_id,status_code,duration_ms,context,resolution,handled_at,handled_by",{count:"exact"})
+   .select("id,occurred_at,level,source,event,message,congress_id,actor_id,request_id,status_code,duration_ms,context,resolution,handled_at,handled_by,fingerprint,release,environment",{count:"exact"})
    .gte("occurred_at",since)
    .order("occurred_at",{ascending:false}).order("id",{ascending:false})
    .range(page*30,page*30+29);

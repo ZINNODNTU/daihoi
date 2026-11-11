@@ -1,5 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
+import {SystemIncidentsPanel} from "@/components/system-incidents-panel";
 import {Activity,AlertTriangle,CheckCircle2,ChevronLeft,ChevronRight,ClipboardCopy,
  Clock3,Filter,RefreshCw,Search,ShieldAlert,Terminal,TriangleAlert} from "lucide-react";
 
@@ -11,6 +12,7 @@ type SystemLog={
  status_code:number|null;duration_ms:number|null;
  context:Record<string,string|number|boolean|null>;
  resolution:Resolution;handled_at:string|null;handled_by:string|null;
+ fingerprint:string|null;release:string|null;environment:string|null;
 };
 type LogPayload={
  logs:SystemLog[];total:number;page:number;pageSize:number;
@@ -147,7 +149,7 @@ export function SystemLogsClient(){
   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
    {([
     {label:"Lỗi 24 giờ",value:metrics.errors24h,icon:ShieldAlert,foot:"Critical và Error"},
-    {label:"Chưa khắc phục",value:metrics.unresolved24h,icon:AlertTriangle,foot:"Lỗi 24 giờ cần xử lý"},
+    {label:"Lượt lỗi chưa khắc phục",value:metrics.unresolved24h,icon:AlertTriangle,foot:"Theo từng bản ghi sự kiện trong 24 giờ"},
     {label:"Cảnh báo 24 giờ",value:metrics.warnings24h,icon:Activity,foot:"Warning trong hệ thống"}
    ] as const).map(({label,value,icon:Icon,foot})=>
     <div key={label} className="rounded-2xl border border-[#e1e7ef] bg-white p-5 shadow-[0_8px_30px_rgba(18,40,70,.035)]">
@@ -166,6 +168,8 @@ export function SystemLogsClient(){
   {error&&<div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[12px] leading-6 text-rose-800">
    {error}
   </div>}
+
+  <SystemIncidentsPanel key={congressId+":"+period} congressId={congressId} period={period}/>
 
   <section aria-label="Bộ lọc nhật ký" className="rounded-2xl border border-[#e1e7ef] bg-white p-4 sm:p-5">
    <div className="mb-4 flex items-center gap-2 text-[13px] font-extrabold text-[#30445d]"><Filter size={17}/> Bộ lọc sự kiện</div>
@@ -269,6 +273,8 @@ export function SystemLogsClient(){
         <div><span className="text-[#8290a1]">Đại hội ID</span><p className="mt-1 break-all font-mono text-[#334e67]">{item.congress_id||"Hệ thống"}</p></div>
         <div><span className="text-[#8290a1]">Người xử lý</span><p className="mt-1 break-all font-mono text-[#334e67]">{item.handled_by||"—"}</p></div>
         <div><span className="text-[#8290a1]">Thời gian cập nhật</span><p className="mt-1 text-[#334e67]">{time(item.handled_at)}</p></div>
+        <div><span className="text-[#8290a1]">Release · Môi trường</span><p className="mt-1 break-all font-mono text-[#334e67]">{item.release||"—"} · {item.environment||"—"}</p></div>
+        <div><span className="text-[#8290a1]">Fingerprint</span><p className="mt-1 break-all font-mono text-[#334e67]">{item.fingerprint||"Log trước V37"}</p></div>
        </div>
        <div>
         <p className="mb-2 text-[11px] font-bold text-[#53687e]">Ngữ cảnh kỹ thuật đã ẩn dữ liệu nhạy cảm</p>
@@ -278,7 +284,8 @@ export function SystemLogsClient(){
         <strong>Gợi ý kiểm tra:</strong> {troubleshooting[item.source]||"Đối chiếu Request ID với runtime logs và thay đổi gần nhất của hệ thống."}
        </p>
        <div className="flex flex-wrap gap-2">
-        {(["open","investigating","resolved"] as const).map(next=>
+        <p className="mb-2 w-full text-[11px] leading-5 text-[#758b9c]">Trạng thái ở đây chỉ áp dụng cho dòng log. Hãy xử lý trong mục <strong>Nhóm sự cố</strong> phía trên để cập nhật cảnh báo tổng hợp.</p>
+         {(["open","investigating","resolved"] as const).map(next=>
          <button key={next} type="button" disabled={updating===item.id||item.resolution===next}
           onClick={()=>void updateResolution(item.id,next)}
           className={"min-h-9 rounded-lg border px-3 text-[11px] font-semibold disabled:opacity-45 "+(next==="resolved"

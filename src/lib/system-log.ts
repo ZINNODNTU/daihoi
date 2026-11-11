@@ -50,7 +50,11 @@ export async function writeSystemLog(input:SystemLogInput):Promise<string>{
   status_code:input.statusCode&&input.statusCode>=100&&input.statusCode<=599?input.statusCode:null,
   duration_ms:input.durationMs!==undefined&&Number.isInteger(input.durationMs)
    ?Math.max(0,Math.min(input.durationMs,3600000)):null,
-  context:cleanContext(input.context)
+  context:cleanContext(input.context),
+  release:/^[a-f0-9]{7,40}$/i.test(process.env.VERCEL_GIT_COMMIT_SHA||"")
+   ?process.env.VERCEL_GIT_COMMIT_SHA!.slice(0,12):"local",
+  environment:["production","preview","development"].includes(process.env.VERCEL_ENV||"")
+   ?process.env.VERCEL_ENV:"development"
  };
  const consoleLine=JSON.stringify({type:"system_log",...payload});
  if(input.level==="critical"||input.level==="error")console.error(consoleLine);

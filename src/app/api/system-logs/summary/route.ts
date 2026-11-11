@@ -10,9 +10,9 @@ export async function GET(){
   const access=await getSystemLogAccess();
   if(!access.user)return NextResponse.json({error:"Cần đăng nhập."},{status:401,headers:HEADERS});
   if(!access.allowed)return NextResponse.json({error:"Không có quyền."},{status:403,headers:HEADERS});
-  let query=createAdminClient().from("system_logs")
+  let query=createAdminClient().from("system_incidents")
    .select("id",{count:"exact",head:true})
-   .gte("occurred_at",new Date(Date.now()-86400000).toISOString())
+   .gte("last_seen_at",new Date(Date.now()-86400000).toISOString())
    .in("level",["error","critical"]).neq("resolution","resolved");
   if(!access.superAdmin)query=query.in("congress_id",access.congressIds);
   const {count,error}=await query;
