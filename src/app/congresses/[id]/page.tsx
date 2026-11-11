@@ -4,7 +4,8 @@ import {
   Armchair,ArrowRight,ArrowUpRight,BarChart3,CalendarDays,ChartColumnIncreasing,ChevronRight,
   ClipboardList,FileText,MapPin,QrCode,Users,UserRoundCheck
 } from "lucide-react";
-import {createClient} from "@/lib/supabase/server";
+import {getAuth,getCongressRole} from "@/lib/auth";
+import {canCongress,type CongressAbility} from "@/lib/congress-permissions";
 
 const areas=[
   {href:"delegates",icon:Users,title:"Quản lý đại biểu",description:"Hồ sơ đại biểu, danh sách Excel và thẻ QR / Barcode."},
@@ -17,7 +18,15 @@ const areas=[
 
 export default async function CongressHome({params}:{params:Promise<{id:string}>}){
   const {id}=await params;
-  const supabase=await createClient();
+  const {supabase,user}=await getAuth();
+  if(!user)notFound();
+  const accessRole=await getCongressRole(supabase,user.id,id);
+  if(!canCongress(accessRole,"workspace.view"))notFound();
+  const areaAccess:Record<string,CongressAbility>={
+    delegates:"delegates.read",quality:"quality.read",attendance:"attendance.read",
+    seating:"seating.read",reports:"reports.read",documents:"documents.read"
+  };
+  const accessibleAreas=areas.filter(area=>canCongress(accessRole,areaAccess[area.href]));
   const [{data:congress},{count:delegateCount},{data:sessions},{data:checkins}]=await Promise.all([
     supabase.from("congresses").select("id,name,term,venue,kind,status,slug").eq("id",id).maybeSingle(),
     supabase.from("delegates").select("id",{count:"exact",head:true}).eq("congress_id",id).eq("is_active",true),
@@ -60,8 +69,8 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link className="btn command-action" href={"/congresses/"+id+"/attendance"}><QrCode size={17}/> Mở điểm danh <ArrowRight size={16}/></Link>
-          <Link className="btn command-outline" href={"/congresses/"+id+"/seating"}><Armchair size={16}/> Sơ đồ ghế</Link>
+          {canCongress(accessRole,"attendance.read")&&<Link className="btn command-action" href={"/congresses/"+id+"/attendance"}><QrCode size={17}/> Mở điểm danh <ArrowRight size={16}/></Link>}
+          {canCongress(accessRole,"seating.read")&&<Link className="btn command-outline" href={"/congresses/"+id+"/seating"}><Armchair size={16}/> Sơ đồ ghế</Link>}
         </div>
       </div>
     </section>
@@ -84,7 +93,7 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
           <span className="text-[11px] text-[#8593a6]">Các phân hệ theo quyền truy cập</span>
         </div>
         <div className="workspace-panel overflow-hidden">
-          {areas.map((area,index)=><Link href={"/congresses/"+id+"/"+area.href} key={area.href} className="action-row group">
+          {accessibleAreas.map((area,index)=><Link href={"/congresses/"+id+"/"+area.href} key={area.href} className="action-row group">
             <span className="action-icon"><area.icon size={19} strokeWidth={1.8}/></span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3">
@@ -118,7 +127,7 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
               <span className="text-[18px] font-bold tabular-nums text-[#293f62]">{arrived}<span className="ml-1 text-[11px] font-normal text-[#91a0b2]">/ {total}</span></span>
             </div>
             <p className="mt-4 text-[11px] leading-6 text-[#91a0b0]">Trạng thái điểm danh không đồng nghĩa với việc đại biểu đã ngồi đúng ghế.</p>
-            <Link href={"/congresses/"+id+"/attendance"} className="btn btn-secondary mt-5 w-full">Xem chi tiết phiên <ChevronRight size={16}/></Link>
+            <Link href={"/congresses/"+id+"/attendance"} className={canCongress(accessRole,"attendance.read")?"btn btn-secondary mt-5 w-full":"hidden"}>Xem chi tiết phiên <ChevronRight size={16}/></Link>
           </div>
         </div>
       </section>
@@ -127,7 +136,7 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
     <section className="workspace-panel overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e6ebf2] px-5 py-4 sm:px-6">
         <div><p className="page-kicker">DANH SÁCH PHIÊN</p><h2 className="section-title mt-1">Các phiên điểm danh</h2></div>
-        <Link href={"/congresses/"+id+"/attendance"} className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#0084bd] hover:underline">Quản lý phiên <ArrowRight size={16}/></Link>
+        <Link href={"/congresses/"+id+"/attendance"} className={canCongress(accessRole,"attendance.read")?"inline-flex items-center gap-1 text-[12px] font-semibold text-[#0084bd] hover:underline":"hidden"}>Quản lý phiên <ArrowRight size={16}/></Link>
       </div>
       {!sessions?.length?<div className="empty-state">
         <QrCode size={25} className="mx-auto text-[#8798b0]"/>

@@ -19,10 +19,10 @@ test("Máy quét chỉ nhận QR phiên hợp lệ, không dùng barcode hoặc 
 
 test("Quyền nghiệp vụ không cấp cho delegate/guest dù tự nhập URL",()=>{
  const auth=content("../src/lib/auth.ts");
- assert.match(auth,/return role==="admin"\|\|role==="checkin"\|\|role==="secretary";/);
+ assert.match(auth,/return role==="admin"\|\|role==="checkin"\|\|role==="secretary"\?role:null;/);
  assert.doesNotMatch(auth,/Boolean\(role\)/);
  const layout=content("../src/app/congresses/[id]/layout.tsx");
- assert.match(layout,/if\(!canView\)redirect\("\/my-card"\)/);
+ assert.match(layout,/if\(!canCongress\(accessRole,"workspace.view"\)\)redirect\("\/my-card"\)/);
  const dashboard=content("../src/app/dashboard/page.tsx");
  assert.match(dashboard,/isStaffUser\(supabase,user\.id\)/);
  const migration=content("../supabase/upgrade-delegate-portal-v11.sql");

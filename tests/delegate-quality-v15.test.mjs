@@ -102,7 +102,8 @@ test("Phân tích là phân hệ độc lập; dữ liệu được phân trang,
  const shell=read("../src/components/app-shell.tsx");
  const home=read("../src/app/congresses/[id]/page.tsx");
  const old=read("../src/app/congresses/[id]/delegates/quality/page.tsx");
- assert.match(shell,/name:"Phân tích chất lượng",href:"\/congresses\/"\+congressId\+"\/quality"/);
+ assert.match(shell,/canCongress\(accessRole,"quality.read"\)/);
+ assert.match(shell,/name:"Phân tích chất lượng",href:base\+"\/quality"/);
  assert.match(home,/href:"quality",icon:ChartColumnIncreasing/);
  assert.match(old,/redirect\("\/congresses\/"\+id\+"\/quality"\+query\)/);
  assert.match(page,/loadQualitySource\(db,id,selectedSessionId\)/);

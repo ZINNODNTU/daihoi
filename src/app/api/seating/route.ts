@@ -34,7 +34,7 @@ async function authorize(congressId:string,edit:boolean){
   const {supabase,user}=await getAuth();
   if(!user)return {error:fail("Vui lòng đăng nhập.",401)} as const;
   if(!uuid.test(congressId))return {error:fail("Mã Đại hội không hợp lệ.",400)} as const;
-  if(!(await hasRole(supabase,user.id,congressId,edit?"admin":"viewer")))
+  if(!(await hasRole(supabase,user.id,congressId,edit?"admin":"checkin")))
     return {error:fail("Bạn không có quyền truy cập sơ đồ Đại hội này.",403)} as const;
   return {user} as const;
 }

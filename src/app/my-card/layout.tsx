@@ -1,6 +1,6 @@
 import {redirect} from "next/navigation";
 import {DelegateShell} from "@/components/delegate-shell";
-import {getPortalViewerAuth} from "@/lib/auth";
+import {getPortalViewerAuth,isStaffUser} from "@/lib/auth";
 import {getPortalCongressContext} from "@/lib/active-congress";
 import Link from "next/link";
 import {IdCard} from "lucide-react";
@@ -18,6 +18,8 @@ export default async function DelegatePortalLayout({children}:{children:React.Re
  </main>;
  const {supabase,user}=await getPortalViewerAuth();
  if(!user)redirect("/login");
+ // Dedicated staff workspace. Do not mount delegate cards for BTC or administrators.
+ if(await isStaffUser(supabase,user.id))redirect("/dashboard");
  const {data:profile}=await supabase.from("profiles").select("full_name").eq("id",user.id).maybeSingle();
  const access=await getPortalCongressContext(user.id).catch(()=>null);
   const guestOnly=Boolean(access&&!access.delegateCongressIds.length&&access.guestCongressIds.length);

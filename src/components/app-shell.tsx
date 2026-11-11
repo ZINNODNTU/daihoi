@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import {BrandMark,type CongressKind} from "@/components/brand-mark";
 import {AdminErrorMonitor} from "@/components/admin-error-monitor";
+import {canCongress,CONGRESS_ROLE_LABELS,type CongressRole} from "@/lib/congress-permissions";
 
 
 type NavItem={name:string;href:string;icon:typeof LayoutGrid};
@@ -22,37 +23,48 @@ type Props={
   canViewBch?:boolean;
   canCheckin?:boolean;
   canViewSystemLogs?:boolean;
+  accessRole?:CongressRole;
 };
 
-export function AppShell({children,name,congressId,congressName,congressKind="doan",canManage=false,canViewBch=false,canCheckin=false,canViewSystemLogs=false}:Props){
+export function AppShell({children,name,congressId,congressName,congressKind="doan",canViewSystemLogs=false,accessRole=null}:Props){
   const [mobile,setMobile]=useState(false);
   const path=usePathname();
   const [logoutError,setLogoutError]=useState("");
   const [unresolvedLogs,setUnresolvedLogs]=useState(0);
-  const overview:NavItem={name:"Tổng quan hệ thống",href:"/dashboard",icon:LayoutGrid};
+  const overview:NavItem={name:congressId?"Tất cả Đại hội":"Tổng quan hệ thống",href:"/dashboard",icon:LayoutGrid};
   const logs:NavItem={name:"Nhật ký hệ thống",href:"/dashboard/system-logs",icon:ScrollText};
-  const myAccount:NavItem={name:"Tài khoản của tôi",href:"/account",icon:CircleUserRound};
+  const myAccount:NavItem={name:"Tài khoản & bảo mật",href:"/account",icon:CircleUserRound};
+  const base=congressId?"/congresses/"+congressId:"";
+  // These capabilities are computed by the verified server layout, not the browser.
+  // Never render delegate-only "Thẻ đại biểu" inside the staff workspace.
   const congressItems:NavItem[]=congressId?[
-    {name:"Bảng điều hành",href:"/congresses/"+congressId,icon:BarChart3},
-    {name:"Đại biểu",href:"/congresses/"+congressId+"/delegates",icon:Users},
-    {name:"Phân tích chất lượng",href:"/congresses/"+congressId+"/quality",icon:ChartColumnIncreasing},
-    {name:"Sơ đồ ghế",href:"/congresses/"+congressId+"/seating",icon:Armchair},
-    ...(canViewBch?[{name:"Trích ngang nhân sự BCH",href:"/congresses/"+congressId+"/bch-candidates",icon:ClipboardList}]:[]),
-    ...(canCheckin?[
-     {name:"Trung tâm điểm danh",href:"/congresses/"+congressId+"/attendance",icon:QrCode},
-     {name:"Màn hình điểm danh",href:"/congresses/"+congressId+"/attendance/live",icon:BarChart3},
-
-     {name:"Quét tại bàn BTC",href:"/congresses/"+congressId+"/attendance/desk",icon:QrCode}
+    {name:"Bảng điều hành",href:base,icon:BarChart3},
+    ...(canCongress(accessRole,"attendance.read")?[
+      {name:"Trung tâm điểm danh",href:base+"/attendance",icon:QrCode},
+      {name:"Màn hình điểm danh",href:base+"/attendance/live",icon:BarChart3},
+      {name:"Quét tại bàn BTC",href:base+"/attendance/desk",icon:QrCode}
     ]:[]),
-    {name:"Báo cáo",href:"/congresses/"+congressId+"/reports",icon:ClipboardList},
-    {name:"Tài liệu",href:"/congresses/"+congressId+"/documents",icon:FileText}
+    ...(canCongress(accessRole,"delegates.read")?[{name:"Quản lý đại biểu",href:base+"/delegates",icon:Users}]:[]),
+    ...(canCongress(accessRole,"quality.read")?[{name:"Phân tích chất lượng",href:base+"/quality",icon:ChartColumnIncreasing}]:[]),
+    ...(canCongress(accessRole,"seating.read")?[{name:"Sơ đồ ghế",href:base+"/seating",icon:Armchair}]:[]),
+    ...(canCongress(accessRole,"bch.read")?[{name:"Nhân sự BCH",href:base+"/bch-candidates",icon:ClipboardList}]:[]),
+    ...(canCongress(accessRole,"documents.read")?[{name:"Tài liệu",href:base+"/documents",icon:FileText}]:[]),
+    ...(canCongress(accessRole,"reports.read")?[{name:"Báo cáo",href:base+"/reports",icon:ClipboardList}]:[])
   ]:[];
-  const adminItems:NavItem[]=canManage&&congressId?[
-    {name:"Nhân sự BTC",href:"/congresses/"+congressId+"/team",icon:UserRoundCog},
-    {name:"Cấu hình",href:"/congresses/"+congressId+"/settings",icon:Settings2}
+  const adminItems:NavItem[]=congressId?[
+    ...(canCongress(accessRole,"team.manage")?[{name:"Tài khoản BTC",href:base+"/team",icon:UserRoundCog}]:[]),
+    ...(canCongress(accessRole,"settings.manage")?[{name:"Cấu hình Đại hội",href:base+"/settings",icon:Settings2}]:[])
   ]:[];
   const items=[overview,...(canViewSystemLogs?[logs]:[]),myAccount,...congressItems,...adminItems];
-  const active=items.find(x=>x.href===path)||overview;
+  const active=[...items].sort((a,b)=>b.href.length-a.href.length)
+    .find(item=>path===item.href||
+      (item.href!=="/dashboard"&&item.href!==base&&path.startsWith(item.href+"/")))||
+    (congressId?congressItems[0]:overview)||overview;
+  const mobileItems=congressId?congressItems.filter(item=>[
+    base,base+"/attendance",base+"/delegates",base+"/bch-candidates",
+    base+"/documents",base+"/reports"
+  ].includes(item.href)).slice(0,5):[];
+  const roleTitle=accessRole?CONGRESS_ROLE_LABELS[accessRole]:canViewSystemLogs?"Quản trị hệ thống":"Nhân sự BTC Đại hội";
   const displayName=name.trim()||"Thành viên BTC";
   const avatar=displayName.charAt(0).toLocaleUpperCase("vi");
 
@@ -104,7 +116,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
   }
 
   return <div className="app-layout min-h-dvh lg:flex">
-    <AdminErrorMonitor/>
+    {canViewSystemLogs&&<AdminErrorMonitor/>}
     <a href="#noi-dung-chinh" className="skip-link">Bỏ qua điều hướng đến nội dung</a>
     {mobile&&<button type="button" aria-label="Đóng bảng điều hướng" onClick={()=>setMobile(false)}
       className="fixed inset-0 z-40 bg-[#0c1526]/65 backdrop-blur-[2px] lg:hidden"/>}
@@ -125,7 +137,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
       </div>
       <div className="app-sidebar-scroll flex-1 overflow-y-auto px-3.5 pb-4">
         <div className="pt-7">
-          <p className="sidebar-group-label">Hệ thống</p>
+          <p className="sidebar-group-label">{congressId?"Không gian làm việc":"Hệ thống"}</p>
           <nav aria-label="Hệ thống">{navLink(overview)}{canViewSystemLogs&&navLink(logs)}{navLink(myAccount)}</nav>
         </div>
 
@@ -142,7 +154,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
             </Link>
           </div>
           <nav aria-label="Các chức năng Đại hội" className="mt-7">
-            <p className="sidebar-group-label">Nghiệp vụ</p>
+            <p className="sidebar-group-label">Chức năng được cấp quyền</p>
             <div className="space-y-1">{congressItems.map(navLink)}</div>
           </nav>
         </>}
@@ -164,7 +176,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-white/15 bg-white/10 text-[12px] font-bold text-white">{avatar}</span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[12px] font-semibold text-white">{displayName}</p>
-            <p className="mt-1 text-[10px] text-[#9aaac3]">Tài khoản Đại hội</p>
+            <p className="mt-1 truncate text-[10px] text-[#9aaac3]">{roleTitle}</p>
           </div>
           <button type="button" onClick={logout} aria-label="Đăng xuất" title="Đăng xuất"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] text-[#b4c2d6] hover:bg-white/10 hover:text-white">
@@ -193,7 +205,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          {congressId&&<Link href={"/congresses/"+congressId+"/attendance"} className="btn btn-secondary !min-h-9 hidden !text-[11px] md:inline-flex">
+          {congressId&&canCongress(accessRole,"attendance.scan")&&<Link href={"/congresses/"+congressId+"/attendance"} className="btn btn-secondary !min-h-9 hidden !text-[11px] md:inline-flex">
             <QrCode size={15}/> Điểm danh nhanh <ArrowRight size={13}/>
           </Link>}
           <span className="hidden h-7 w-px bg-[#e6eaf1] md:block"/>
@@ -206,13 +218,13 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
       </main>
       <footer className="hidden items-center justify-between border-t border-[#e5e9ef] px-10 py-3 text-[10px] text-[#929eae] lg:flex">
         <span>ĐẠI HỘI SỐ / Hệ thống điều hành</span>
-        <span>Không gian dành cho Ban Tổ chức</span>
+        <span>{roleTitle} · Quyền theo Đại hội</span>
       </footer>
     </div>
 
     {congressId&&<nav aria-label="Điều hướng nhanh trên điện thoại"
-      className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[#e4e8ef] bg-white px-1 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
-      {[congressItems[0],congressItems[1],congressItems[2],congressItems[3],congressItems[4]].map(({name,href,icon:Icon})=>{
+      className={"mobile-bottom-nav fixed inset-x-0 bottom-0 z-30 grid border-t border-[#e4e8ef] bg-white px-1 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-1.5 lg:hidden "+(mobileItems.length===5?"grid-cols-5":mobileItems.length===4?"grid-cols-4":"grid-cols-3")}>
+      {mobileItems.map(({name,href,icon:Icon})=>{
         const current=path===href;
         return <Link key={href} href={href} aria-current={current?"page":undefined}
           className={"flex min-h-[57px] flex-col items-center justify-center gap-1 rounded-[8px] px-0.5 text-[10px] font-semibold "+(current?"text-[#2858ca]":"text-[#8894a7]")}>

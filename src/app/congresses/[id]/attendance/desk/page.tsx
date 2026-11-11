@@ -1,4 +1,5 @@
-﻿import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasRole} from "@/lib/auth";
+import {notFound} from "next/navigation";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {AttendanceClient} from "@/components/attendance-client";
 import {buildDelegateSeatMap,type SeatingLayoutRef,type SeatRef,type SeatAssignmentRef} from "@/lib/attendance-seating";
@@ -11,6 +12,7 @@ export default async function AttendanceDeskPage({params,searchParams}:{
  const {id}=await params;
  const selectedSessionId=(await searchParams).sessionId||"";
  const {supabase,user}=await getAuth();
+ if(!user||!(await hasRole(supabase,user.id,id,"checkin")))notFound();
  const [delegates,sessions,checkins]=await Promise.all([
   supabase.from("delegates")
    .select("id,congress_id,code,full_name,unit,delegate_type,qr_version,barcode_code,is_active,photo_path")

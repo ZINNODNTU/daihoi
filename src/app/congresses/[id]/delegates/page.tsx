@@ -1,9 +1,11 @@
 import {getAuth,hasRole} from "@/lib/auth";
+import {notFound} from "next/navigation";
 import {DelegatesClient} from "@/components/delegates-client";
 import {DelegateAdminTabs} from "@/components/delegate-admin-tabs";
 import type {Delegate,AttendanceSession} from "@/lib/types";
 export default async function DelegatesPage({params}:{params:Promise<{id:string}>}){
  const {id}=await params;const {supabase,user}=await getAuth();
+ if(!user||!(await hasRole(supabase,user.id,id,"admin")))notFound();
  const [delegates,sessions,congress]=await Promise.all([
   supabase.from("delegates")
    .select("id,congress_id,code,full_name,unit,student_id,position,login_email,auth_user_id,delegate_type,gender,birth_date,qr_version,barcode_code,is_active,photo_path")

@@ -27,14 +27,14 @@ export default async function Dashboard(){
   const {data:{user}}=await supabase.auth.getUser();
   if(!user)redirect("/login");
   if(!(await isStaffUser(supabase,user.id)))redirect("/my-card");
-  const [{data:profile},{data:congresses,error},{data:adminMemberships}]=await Promise.all([
+  const [{data:profile},{data:congresses,error}]=await Promise.all([
     supabase.from("profiles").select("full_name,platform_role").eq("id",user.id).maybeSingle(),
     supabase.from("congresses").select("id,name,kind,term,status,slug,venue,created_at").order("created_at",{ascending:false}),
-    supabase.from("congress_members").select("congress_id").eq("user_id",user.id).eq("role","admin").limit(1)
+
   ]);
   const items=(congresses??[]) as CongressSummary[];
   const canCreate=profile?.platform_role==="super_admin";
-  const canViewSystemLogs=canCreate||Boolean(adminMemberships?.length);
+  const canViewSystemLogs=canCreate;
   const live=items.filter(c=>c.status==="live").length;
   const preparing=items.filter(c=>c.status==="preparing").length;
   const completed=items.filter(c=>c.status==="completed").length;

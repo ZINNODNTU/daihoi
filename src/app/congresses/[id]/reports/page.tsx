@@ -1,10 +1,12 @@
-import {getAuth} from "@/lib/auth";
+import {getAuth,hasRole} from "@/lib/auth";
+import {notFound} from "next/navigation";
 import {AttendanceReportClient} from "@/components/attendance-report-client";
 import type {ReportDelegate} from "@/lib/attendance-report";
 import type {AttendanceSession} from "@/lib/types";
 export default async function ReportsPage({params}:{params:Promise<{id:string}>}){
  const {id}=await params;
- const {supabase}=await getAuth();
+ const {supabase,user}=await getAuth();
+ if(!user||!(await hasRole(supabase,user.id,id,"viewer")))notFound();
  const [congress,delegates,sessions]=await Promise.all([
   supabase.from("congresses").select("name,kind,term").eq("id",id).maybeSingle(),
   supabase.from("delegates").select("id,code,full_name,unit,delegate_type,is_active").eq("congress_id",id).order("code"),

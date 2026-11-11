@@ -22,7 +22,9 @@ async function authorize(congressId:string,write:boolean){
   const {data,error}=await supabase.from("congress_members")
    .select("role").eq("congress_id",congressId).eq("user_id",user.id).maybeSingle();
   if(error)return {error:fail("Không xác minh được phân quyền nhân sự.",500)} as const;
-  canView=["secretary","delegate","guest"].includes(data?.role||"");
+  // Secretary access additionally requires an active, congress-scoped BTC identity.
+  canView=["delegate","guest"].includes(data?.role||"")||
+   (data?.role==="secretary"&&await hasRole(supabase,user.id,congressId,"viewer"));
    if(!canView){
     const own=await createAdminClient().from("delegates").select("id")
      .eq("congress_id",congressId).eq("auth_user_id",user.id)
