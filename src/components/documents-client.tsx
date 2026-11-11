@@ -321,7 +321,7 @@ export function DocumentsClient({congressId,docs,canManage}:{congressId:string;d
              disabled={busy||ordering||sharing!==null||removingId!==null}
              onClick={()=>void removeDocument(doc)}
              className="btn !min-h-9 !border-red-200 !bg-red-50 !px-3 !text-red-700 hover:!bg-red-100 disabled:opacity-35">
-             <Trash2 size={15}/><span className="text-[11px] font-bold">Gỡ</span>
+             <Trash2 size={15}/><span className="text-[11px] font-bold">Xóa</span>
             </button>
            </div>}
           </div>;
