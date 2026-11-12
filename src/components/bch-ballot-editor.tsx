@@ -2,11 +2,11 @@
 import {useState,type FormEvent} from "react";
 import {AlertCircle,CheckCircle2,ClipboardList,RotateCcw,Save} from "lucide-react";
 import {ballotPercentage,formatBallotPercentage,validateBchVotes,validateSharedBchTotal,
- type BchCandidate} from "@/lib/bch-candidates";
+ type BchBallotCandidate} from "@/lib/bch-candidates";
 
 function VoteRow({item,congressId,total,disabled,onSaved}:{
- item:BchCandidate;congressId:string;total:number|null;disabled:boolean;
- onSaved:(candidate:Partial<BchCandidate>&{id:string})=>void;
+ item:BchBallotCandidate;congressId:string;total:number|null;disabled:boolean;
+ onSaved:(candidate:Partial<BchBallotCandidate>&{id:string})=>void;
 }){
  const [draft,setDraft]=useState(item.votes_received===null||item.votes_received===undefined?"":String(item.votes_received));
  const [busy,setBusy]=useState(false);
@@ -69,9 +69,9 @@ function VoteRow({item,congressId,total,disabled,onSaved}:{
 }
 
 export function BchBallotEditor({congressId,candidates,ballotReady,disabled,total,onTotalSaved,onSaved}:{
- congressId:string;candidates:BchCandidate[];ballotReady:boolean;disabled:boolean;
+ congressId:string;candidates:BchBallotCandidate[];ballotReady:boolean;disabled:boolean;
  total:number|null;onTotalSaved:(value:number|null)=>void;
- onSaved:(updated:Partial<BchCandidate>&{id:string})=>void;
+ onSaved:(updated:Partial<BchBallotCandidate>&{id:string})=>void;
 }){
  const [totalDraft,setTotalDraft]=useState(total===null?"":String(total));
  const [saving,setSaving]=useState(false);

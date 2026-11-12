@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {getAuth,hasCongressAbility} from "@/lib/auth";
+import {createAdminClient} from "@/lib/supabase/admin";
 import {validateSharedBchTotal} from "@/lib/bch-candidates";
 import {writeSystemLog} from "@/lib/system-log";
 export const runtime="nodejs";
@@ -17,7 +18,7 @@ export async function PATCH(request:Request){
   if(total===undefined)return err("Tổng phiếu phải là số nguyên từ 1 đến 1.000.000.",400);
   const {supabase,user}=await getAuth();
   if(!user)return err("Vui lòng đăng nhập.",401);
-  if(!(await hasCongressAbility(supabase,user.id,congressId,"bch.write")))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"ballots.write")))
    return err("Tài khoản không có quyền nhập phiếu.",403);
   const {data:congress,error:congressError}=await supabase.from("congresses")
    .select("id,kind,bch_total_ballots").eq("id",congressId).maybeSingle();
@@ -25,14 +26,14 @@ export async function PATCH(request:Request){
   if(congress.kind!=="doan")return err("Chỉ Đại hội Đoàn được nhập kiểm phiếu BCH.",400);
   // Invoker-rights SQL function atomically updates the one shared total and
   // each candidate's legacy denormalized denominator, rejecting incompatible votes.
-  const {data,error}=await supabase.rpc("set_bch_shared_ballot_total",{
+  const {data,error}=await createAdminClient().rpc("set_bch_shared_ballot_total",{
    p_congress_id:congressId,p_total:total
   });
   if(error){
    if(error.code==="23514")return err("Có ứng viên đã lưu phiếu lớn hơn tổng mới, hoặc đang còn phiếu nên không thể xóa tổng. Hãy điều chỉnh số phiếu của ứng viên trước.",409);
-   if(error.code==="42883"||error.code==="PGRST202")return err("Chưa chạy migration V57 trên Supabase.",503);
+   if(error.code==="42883"||error.code==="PGRST202")return err("Chưa cài đặt phân hệ kiểm phiếu V58 trên Supabase.",503);
    console.error("shared BCH tally total update",error.code);
-   return err("Không lưu được tổng số phiếu chung.",503);
+   return err("Không ghi được tổng phiếu chung. Mã lỗi: "+String(error.code||"UNKNOWN")+".",503);
   }
   await writeSystemLog({level:"info",source:"api",event:"bch.shared_total_updated",
    message:"BTC đã cập nhật tổng số phiếu dùng chung cho BCH.",congressId,actorId:user.id,

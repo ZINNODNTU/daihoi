@@ -5,7 +5,7 @@ import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {
   Armchair,ArrowRight,BarChart3,ChartColumnIncreasing,ChevronDown,ChevronRight,ClipboardList,FileText,
-  LayoutGrid,LogOut,Menu,QrCode,Settings2,ShieldCheck,UserRoundCog,Users,X,CircleUserRound,ScrollText
+  LayoutGrid,LogOut,Menu,QrCode,Settings2,ShieldCheck,UserRoundCog,Users,X,CircleUserRound,ScrollText,ClipboardCheck
 } from "lucide-react";
 import {BrandMark,type CongressKind} from "@/components/brand-mark";
 import {AdminErrorMonitor} from "@/components/admin-error-monitor";
@@ -50,6 +50,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
     ...(canUse("quality.read")?[{name:"Phân tích chất lượng",href:base+"/quality",icon:ChartColumnIncreasing}]:[]),
     ...(canUse("seating.read")?[{name:"Sơ đồ ghế",href:base+"/seating",icon:Armchair}]:[]),
     ...(canUse("bch.read")?[{name:"Nhân sự BCH",href:base+"/bch-candidates",icon:ClipboardList}]:[]),
+    ...(congressKind==="doan"&&canUse("ballots.read")?[{name:"Kiểm phiếu BCH",href:base+"/ballots",icon:ClipboardCheck}]:[]),
     ...(canUse("documents.read")?[{name:"Tài liệu",href:base+"/documents",icon:FileText}]:[]),
     ...(canUse("reports.read")?[{name:"Báo cáo",href:base+"/reports",icon:ClipboardList}]:[])
   ]:[];
@@ -66,7 +67,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
       (item.href!=="/dashboard"&&item.href!==base&&path.startsWith(item.href+"/")))||
     (congressId?congressItems[0]:overview)||overview;
   const mobileItems=congressId?congressItems.filter(item=>[
-    base,base+"/attendance",base+"/delegates",base+"/bch-candidates",
+    base,base+"/attendance",base+"/delegates",base+"/ballots",base+"/bch-candidates",
     base+"/documents",base+"/reports"
   ].includes(item.href)).slice(0,5):[];
   const roleTitle=accessRole?CONGRESS_ROLE_LABELS[accessRole]:canViewSystemLogs?"Quản trị hệ thống":"Nhân sự BTC Đại hội";

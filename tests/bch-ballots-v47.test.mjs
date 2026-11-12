@@ -44,18 +44,20 @@ test("BCH ballot migration preserves RLS and checks counts in the database",()=>
  assert.match(sql,/votes_received IS NULL AND total_ballots IS NULL/);
  assert.doesNotMatch(sql,/GRANT\s+.*\b(?:anon|PUBLIC)\b/i);
 });
-test("Admin tallies remain internal; delegates receive introductory candidate fields only",()=>{
+test("Tally is strictly separate from personnel, delegates only receive introductory fields",()=>{
  const page=read("../src/app/congresses/[id]/bch-candidates/page.tsx");
  const api=read("../src/app/api/bch-candidates/route.ts");
  const delegate=read("../src/app/my-card/bch/page.tsx");
  const admin=read("../src/components/bch-candidates-client.tsx");
+ const ballot=read("../src/app/congresses/[id]/ballots/page.tsx");
+ const ballotApi=read("../src/app/api/bch-candidates/ballots/route.ts");
  assert.match(page,/congressKind=/);
- assert.match(page,/fallback=people.error/);
- assert.match(page,/ballotReady=/);
- assert.match(api,/auth\.canManage\?\",votes_received,total_ballots\"/);
- assert.match(api,/scope\.data\.kind!==\"doan\"/);
+ assert.doesNotMatch(page,/BALLOT_FIELDS|ballotReady=|votes_received/);
+ assert.match(api,/PUBLIC_BCH_FIELDS/);
+ assert.doesNotMatch(api,/\.select\(\)/);
  assert.doesNotMatch(delegate,/votes_received|total_ballots/);
- assert.match(admin,/formatBallotPercentage/);
- assert.match(admin,/Kết quả kiểm phiếu/);
- assert.match(admin,/columns\.push\(\"Số phiếu đạt\"/);
+ assert.doesNotMatch(admin,/formatBallotPercentage|BchBallotEditor/);
+ assert.match(ballot,/ballots\.read/);
+ assert.match(ballotApi,/votes_received,total_ballots/);
+ assert.match(ballotApi,/hasCongressAbility\(supabase,user\.id,congressId,"ballots\.read"\)/);
 });

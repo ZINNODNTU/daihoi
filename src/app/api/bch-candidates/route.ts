@@ -8,6 +8,7 @@ export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PUBLIC_BCH_FIELDS="id,congress_id,full_name,birth_year,hometown,ethnicity,education_level,union_join_year,current_position,photo_path,display_order,created_at,updated_at";
 const fail=(error:string,status:number)=>NextResponse.json({error},{
  status,headers:{"Cache-Control":"no-store"}
 });
@@ -43,26 +44,10 @@ export async function GET(request:Request){
   const congressId=new URL(request.url).searchParams.get("congressId")||"";
   const auth=await authorize(congressId,false);
   if("error" in auth)return auth.error;
-  const {data,error}=await createAdminClient().from("bch_candidates").select(
-   "id,congress_id,full_name,birth_year,hometown,ethnicity,education_level,union_join_year,current_position,photo_path,display_order,created_at,updated_at"+
-   (auth.canManage?",votes_received,total_ballots":"")
-  ).eq("congress_id",congressId).order("display_order",{ascending:true})
+  const {data,error}=await createAdminClient().from("bch_candidates").select(PUBLIC_BCH_FIELDS).eq("congress_id",congressId).order("display_order",{ascending:true})
    .order("created_at",{ascending:true}).limit(500);
-  if(error?.code==="42703"&&auth.canManage){
-    const legacy=await createAdminClient().from("bch_candidates").select(
-     "id,congress_id,full_name,birth_year,hometown,ethnicity,education_level,union_join_year,current_position,photo_path,display_order,created_at,updated_at"
-    ).eq("congress_id",congressId).order("display_order",{ascending:true})
-     .order("created_at",{ascending:true}).limit(500);
-    if(!legacy.error)return NextResponse.json({candidates:legacy.data||[],ballotReady:false},
-     {headers:{"Cache-Control":"no-store"}});
-   }
    if(error)return fail("Không đọc được danh sách nhân sự BCH. Kiểm tra migration v8.",500);
-  const totalResult=auth.canManage?await auth.supabase.from("congresses")
-   .select("bch_total_ballots").eq("id",congressId).maybeSingle():null;
-  if(totalResult?.error)return fail("Không đọc được tổng số phiếu BCH dùng chung.",503);
-  return NextResponse.json({candidates:data||[],
-   ...(auth.canManage?{ballotTotal:totalResult?.data?.bch_total_ballots??null}:{})
-  },{headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({candidates:data||[]},{headers:{"Cache-Control":"no-store"}});
  }catch{return fail("Không thể tải danh sách BCH.",500);}
 }
 export async function POST(request:Request){
@@ -78,8 +63,8 @@ export async function POST(request:Request){
    if(scope.data.kind!=="doan"&&checked.data.votes_received!==null)
     return fail("Chỉ Đại hội Đoàn được nhập kết quả kiểm phiếu tại đây.",400);
   const {data,error}=await auth.supabase.from("bch_candidates").insert({
-   congress_id:congressId,created_by:auth.user.id,...bchWriteData(checked.data,checked.data.votes_received!==null||body.ballotEnabled===true)
-  }).select().single();
+   congress_id:congressId,created_by:auth.user.id,...bchWriteData(checked.data,false)
+  }).select(PUBLIC_BCH_FIELDS).single();
   if(error){
    console.error("bch candidate insert failed",error.code);
    return fail("Không lưu được nhân sự. Kiểm tra cấu hình Supabase BCH v8 và migration phiếu V47.",500);
@@ -105,8 +90,8 @@ export async function PATCH(request:Request){
    if(scope.data.kind!=="doan"&&checked.data.votes_received!==null)
     return fail("Chỉ Đại hội Đoàn được nhập kết quả kiểm phiếu tại đây.",400);
   const {data,error}=await auth.supabase.from("bch_candidates")
-   .update({...bchWriteData(checked.data,checked.data.votes_received!==null||body.ballotEnabled===true),updated_at:new Date().toISOString()})
-   .eq("id",id).eq("congress_id",congressId).select().maybeSingle();
+   .update({...bchWriteData(checked.data,false),updated_at:new Date().toISOString()})
+   .eq("id",id).eq("congress_id",congressId).select(PUBLIC_BCH_FIELDS).maybeSingle();
   if(error)return fail("Không thể cập nhật hồ sơ nhân sự.",500);
   if(!data)return fail("Không tìm thấy hồ sơ nhân sự trong Đại hội.",404);
   await writeSystemLog({level:"info",source:"api",event:"bch.candidate_updated",

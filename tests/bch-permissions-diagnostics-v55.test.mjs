@@ -34,34 +34,38 @@ test("permission page requires verified server entitlement and nav checks accoun
  assert.match(shell,/canUse\("team\.manage"\)/);
  assert.match(shell,/name:"Phân quyền",href:base\+"\/permissions"/);
 });
-test("permission UI selects individual BTC accounts and persists each account's allowed actions",()=>{
+test("account-specific permission configuration uses batch writes and a secure audit timeline",()=>{
  const ui=read("src/components/congress-permissions-client.tsx");
  const api=read("src/app/api/congress-members/permissions/route.ts");
  const memberApi=read("src/app/api/congress-members/route.ts");
  assert.match(ui,/setSelectedId/);
- assert.match(ui,/selected\.deniedAbilities\.includes\(ability\)/);
- assert.match(ui,/type="checkbox" checked=\{allowed\}/);
- assert.match(ui,/\/api\/congress-members\/permissions/);
- assert.match(ui,/userId:member\.userId,ability,allowed/);
+ assert.match(ui,/permissionOverrides/);
+ assert.match(ui,/type="checkbox" checked=\{checked\}/);
+ assert.match(ui,/method:"PUT"/);
+ assert.match(ui,/changes/);
+ assert.match(ui,/Nhật ký phân quyền/);
  assert.match(api,/hasCongressAbility\(supabase,user\.id,congressId,"team\.manage"\)/);
  assert.match(api,/isAccountPermissionAbility/);
- assert.match(api,/session\.user\.id===userId|user\.id===userId/);
- assert.match(api,/btc_account_capability_restrictions/);
- assert.match(api,/canCongress\(role,ability\)/);
- assert.match(memberApi,/deniedAbilities:/);
+ assert.match(api,/set_btc_account_permissions_v58/);
+ assert.match(api,/audit_logs/);
+ assert.match(api,/canCustomizeCongressAbility/);
+ assert.match(memberApi,/permissionOverrides:/);
 });
-test("BCH access and manual tally are scoped to effective account permissions",()=>{
- const page=read("src/app/congresses/[id]/bch-candidates/page.tsx");
- const api=read("src/app/api/bch-candidates/route.ts");
- const ui=read("src/components/bch-candidates-client.tsx");
- assert.match(page,/hasCongressAbility\(supabase,user\.id,id,"bch\.read"\)/);
- assert.match(page,/hasCongressAbility\(supabase,user\.id,id,"bch\.write"\)/);
- assert.match(page,/BASE_FIELDS\+\(canManage\?BALLOT_FIELDS:""\)/);
- assert.match(page,/fallback=people\.error\?\.code==="42703"&&canManage/);
- assert.match(page,/bch_total_ballots/);
- assert.match(api,/error\?\.code==="42703"&&auth\.canManage/);
- assert.doesNotMatch(ui,/Phân quyền BTC/);
- assert.match(ui,/BchBallotEditor/);
+test("BCH profile and tally access are unrelated capabilities and separate routes",()=>{
+ const personnel=read("src/app/congresses/[id]/bch-candidates/page.tsx");
+ const ballot=read("src/app/congresses/[id]/ballots/page.tsx");
+ const ballotGuard=read("src/app/congresses/[id]/ballots/layout.tsx");
+ const api=read("src/app/api/bch-candidates/ballots/route.ts");
+ const personnelUI=read("src/components/bch-candidates-client.tsx");
+ const tallyUI=read("src/components/bch-ballots-client.tsx");
+ assert.match(personnel,/hasCongressAbility\(supabase,user\.id,id,"bch\.read"\)/);
+ assert.match(personnel,/hasCongressAbility\(supabase,user\.id,id,"bch\.write"\)/);
+ assert.match(personnel,/canViewBallots/);
+ assert.match(ballot,/hasCongressAbility\(supabase,user\.id,id,"ballots\.read"\)/);
+ assert.match(ballotGuard,/requireCongressAbility\(id,"ballots\.read"\)/);
+ assert.match(api,/hasCongressAbility\(supabase,user\.id,congressId,"ballots\.write"\)/);
+ assert.doesNotMatch(personnelUI,/BchBallotEditor/);
+ assert.match(tallyUI,/BchBallotEditor/);
 });
 test("migration V57 is additive and grants per-account restrictions without privilege escalation",()=>{
  const sql=read("supabase/upgrade-bch-shared-ballot-account-permissions-v57.sql");

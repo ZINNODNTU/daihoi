@@ -2,21 +2,19 @@
 
 import {FormEvent,useEffect,useMemo,useState} from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
  BookOpen,Camera,Download,Edit3,FileSpreadsheet,GraduationCap,RefreshCw,UserRound,
  Plus,Search,Trash2,UserRoundPlus,Users,X,GripVertical,ArrowUp,ArrowDown,ClipboardList
 } from "lucide-react";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
-import {BchBallotEditor} from "@/components/bch-ballot-editor";
-import {sortBchCandidates,validateBchInput,ballotPercentage,formatBallotPercentage,
- type BchCandidate} from "@/lib/bch-candidates";
+import {sortBchCandidates,validateBchInput,type BchCandidate} from "@/lib/bch-candidates";
 
 type DelegateOption={id:string;full_name:string;position:string;code:string;photo_path:string|null};
 type PhotoTarget={kind:"form"}|{kind:"existing";candidate:BchCandidate};
 type UploadedPhoto={photo_path:string;updated_at:string;unchanged?:boolean;size?:number};
 type Props={
- congressId:string;congressName:string;congressCode:string;congressKind:string;ballotReady:boolean;canManage:boolean;
- totalBallots:number|null;
+ congressId:string;congressName:string;congressCode:string;congressKind:string;canManage:boolean;canViewBallots:boolean;
  initialCandidates:BchCandidate[];initialError:string;delegates:DelegateOption[];
 };
 type FormDataState={
@@ -71,10 +69,9 @@ function BchPortrait({candidate,large=false}:{
 }
 
 export function BchCandidatesClient({
- congressId,congressName,congressCode,congressKind,ballotReady,canManage,totalBallots,initialCandidates,initialError,delegates
+ congressId,congressName,congressCode,congressKind,canManage,canViewBallots,initialCandidates,initialError,delegates
 }:Props){
  const [candidates,setCandidates]=useState(()=>sortBchCandidates(initialCandidates));
- const [sharedTotal,setSharedTotal]=useState<number|null>(totalBallots);
  const [search,setSearch]=useState("");
  const [form,setForm]=useState<FormDataState>(initial);
  const [showForm,setShowForm]=useState(false);
@@ -214,7 +211,6 @@ export function BchCandidatesClient({
    const body=await response.json();
    if(!response.ok)throw new Error(body.error||"Không đồng bộ được danh sách.");
    setCandidates(sortBchCandidates(body.candidates as BchCandidate[]));
-   if(canManage&&"ballotTotal" in body)setSharedTotal(body.ballotTotal??null);
   }catch(e){setError(e instanceof Error?e.message:"Không thể làm mới.");}
   finally{setBusy(false);}
  }
@@ -274,17 +270,12 @@ export function BchCandidatesClient({
    const {default:writeExcelFile}=await import("write-excel-file/browser");
    const columns=["STT","Họ tên","Năm sinh","Quê quán","Dân tộc",
     "Trình độ","Năm vào Đoàn","Chức vụ hiện tại"];
-    if(congressKind==="doan"&&ballotReady)columns.push("Số phiếu đạt","Tổng số phiếu","Tỷ lệ (%)");
    const rows:(string|number)[][]=[
     columns,
     ...sorted.map((candidate,index)=>[
      index+1,candidate.full_name,candidate.birth_year,candidate.hometown,
      candidate.ethnicity,candidate.education_level,candidate.union_join_year,
      candidate.current_position,
-      ...(congressKind==="doan"&&ballotReady?[
-       candidate.votes_received??"",candidate.total_ballots??"",
-       ballotPercentage(candidate.votes_received,candidate.total_ballots)===null?"":Number(ballotPercentage(candidate.votes_received,candidate.total_ballots)!.toFixed(2))
-      ]:[])
     ])
    ];
    await writeExcelFile([{
@@ -299,7 +290,6 @@ export function BchCandidatesClient({
     <p className="page-kicker">CÔNG TÁC TỔ CHỨC · NHÂN SỰ ĐẠI HỘI</p>
     <h1 className="page-title mt-3">Danh sách trích ngang nhân sự BCH</h1>
     <p className="page-description mt-2">Tổng hợp thông tin nhân sự được giới thiệu tham gia Ban Chấp hành của {congressName}.</p>
-    <p className="mt-2 text-xs font-medium text-[#7893a3]">Thông tin kiểm phiếu nhập tay chỉ dành cho BTC · Không thay thế biên bản bầu cử</p>
    </div>
    <div className="flex w-full flex-wrap gap-2 sm:w-auto">
 
@@ -309,10 +299,10 @@ export function BchCandidatesClient({
      disabled={busy||!sorted.length} onClick={()=>void downloadExcel()}>
      <Download size={16}/> Xuất Excel
     </button>
-    {canManage&&congressKind==="doan"&&<a href="#ket-qua-kiem-phieu-bch"
+    {canViewBallots&&congressKind==="doan"&&<Link href={"/congresses/"+congressId+"/ballots"}
      className="btn btn-primary flex-1 justify-center sm:flex-none">
-     <ClipboardList size={17}/> Nhập kết quả kiểm phiếu
-    </a>}
+     <ClipboardList size={17}/> Mở sổ kiểm phiếu
+    </Link>}
     {canManage&&<button type="button" className={congressKind==="doan"?
      "btn btn-secondary flex-1 justify-center sm:flex-none":"btn btn-primary flex-1 justify-center sm:flex-none"}
      disabled={busy} onClick={create}><Plus size={17}/> Thêm nhân sự</button>}
@@ -334,9 +324,6 @@ export function BchCandidatesClient({
    </div>
   </div>
 
-  {congressKind==="doan"&&canManage&&!ballotReady&&!initialError&&<div role="status" className="rounded-xl border border-[#ebdbb2] bg-[#fff9ed] px-4 py-3 text-[13px] text-[#855f21]">
-    Cơ sở dữ liệu của Đại hội chưa có hai cột kiểm phiếu V47. Quản trị hệ thống cần chạy migration supabase/upgrade-bch-ballot-results-v47.sql trên đúng Supabase project, sau đó tải lại trang. Nhân sự BCH hiện tại được giữ nguyên; số phiếu chưa thể lưu khi thiếu migration.
-   </div>}
    {error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">{error}</div>}
   {notice&&<div role="status" className="rounded-xl border border-[#cce8db] bg-[#eef9f2] px-4 py-3 text-[13px] font-medium text-[#197750]">{notice}</div>}
 
@@ -401,15 +388,6 @@ export function BchCandidatesClient({
    </form>
   </section>}
 
-  {congressKind==="doan"&&canManage&&<BchBallotEditor
-   congressId={congressId} candidates={sorted} ballotReady={ballotReady} disabled={busy}
-   total={sharedTotal} onTotalSaved={value=>{setSharedTotal(value);void refresh();}}
-   onSaved={saved=>{
-    setCandidates(previous=>sortBchCandidates(previous.map(item=>
-     item.id===saved.id?{...item,...saved}:item)));
-    setNotice("Đã lưu kết quả kiểm phiếu BCH. Thống kê và file Excel đã được cập nhật.");
-   }}
-  />}
 
   <section className="overflow-hidden rounded-xl border border-[#dfe8ee] bg-white">
    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e8eef3] px-4 py-4 sm:px-5">
@@ -433,7 +411,6 @@ export function BchCandidatesClient({
       <th className="!text-center">STT</th><th>Ảnh</th><th>Họ tên</th><th>Năm sinh</th>
       <th>Quê quán</th><th>Dân tộc</th><th>Trình độ</th>
       <th>Năm vào Đoàn</th><th>Chức vụ hiện tại</th>
-       {congressKind==="doan"&&canManage&&<th>Kết quả kiểm phiếu</th>}
       {canManage&&<th>Thao tác</th>}
      </tr></thead>
      <tbody>{visible.map(item=><tr key={item.id}
@@ -454,13 +431,6 @@ export function BchCandidatesClient({
       <td>{item.birth_year}</td><td>{item.hometown}</td>
       <td>{item.ethnicity}</td><td>{item.education_level}</td>
       <td>{item.union_join_year}</td><td>{item.current_position}</td>
-       {congressKind==="doan"&&canManage&&<td className="min-w-[145px]">
-        {!ballotReady?<span className="text-xs text-[#9aabb6]">Chờ cập nhật CSDL</span>:ballotPercentage(item.votes_received,sharedTotal)!==null?
-         <div className="text-xs font-bold tabular-nums text-[#286b83]">
-          {item.votes_received?.toLocaleString("vi-VN")} / {sharedTotal?.toLocaleString("vi-VN")}
-          <p className="mt-1 text-[16px] font-extrabold text-[#166a86]">{formatBallotPercentage(item.votes_received,sharedTotal)}</p>
-         </div>:<span className="text-xs text-[#9aabb6]">Chưa nhập</span>}
-       </td>}
       {canManage&&<td><div className="flex flex-wrap gap-1.5">
        <button type="button" title="Đưa lên một vị trí" aria-label={"Chuyển "+item.full_name+" lên"}
         className="btn btn-secondary !min-h-8 !px-2 !text-xs" disabled={!canReorder||sorted[0]?.id===item.id}
@@ -479,7 +449,7 @@ export function BchCandidatesClient({
         className="btn btn-secondary !min-h-8 !px-2 !text-xs" onClick={()=>void remove(item)} disabled={busy}><Trash2 size={15}/>Xóa</button>
       </div></td>}
      </tr>)}
-     {!visible.length&&<tr><td colSpan={(canManage?10:9)+(congressKind==="doan"&&canManage?1:0)} className="py-10 text-center text-sm text-[#8193a1]">Chưa có nhân sự phù hợp.</td></tr>}
+     {!visible.length&&<tr><td colSpan={canManage?10:9} className="py-10 text-center text-sm text-[#8193a1]">Chưa có nhân sự phù hợp.</td></tr>}
      </tbody>
     </table>
    </div>
@@ -498,15 +468,6 @@ export function BchCandidatesClient({
       <div><dt className="text-[#8397a5]">Năm vào Đoàn</dt><dd className="mt-1 font-semibold text-[#3e5a6c]">{item.union_join_year}</dd></div>
       <div className="col-span-2"><dt className="text-[#8397a5]">Trình độ</dt><dd className="mt-1 font-semibold text-[#3e5a6c]">{item.education_level}</dd></div>
       <div className="col-span-2"><dt className="text-[#8397a5]">Chức vụ hiện tại</dt><dd className="mt-1 font-semibold text-[#3e5a6c]">{item.current_position}</dd></div>
-       {congressKind==="doan"&&canManage&&<div className="col-span-2 rounded-lg bg-[#eff6fa] p-3">
-        <dt className="text-[#51788d]">Kết quả kiểm phiếu</dt>
-        <dd className="mt-1 font-bold tabular-nums text-[#206b86]">
-         {!ballotReady?<span className="text-xs text-[#9aabb6]">Chờ cập nhật CSDL</span>:ballotPercentage(item.votes_received,sharedTotal)!==null?
-          [item.votes_received?.toLocaleString("vi-VN"),sharedTotal?.toLocaleString("vi-VN")].join(" / ")+" · "+formatBallotPercentage(item.votes_received,sharedTotal):
-          "Chưa nhập số phiếu"}
-        </dd>
-       </div>
-     }
       </dl>
      {canManage&&<div className="mt-4 flex flex-wrap gap-2 border-t border-[#e3edf1] pt-3">
        <button type="button" disabled={!canReorder||sorted[0]?.id===item.id}
@@ -525,7 +486,7 @@ export function BchCandidatesClient({
    </div>
   </section>
   <p className="flex items-center gap-2 text-xs leading-6 text-[#8294a1]">
-   <FileSpreadsheet size={16}/><span>File Excel xuất danh sách theo thứ tự hiện tại (và kèm kết quả kiểm phiếu khi đã cập nhật V47), không bị ảnh hưởng bởi bộ lọc tìm kiếm.</span>
+   <FileSpreadsheet size={16}/><span>File Excel trích ngang nhân sự xuất theo thứ tự hiện tại, không bị ảnh hưởng bởi bộ lọc tìm kiếm.</span>
   </p>
    {photoTarget&&<DelegatePhotoEditor
     title="Ảnh nhân sự giới thiệu BCH"

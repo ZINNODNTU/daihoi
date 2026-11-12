@@ -4,6 +4,11 @@ export type BchCandidate={
  photo_path:string|null;display_order:number;created_at:string;updated_at:string;
  votes_received?:number|null;total_ballots?:number|null;
 };
+/** Minimal server-scoped tally record; personnel biodata is not required for counting. */
+export type BchBallotCandidate=Pick<BchCandidate,
+ "id"|"full_name"|"display_order"|"created_at"|"updated_at"
+> & {votes_received:number|null;total_ballots:number|null};
+
 export type BchCandidateInput=Pick<BchCandidate,
  "full_name"|"birth_year"|"hometown"|"ethnicity"|"education_level"|
  "union_join_year"|"current_position"|"display_order"> & {

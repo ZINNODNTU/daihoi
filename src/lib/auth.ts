@@ -1,7 +1,7 @@
 import "server-only";
 import {createClient} from "@/lib/supabase/server";
 import {cache} from "react";
-import {canCongressForAccount,roleAbilities,type CongressAbility,type CongressRole} from "@/lib/congress-permissions";
+import {roleAbilities,type CongressAbility,type CongressRole} from "@/lib/congress-permissions";
 
 type Db=Awaited<ReturnType<typeof createClient>>;
 export type Role="admin"|"checkin"|"secretary"|"delegate"|"guest";
@@ -73,12 +73,20 @@ export async function getCongressEffectiveAbilities(
  if(!role)return [];
  if(role==="super_admin")return roleAbilities(role);
  const {data,error}=await supabase.from("btc_account_capability_restrictions")
-  .select("ability").eq("congress_id",congressId).eq("user_id",userId)
-  .eq("allowed",false).limit(30);
- // Failing closed avoids silently bypassing individual restrictions.
+  .select("ability,allowed").eq("congress_id",congressId).eq("user_id",userId)
+  .limit(30);
+ // Fail closed; do not bypass per-account overrides when RLS/DB is unavailable.
  if(error)return [];
- const restrictions=(data||[]).map(row=>row.ability);
- return roleAbilities(role).filter(ability=>canCongressForAccount(role,ability,restrictions));
+ const overrides=new Map((data||[]).map(row=>[row.ability,row.allowed]));
+ const effective=new Set<CongressAbility>(roleAbilities(role).filter(a=>overrides.get(a)!==false));
+ // Granting a dedicated tally function is permitted for a non-admin BTC user.
+ // All other role defaults remain non-escalatable.
+ for(const ability of ["ballots.read","ballots.write"] as const){
+  if(overrides.get(ability)===true)effective.add(ability);
+ }
+ // Write access never exists without read access (including on stale overrides).
+ if(!effective.has("ballots.read"))effective.delete("ballots.write");
+ return [...effective];
 }
 export async function hasCongressAbility(
  supabase:Db,userId:string,congressId:string,ability:CongressAbility

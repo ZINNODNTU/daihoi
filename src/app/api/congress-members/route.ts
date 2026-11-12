@@ -46,8 +46,8 @@ export async function GET(request:Request){
     .order("created_at",{ascending:false}).limit(300),
    db.from("congress_members").select("user_id,role")
     .eq("congress_id",congressId).in("role",["admin","checkin","secretary"]).limit(300),
-   db.from("btc_account_capability_restrictions").select("user_id,ability")
-    .eq("congress_id",congressId).eq("allowed",false).limit(5000)
+   db.from("btc_account_capability_restrictions").select("user_id,ability,allowed")
+    .eq("congress_id",congressId).limit(5000)
   ]);
   if(error||roleError||restrictionsError)return fail("Không tải được tài khoản BTC hoặc quyền riêng. Kiểm tra migration V57.",503);
   const byUser=new Map((roles||[]).map(m=>[m.user_id,m.role]));
@@ -55,7 +55,9 @@ export async function GET(request:Request){
    members:(accounts||[]).filter(a=>byUser.has(a.user_id)).map(a=>({
     userId:a.user_id,email:a.login_email,name:a.full_name,
     role:byUser.get(a.user_id),createdAt:a.created_at,
-    deniedAbilities:(restrictions||[]).filter(item=>item.user_id===a.user_id).map(item=>item.ability)
+    isSelf:a.user_id===session.user.id,
+    deniedAbilities:(restrictions||[]).filter(item=>item.user_id===a.user_id&&item.allowed===false).map(item=>item.ability),
+    permissionOverrides:(restrictions||[]).filter(item=>item.user_id===a.user_id).map(item=>({ability:item.ability,allowed:item.allowed}))
    }))
   },{headers:HEADERS});
  }catch{return fail("Không thể tải danh sách tài khoản BTC.",503);}

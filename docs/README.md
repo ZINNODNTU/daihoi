@@ -52,6 +52,8 @@
 
 | **V57 — Phân quyền theo từng tài khoản BTC và một tổng phiếu BCH dùng chung** | [Hướng dẫn V57](huong-dan/PHAN-QUYEN-TAI-KHOAN-TONG-PHIEU-CHUNG-V57.md) — bật/tắt quyền từng người; lưu tổng phiếu một lần và tự tính % cho mọi ứng viên. |
 
+| **V58 — Tách sổ kiểm phiếu BCH và phân quyền từng tài khoản BTC theo nghiệp vụ** | [Sổ kiểm phiếu & phân quyền V58](huong-dan/SO-KIEM-PHIEU-VA-PHAN-QUYEN-TAI-KHOAN-V58.md) — sửa lỗi lưu tổng phiếu V57, quyền xem/nhập phiếu riêng, batch quyền có audit giao dịch. |
+
 ## Cấu trúc thư mục
 
 ```text
