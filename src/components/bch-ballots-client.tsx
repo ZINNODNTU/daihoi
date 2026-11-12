@@ -6,7 +6,8 @@ import {
  LockKeyhole,RefreshCw,Search,ShieldCheck,UsersRound
 } from "lucide-react";
 import {BchBallotEditor} from "@/components/bch-ballot-editor";
-import {ballotPercentage,formatBallotPercentage,type BchBallotCandidate} from "@/lib/bch-candidates";
+import {BchNewCommitteeLaunch} from "@/components/bch-new-committee-launch";
+import {ballotPercentage,formatBallotPercentage,sortBchBallotsByPercentage,type BchBallotCandidate} from "@/lib/bch-candidates";
 
 type Props={
  congressId:string;congressName:string;congressCode:string;
@@ -21,16 +22,20 @@ export function BchBallotsClient({congressId,congressName,congressCode,
  const [total,setTotal]=useState<number|null>(totalBallots);
  const [search,setSearch]=useState("");
  const [filter,setFilter]=useState<"all"|"entered"|"pending">("all");
+ const [sortMode,setSortMode]=useState<"votes_desc"|"manual">("votes_desc");
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState(initialError);
  const [notice,setNotice]=useState("");
  const recorded=candidates.filter(c=>c.votes_received!==null&&c.votes_received!==undefined).length;
  const pending=candidates.length-recorded;
- const visible=useMemo(()=>candidates.filter(c=>
+ const visible=useMemo(()=>{
+  const filtered=candidates.filter(c=>
   c.full_name.toLocaleLowerCase("vi").includes(search.toLocaleLowerCase("vi"))&&
   (filter==="all"||filter==="entered"&&c.votes_received!==null||
    filter==="pending"&&c.votes_received===null)
- ),[candidates,search,filter]);
+ );
+  return sortMode==="votes_desc"?sortBchBallotsByPercentage(filtered,total):filtered;
+ },[candidates,search,filter,sortMode,total]);
  async function refresh(){
   if(busy)return;
   setBusy(true);setError("");setNotice("");
@@ -53,7 +58,7 @@ export function BchBallotsClient({congressId,congressName,congressCode,
    const {default:writeExcelFile}=await import("write-excel-file/browser");
    const rows:(string|number)[][]=[
     ["STT","Họ tên ứng viên BCH","Số phiếu đạt","Tổng số phiếu chung","Tỷ lệ (%)"],
-    ...candidates.map((c,i)=>[
+    ...sortBchBallotsByPercentage(candidates,total).map((c,i)=>[
      i+1,c.full_name,c.votes_received??"",total??"",
      ballotPercentage(c.votes_received,total)===null?"":Number(ballotPercentage(c.votes_received,total)!.toFixed(2))
     ])
@@ -128,8 +133,8 @@ export function BchBallotsClient({congressId,congressName,congressCode,
    <div className="grid gap-3 text-[12px] sm:grid-cols-3">
     {[
      {number:"01",title:"Nhập tổng phiếu",detail:"Chỉ nhập một lần cho Đại hội."},
-     {number:"02",title:"Ghi phiếu từng ứng viên",detail:"Mỗi ứng viên có số phiếu đạt riêng."},
-     {number:"03",title:"Đối chiếu và xuất",detail:"Tỷ lệ được tính tự động theo tổng chung."}
+     {number:"02",title:"Ghi thuận hoặc ngược",detail:"Phiếu ngược tự lấy tổng trừ số phiếu nhập."},
+     {number:"03",title:"Xếp hạng và ra mắt",detail:"Lấy đúng N người theo tỷ lệ phiếu cao nhất."}
     ].map(step=><div key={step.number} className="flex items-start gap-3">
      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#ecf5f8] text-[12px] font-extrabold text-[#227c9f]">{step.number}</span>
      <div><p className="font-bold text-[#28546b]">{step.title}</p><p className="mt-1 text-[11px] leading-4 text-[#798fa0]">{step.detail}</p></div>
@@ -147,7 +152,16 @@ export function BchBallotsClient({congressId,congressName,congressCode,
      {label}
     </button>)}
    </div>
-   <label className="relative w-full max-w-[320px]">
+   <label className="flex items-center gap-2 text-[11px] font-bold text-[#52788e]">
+     Sắp xếp
+     <select value={sortMode} onChange={e=>setSortMode(e.target.value as "votes_desc"|"manual")}
+      aria-label="Sắp xếp ứng viên kiểm phiếu"
+      className="field min-h-10 min-w-[160px] rounded-lg text-[12px]">
+      <option value="votes_desc">Tỷ lệ phiếu cao nhất</option>
+      <option value="manual">Thứ tự danh sách</option>
+     </select>
+    </label>
+    <label className="relative w-full max-w-[320px]">
     <Search size={15} className="pointer-events-none absolute left-3 top-3 text-[#8fa5b3]"/>
     <input className="field min-h-10 w-full !pl-9" value={search}
      onChange={e=>setSearch(e.target.value)}
@@ -181,7 +195,9 @@ export function BchBallotsClient({congressId,congressName,congressCode,
      {!visible.length&&<p className="p-5 text-[12px] text-[#738e9d]">Không có ứng viên phù hợp với bộ lọc.</p>}
     </div>
    </section>}
-  <p className="text-[11px] leading-6 text-[#7b919f]">
+  <BchNewCommitteeLaunch candidates={candidates} total={total}
+    congressName={congressName} canViewBch={canViewBch}/>
+   <p className="text-[11px] leading-6 text-[#7b919f]">
    Sổ kiểm phiếu chỉ ghi nhận kết quả từ biên bản thực tế; không phải hệ thống bỏ phiếu điện tử.
    Quyền xem và quyền ghi được quản lý riêng cho từng tài khoản BTC tại trang Phân quyền Đại hội.
   </p>

@@ -2,7 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import ts from "typescript";
-import {validateBchVotes} from "../src/lib/bch-candidates.ts";
+import {validateBchVotes,validateBchVoteEntry} from "../src/lib/bch-candidates.ts";
 const src=readFileSync(new URL("../src/app/api/bch-candidates/ballots/route.ts",import.meta.url),"utf8");
 const js=ts.transpileModule(src,{compilerOptions:{
  module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true
@@ -44,7 +44,7 @@ const mocks={
  "@/lib/auth":{getAuth:async()=>({supabase:userDb,user:state.loggedIn?{id:user}:null}),
   hasCongressAbility:async(_db,_id,_congress,ability)=>ability==="ballots.read"?state.read:state.write},
  "@/lib/supabase/admin":{createAdminClient:()=>admin},
- "@/lib/bch-candidates":{validateBchVotes},
+ "@/lib/bch-candidates":{validateBchVotes,validateBchVoteEntry},
  "@/lib/system-log":{writeSystemLog:async item=>{state.logs.push(item);}}
 };
 const m={exports:{}};
@@ -102,6 +102,26 @@ test("clearing votes only touches the candidate tally and does not delete profil
  assert.equal(state.votes,null);
  assert.equal(state.calls.length,2);
 });
+test("new phiếu thuận/ngược API stores converted achieved votes, not against count",async()=>{
+ reset();state.total=10;
+ let response=await submit({vote_mode:"against",entered_votes:4});
+ assert.equal(response.status,200);
+ assert.equal((await response.json()).candidate.votes_received,6);
+ assert.equal(state.calls[0].args.p_votes,6);
+ assert.equal(state.logs[0].context.entryMode,"against");
+ assert.equal(state.logs[0].context.enteredVotes,4);
+
+ response=await submit({vote_mode:"favorable",entered_votes:4});
+ assert.equal(response.status,200);
+ assert.equal((await response.json()).candidate.votes_received,4);
+ assert.equal(state.calls[1].args.p_votes,4);
+ assert.equal((await submit({vote_mode:"against",entered_votes:11})).status,400);
+ assert.equal((await submit({vote_mode:"against",entered_votes:-1})).status,400);
+ assert.equal((await submit({vote_mode:"invalid",entered_votes:1})).status,400);
+ assert.equal((await submit({vote_mode:"against",entered_votes:4,votes_received:6})).status,400);
+ assert.equal(state.calls.length,2);
+});
+
 test("GET requires ballots.read and returns only scoped private ballot fields",async()=>{
  reset();
  const response=await GET(new Request("https://test.local/api/bch-candidates/ballots?congressId="+congress));

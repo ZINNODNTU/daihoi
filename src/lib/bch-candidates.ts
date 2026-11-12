@@ -7,7 +7,8 @@ export type BchCandidate={
 /** Minimal server-scoped tally record; personnel biodata is not required for counting. */
 export type BchBallotCandidate=Pick<BchCandidate,
  "id"|"full_name"|"display_order"|"created_at"|"updated_at"
-> & {votes_received:number|null;total_ballots:number|null};
+> & {votes_received:number|null;total_ballots:number|null;
+ photo_path?:string|null;current_position?:string|null};
 
 export type BchCandidateInput=Pick<BchCandidate,
  "full_name"|"birth_year"|"hometown"|"ethnicity"|"education_level"|
@@ -35,6 +36,60 @@ export function ballotPercentage(votes:number|null|undefined,total:number|null|u
 export function formatBallotPercentage(votes:number|null|undefined,total:number|null|undefined){
  const percentage=ballotPercentage(votes,total);
  return percentage===null?"—":percentage.toLocaleString("vi-VN",{minimumFractionDigits:2,maximumFractionDigits:2})+"%";
+}
+
+export type BchVoteInputMode="favorable"|"against";
+
+/** Validate a transcribed count, then convert against votes into elected votes.
+ * The persisted tally always stores achieved votes, regardless of entry mode.
+ * No destructive migration or rewrite of legacy tallies is required.
+ */
+export function validateBchVoteEntry(value:unknown,total:number|null,mode:unknown){
+ if(mode!=="favorable"&&mode!=="against")
+  return {votes:null,entered:null,error:"Hình thức nhập phiếu không hợp lệ."};
+ const parsed=validateBchVotes(value,total);
+ if(parsed.error)return {votes:null,entered:null,error:parsed.error};
+ return {
+  votes:parsed.votes===null?null:mode==="against"?total!-parsed.votes:parsed.votes,
+  entered:parsed.votes,error:null
+ };
+}
+
+export function sortBchBallotsByPercentage<T extends Pick<BchBallotCandidate,
+ "id"|"full_name"|"display_order"|"votes_received">>(candidates:readonly T[],total:number|null):T[]{
+ return [...candidates].sort((a,b)=>{
+  const pctA=ballotPercentage(a.votes_received,total);
+  const pctB=ballotPercentage(b.votes_received,total);
+  if(pctA===null&&pctB!==null)return 1;
+  if(pctB===null&&pctA!==null)return -1;
+  if(pctA!==null&&pctB!==null&&pctA!==pctB)return pctB-pctA;
+  return a.display_order-b.display_order||
+   a.full_name.localeCompare(b.full_name,"vi")||a.id.localeCompare(b.id);
+ });
+}
+
+/** An exact top-N shortlist, not an official proclamation of election results.
+ * All votes must be recorded so missing tallies cannot distort the ranking.
+ * A tie at the cutoff is reported for review; no extra member is silently added.
+ */
+export function selectNewBchMembers<T extends BchBallotCandidate>(
+ candidates:readonly T[],total:number|null,requested:unknown
+):{members:T[];cutoffTie:boolean;error:string|null}{
+ const count=Number(requested);
+ const validInput=(typeof requested==="string"&&/^[1-9][0-9]*$/.test(requested))||
+  (typeof requested==="number"&&Number.isSafeInteger(requested));
+ if(!validInput||!Number.isSafeInteger(count)||count<1)
+  return {members:[],cutoffTie:false,error:"Nhập số lượng ủy viên BCH khóa mới (số nguyên từ 1 trở lên)."};
+ if(count>candidates.length)
+  return {members:[],cutoffTie:false,error:"Số lượng ủy viên không được vượt số ứng viên BCH."};
+ if(total===null||total<=0)
+  return {members:[],cutoffTie:false,error:"Cần lưu tổng phiếu chung trước khi lập danh sách BCH."};
+ if(candidates.some(item=>ballotPercentage(item.votes_received,total)===null))
+  return {members:[],cutoffTie:false,error:"Hãy nhập đủ phiếu hợp lệ cho toàn bộ ứng viên trước khi ra mắt BCH mới."};
+ const ranked=sortBchBallotsByPercentage(candidates,total);
+ const cutoffTie=count<ranked.length&&
+  ranked[count-1].votes_received===ranked[count].votes_received;
+ return {members:ranked.slice(0,count),cutoffTie,error:null};
 }
 
 /** One common denominator for the congress, entered once by the BTC. */

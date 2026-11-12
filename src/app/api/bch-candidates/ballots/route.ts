@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
 import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
-import {validateBchVotes} from "@/lib/bch-candidates";
+import {validateBchVotes,validateBchVoteEntry} from "@/lib/bch-candidates";
 import {writeSystemLog} from "@/lib/system-log";
 
 export const runtime="nodejs";
@@ -25,13 +25,18 @@ export async function GET(request:Request){
    .select("id,name,kind,bch_total_ballots").eq("id",congressId).maybeSingle();
   if(congressError||!congress)return fail("Không đọc được Đại hội.",503);
   if(congress.kind!=="doan")return fail("Sổ kiểm phiếu chỉ áp dụng cho Đại hội Đoàn.",404);
-  const {data,error}=await createAdminClient().from("bch_candidates")
-   .select("id,full_name,display_order,created_at,updated_at,votes_received,total_ballots")
+  const [canWrite,canViewBch]=await Promise.all([
+    hasCongressAbility(supabase,user.id,congressId,"ballots.write"),
+    hasCongressAbility(supabase,user.id,congressId,"bch.read")
+   ]);
+   const {data,error}=await createAdminClient().from("bch_candidates")
+   .select("id,full_name,display_order,created_at,updated_at,votes_received,total_ballots"+
+     (canViewBch?",photo_path,current_position":""))
    .eq("congress_id",congressId).order("display_order").order("created_at").limit(500);
   if(error)return fail("Không tải được danh sách kiểm phiếu ("+(error.code||"unknown")+").",503);
   return NextResponse.json({
    total_ballots:congress.bch_total_ballots,candidates:data||[],
-   canWrite:await hasCongressAbility(supabase,user.id,congressId,"ballots.write")
+   canWrite
   },{headers:HEADERS});
  }catch{return fail("Không tải được sổ kiểm phiếu.",503);}
 }
@@ -58,7 +63,14 @@ export async function PATCH(request:Request){
    .select("kind,bch_total_ballots").eq("id",congressId).maybeSingle();
   if(congressError||!congress)return fail("Không xác minh được Đại hội.",503);
   if(congress.kind!=="doan")return fail("Chỉ Đại hội Đoàn có sổ kiểm phiếu BCH.",400);
-  const checked=validateBchVotes(body?.votes_received,congress.bch_total_ballots);
+  // New entry protocol accepts the transcribed count + explicit mode.
+   // Legacy requests supplying votes_received remain direct achieved votes.
+   const explicitMode=body?.vote_mode!==undefined;
+   if(explicitMode&&body?.votes_received!==undefined)
+    return fail("Không được gửi đồng thời phiếu đã quy đổi và phiếu gốc.",400);
+   const checked=explicitMode?
+    validateBchVoteEntry(body?.entered_votes,congress.bch_total_ballots,body?.vote_mode):
+    validateBchVotes(body?.votes_received,congress.bch_total_ballots);
   if(checked.error)return fail(checked.error,400);
   const timestamp=body?.expectedUpdatedAt;
   if(typeof timestamp!=="string"||timestamp.length>64||
@@ -79,7 +91,8 @@ export async function PATCH(request:Request){
   await writeSystemLog({level:"info",source:"api",event:"bch.ballot_updated",
    message:"BTC ghi nhận số phiếu BCH tại phân hệ kiểm phiếu.",actorId:user.id,congressId,
    context:{operation:"bch.ballots.update",endpoint:"/api/bch-candidates/ballots",
-    httpMethod:"PATCH",candidateId:id,hasResult:checked.votes!==null}});
+    httpMethod:"PATCH",candidateId:id,hasResult:checked.votes!==null,
+     entryMode:explicitMode?body.vote_mode:"legacy-direct",enteredVotes:explicitMode&&"entered" in checked?checked.entered:checked.votes}});
   return NextResponse.json({candidate:data},{headers:HEADERS});
  }catch{return fail("Không xử lý được kết quả kiểm phiếu.",400);}
 }

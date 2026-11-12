@@ -59,6 +59,8 @@
 | **V60 — RBAC toàn bộ tài khoản và nhóm quyền theo Đại hội** | [Hướng dẫn RBAC V60](huong-dan/RBAC-TOAN-HE-THONG-V60.md) — phân quyền theo vai trò, nhóm và từng tài khoản; migration đã áp dụng trên Supabase production ngày 12/11/2026. |
 | **V61 — Admin xem đúng giao diện thực tế của đại biểu** | Sử dụng chung các trang cổng đại biểu, giữ nguyên phiên Admin và khóa thao tác ghi trong chế độ xem hộ. |
 
+| **V62 — Nhập phiếu thuận/ngược, xếp theo % cao nhất và ra mắt BCH khóa mới** | [Hướng dẫn kiểm phiếu V62](huong-dan/PHIEU-THUAN-NGUOC-RA-MAT-BCH-V62.md) — chọn đúng N người, cảnh báo đồng phiếu và trình chiếu nhân sự; không cần migration mới. |
+
 ## Cấu trúc thư mục
 
 ```text
