@@ -5,9 +5,12 @@ import Link from "next/link";
 import {Camera,CameraOff,CheckCircle2,ClipboardPaste,ImagePlus,LoaderCircle,RefreshCw,ShieldCheck,ScanLine,AlertCircle} from "lucide-react";
 import {parseSessionCheckinCode,type ParsedSessionCode} from "@/lib/delegate-session-scanner";
 import {startTrackedScanner,trackedBoxStyle} from "@/lib/fast-qr-camera";
+import type {CongressKind} from "@/components/brand-mark";
+import {delegateTheme} from "@/lib/delegate-brand-theme";
 
 type Result={ok:true;already?:boolean;sessionName:string;delegate:{full_name:string};checkin?:{checked_in_at:string}};
-export function DelegateCheckinScanner(){
+export function DelegateCheckinScanner({kind="doan"}:{kind?:CongressKind}){
+ const theme=delegateTheme(kind);
  const router=useRouter();
  const [camera,setCamera]=useState(false);
  const [tracked,setTracked]=useState<ReturnType<typeof trackedBoxStyle>|null>(null);
@@ -132,90 +135,82 @@ export function DelegateCheckinScanner(){
  // checkin is intentionally invoked after one decoded result; scan lock prevents duplicates.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[camera,selectedCamera,refreshCameras]);
- return <section id="diem-danh" className="scroll-mt-28 overflow-hidden rounded-[20px] border border-[#c9e0e5] bg-white shadow-[0_12px_32px_rgba(20,67,83,.055)] print:hidden">
-  <div className="border-b border-[#e4edef] bg-[#f5faf9] px-5 py-5 sm:px-7">
-   <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.15em] text-[#2e82a7]">
-    <ScanLine size={16}/> Điểm danh phiên Đại hội
+ return <section id="diem-danh" className="scroll-mt-28 overflow-hidden rounded-[23px] border border-[#d9e7ed] bg-white shadow-[0_12px_40px_rgba(26,64,91,.075)] print:hidden">
+  <div className={"relative overflow-hidden border-b px-5 pb-5 pt-6 sm:px-7 sm:pb-6 "+theme.header+" "+theme.border}>
+   <span aria-hidden="true" className={"absolute inset-x-0 top-0 h-[4px] "+theme.stripe}/>
+   <div className="flex items-start gap-3.5">
+    <span className={"flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] border border-white/90 shadow-sm "+theme.soft+" "+theme.accent}><ScanLine size={25}/></span>
+    <div className="min-w-0">
+     <p className={"text-[10px] font-extrabold uppercase tracking-[.14em] "+theme.eyebrow}>QUÉT MÃ QR CỦA PHIÊN</p>
+     <h2 className="mt-1 text-[clamp(19px,4.3vw,25px)] font-extrabold leading-[1.3] tracking-[-.025em] text-[#203e53]">Sẵn sàng điểm danh</h2>
+     <p className="mt-1.5 max-w-[450px] text-[12px] leading-5 text-[#667e91]">Hướng camera về mã QR được Ban Tổ chức chiếu tại hội trường. Hệ thống tự xác nhận bằng tài khoản của bạn.</p>
+    </div>
    </div>
-   <h2 className="mt-2 text-[21px] font-extrabold tracking-tight text-[#193f51]">Quét mã để xác nhận tham dự</h2>
-   <p className="mt-2 text-[13px] leading-6 text-[#657e8e]">Dùng camera điện thoại quét QR cố định của phiên tại hội trường. Hệ thống tự nhận diện đúng đại biểu từ tài khoản đã đăng nhập.</p>
   </div>
-  <div className="p-4 sm:p-6">
-   <details className="mb-4 rounded-xl border border-[#d8e8ea] bg-[#f6fafb]">
-     <summary className="flex min-h-12 cursor-pointer items-center px-4 text-[12px] font-bold text-[#496e80]">Tùy chọn camera (nếu cần)</summary>
-     <div className="flex flex-wrap items-end gap-2 border-t border-[#d8e8ea] p-3 sm:p-4">
-    <div className="min-w-0 flex-1">
-     <label htmlFor="delegate-camera-select" className="flex items-center gap-2 text-[12px] font-extrabold text-[#335d6e]">
-      <Camera size={16}/> Chọn camera điểm danh
-     </label>
-     <select id="delegate-camera-select" value={selectedCamera} disabled={submitting||listingCameras}
-      onChange={e=>{setError("");setSelectedCamera(e.target.value);}}
-      className="field mt-2 !min-h-[46px] w-full !rounded-lg">
-      <option value="">Camera sau (tự động)</option>
-      {devices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>
-       {device.label||"Camera "+(index+1)}
-      </option>)}
-     </select>
+  <div className="space-y-4 p-4 sm:p-6">
+   {result&&<div role="status" aria-live="polite" className="rounded-2xl border border-[#bee5cd] bg-[#eaf8ef] px-4 py-5 text-[#196749]">
+    <div className="flex items-start gap-3">
+     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-[#249361]"><CheckCircle2 size={25}/></span>
+     <div className="min-w-0">
+      <p className="text-[16px] font-extrabold leading-6">{result.already?"Bạn đã điểm danh phiên này":"Điểm danh thành công!"}</p>
+      <p className="mt-1 text-[12px] font-semibold leading-5">{result.delegate.full_name}</p>
+      <p className="mt-0.5 text-[12px] leading-5">{result.sessionName}</p>
+      <p className="mt-1 text-[11px] leading-5">Lượt tham dự đã được ghi nhận.</p>
+     </div>
     </div>
-    <button type="button" onClick={()=>void refreshCameras()} disabled={listingCameras}
-     aria-label="Làm mới danh sách camera" title="Làm mới danh sách camera"
-     className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-lg border border-[#cbdfe4] bg-white text-[#397383] disabled:opacity-50">
-     <RefreshCw size={18} className={listingCameras?"animate-spin":""}/>
-    </button>
-    {!devices.length&&<p className="w-full text-[11px] leading-5 text-[#839dab]">
-     Mở camera và cấp quyền truy cập để hiển thị các camera khả dụng của điện thoại hoặc máy tính.
-    </p>}
-   </div>
-   </details>
-    {camera&&<div className="relative mx-auto mb-4 max-w-[560px] overflow-hidden rounded-2xl border border-[#254d60] bg-[#102b3b]">
-    <video ref={videoRef} autoPlay muted playsInline aria-label="Camera quét mã QR điểm danh"
-     className="aspect-[4/3] w-full max-h-[48dvh] sm:max-h-[60dvh] bg-[#102b3b] object-cover"/>
-    <div aria-hidden="true" className="pointer-events-none absolute inset-[13%] rounded-2xl border-2 border-[#e1bf7b]/75 shadow-[0_0_0_100px_rgba(5,27,40,.15)]"/>
-    {tracked&&<div aria-hidden="true" className="pointer-events-none absolute rounded-lg border-[3px] border-[#56eba4] bg-[#56eba4]/10 shadow-[0_0_20px_#56eba477]"
-     style={tracked}/>}
-    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#09293c] to-transparent px-4 pb-4 pt-10 text-center text-xs font-semibold text-white">
-     Đưa mã QR của phiên vào khung hình
-    </div>
+    <Link href="/my-card/history" className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#a9dcc0] bg-white px-4 text-[12px] font-extrabold text-[#19714e] sm:w-auto">Xem lịch sử điểm danh <CheckCircle2 size={16}/></Link>
    </div>}
-   {result&&<div role="status" className="mb-4 rounded-xl border border-[#c4dfe9] bg-[#edf6fa] px-4 py-4 text-[#176f9a]">
-    <p className="flex items-center gap-2 text-sm font-extrabold"><CheckCircle2 size={19}/>{result.already?"Bạn đã điểm danh phiên này":"Điểm danh thành công!"}</p>
-    <p className="mt-2 text-xs leading-6">{result.sessionName} · {result.delegate.full_name}</p>
-    <p className="mt-1 text-[12px] leading-5">Lượt tham dự đã được lưu.</p>
-     <Link href="/my-card/history" className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-[#a5d0e4] bg-white px-4 text-[12px] font-bold text-[#176f9a]">Xem lịch sử điểm danh</Link>
+   {error&&<p role="alert" className="flex items-start gap-2 rounded-xl border border-[#f0d8bc] bg-[#fff8ed] px-4 py-3 text-[12px] leading-6 text-[#945c26]"><AlertCircle size={18} className="mt-0.5 shrink-0"/>{error}</p>}
+   {cameraError&&<p role="alert" className="flex items-start gap-2 rounded-xl border border-[#f0d8bc] bg-[#fff8ed] px-4 py-3 text-[12px] leading-6 text-[#945c26]"><AlertCircle size={18} className="mt-0.5 shrink-0"/>{cameraError}</p>}
+   {camera?<div className="relative mx-auto overflow-hidden rounded-[18px] border-[5px] border-[#ecf3f6] bg-[#0d2534] shadow-[0_12px_32px_rgba(10,43,62,.18)]">
+    <video ref={videoRef} autoPlay muted playsInline aria-label="Camera quét mã QR điểm danh" className="aspect-[4/3] w-full max-h-[54dvh] bg-[#0d2534] object-cover sm:max-h-[59dvh]"/>
+    <div aria-hidden="true" className="pointer-events-none absolute inset-[15%] rounded-[20px] border-[3px] border-white/85 shadow-[0_0_0_100px_rgba(7,24,35,.32)]"/>
+    {tracked&&<div aria-hidden="true" className="pointer-events-none absolute rounded-lg border-[3px] border-[#63f4a4] bg-[#63f4a4]/10 shadow-[0_0_22px_#63f4a455]" style={tracked}/>}
+    <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#092a3b] to-transparent px-3 pb-4 pt-12 text-center text-[12px] font-bold text-white">Căn mã QR vào giữa khung hình</p>
+   </div>:!result&&<div className={"relative flex min-h-[128px] flex-col items-center justify-center gap-2 overflow-hidden rounded-[16px] border border-dashed px-4 py-5 "+theme.border+" "+theme.tint}>
+    <span className={"flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm "+theme.accent}><ScanLine size={26}/></span>
+    <p className="text-[12px] font-extrabold text-[#4b6c80]">Đưa mã QR của phiên vào vùng quét</p>
+    <p className="text-center text-[11px] leading-5 text-[#8198a7]">Đảm bảo đủ sáng, giữ điện thoại ổn định.</p>
    </div>}
-   {error&&<p role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-[#f0ddc8] bg-[#fff8ef] px-4 py-3 text-xs leading-6 text-[#925b25]"><AlertCircle size={17} className="mt-0.5 shrink-0"/>{error}</p>}
-   {cameraError&&<p role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-[#f0ddc8] bg-[#fff8ef] px-4 py-3 text-xs leading-6 text-[#925b25]"><AlertCircle size={17} className="mt-0.5 shrink-0"/>{cameraError}</p>}
-   <button type="button" disabled={submitting}
-    onClick={()=>camera?stopCamera():openCamera()}
-    className={"inline-flex min-h-[54px] w-full items-center justify-center gap-3 rounded-xl px-5 text-[14px] font-extrabold transition active:scale-[.99] "+
-     (camera?"border border-[#cbdce2] bg-[#f3f7f9] text-[#27566b]":"bg-[#087fae] text-white hover:bg-[#066b93]")}>
-    {submitting?<LoaderCircle size={20} className="animate-spin"/>:camera?<CameraOff size={20}/>:<Camera size={20}/>}
-    {submitting?"Đang xác nhận điểm danh...":camera?"Dừng camera":"Mở camera quét điểm danh"}
+   <button type="button" disabled={submitting||decodingPhoto} onClick={()=>camera?stopCamera():openCamera()}
+    className={"inline-flex min-h-[58px] w-full items-center justify-center gap-3 rounded-[14px] px-4 text-[14px] font-extrabold shadow-[0_8px_18px_rgba(29,64,86,.1)] transition-transform active:scale-[.99] focus-visible:outline-none focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-55 "+(camera?"border border-[#d6e5ed] bg-[#f4f8fa] text-[#345a70]":theme.cta)}>
+    {submitting?<LoaderCircle size={21} className="animate-spin"/>:camera?<CameraOff size={22}/>:<Camera size={22}/>}
+    {submitting?"Đang xác nhận điểm danh...":camera?"Dừng quét camera":"Mở camera quét QR"}
    </button>
-   <div className="mt-3">
-    <input ref={captureRef} type="file" accept="image/*" capture="environment"
-     className="sr-only" aria-label="Chụp ảnh hoặc chọn ảnh QR điểm danh"
-     onChange={e=>void scanCapturedPhoto(e)}/>
-    <button type="button" disabled={decodingPhoto||submitting}
-     onClick={()=>captureRef.current?.click()}
-     className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#cde0e5] bg-[#f4f9fa] px-4 text-xs font-bold text-[#386c7d] hover:bg-[#edf6f8]">
-     {decodingPhoto?<LoaderCircle size={17} className="animate-spin"/>:<ImagePlus size={17}/>}
-     {decodingPhoto?"Đang đọc mã từ ảnh...":"Dùng camera mặc định / Ảnh đã chụp"}
-    </button>
-    <p className="mt-2 text-center text-[10px] leading-5 text-[#8ba0ac]">Phương án dành cho thiết bị không hỗ trợ quét trực tiếp, kể cả khi truy cập qua HTTP nội bộ.</p>
+   <div className="grid gap-2.5 sm:grid-cols-2">
+    <div>
+     <input ref={captureRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Chụp ảnh hoặc chọn ảnh QR điểm danh" onChange={e=>void scanCapturedPhoto(e)}/>
+     <button type="button" disabled={decodingPhoto||submitting} onClick={()=>captureRef.current?.click()}
+      className={"inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border px-3 text-[12px] font-bold transition disabled:opacity-55 "+theme.secondary}>
+      {decodingPhoto?<LoaderCircle size={17} className="animate-spin"/>:<ImagePlus size={18}/>}
+      {decodingPhoto?"Đang đọc QR...":"Quét từ ảnh đã chụp"}
+     </button>
+    </div>
+    <Link href="/my-card/history" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#dce6eb] bg-[#f8fbfc] px-3 text-[12px] font-bold text-[#516e83] hover:bg-[#eef5f9]"><CheckCircle2 size={18}/> Lịch sử tham dự</Link>
    </div>
-   <div className="mt-5 border-t border-[#ebf0f2] pt-4">
-    <label htmlFor="delegate-qr-link" className="flex items-center gap-2 text-[12px] font-bold text-[#496a7d]"><ClipboardPaste size={16}/> Hoặc dán liên kết QR phiên</label>
+   <details className="mb-4 rounded-xl border border-[#dfeaf0] bg-[#fbfcfe]">
+    <summary className="flex min-h-12 cursor-pointer items-center gap-2 px-4 text-[12px] font-bold text-[#476b80]"><Camera size={17}/> Tùy chọn camera (nếu cần)</summary>
+    <div className="flex flex-wrap items-end gap-2 border-t border-[#e3edf1] p-3 sm:p-4">
+     <div className="min-w-0 flex-1">
+      <label htmlFor="delegate-camera-select" className="flex items-center gap-2 text-[12px] font-extrabold text-[#335d6e]"><Camera size={16}/> Chọn camera điểm danh</label>
+      <select id="delegate-camera-select" value={selectedCamera} disabled={submitting||listingCameras} onChange={e=>{setError("");setSelectedCamera(e.target.value);}} className="field mt-2 !min-h-[46px] w-full !rounded-lg">
+       <option value="">Camera sau (tự động)</option>
+       {devices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>{device.label||"Camera "+(index+1)}</option>)}
+      </select>
+     </div>
+     <button type="button" onClick={()=>void refreshCameras()} disabled={listingCameras} aria-label="Làm mới danh sách camera" title="Làm mới danh sách camera" className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-lg border border-[#cbdfe4] bg-white text-[#397383] disabled:opacity-50">
+      <RefreshCw size={18} className={listingCameras?"animate-spin":""}/>
+     </button>
+     {!devices.length&&<p className="w-full text-[11px] leading-5 text-[#839dab]">Mở camera và cấp quyền truy cập để hiển thị các camera khả dụng.</p>}
+    </div>
+   </details>
+   <div className="border-t border-[#e6eef2] pt-4">
+    <label htmlFor="delegate-qr-link" className="flex items-center gap-2 text-[12px] font-bold text-[#496a7d]"><ClipboardPaste size={16}/> Hoặc dán liên kết QR của phiên</label>
     <form className="mt-2 flex flex-col gap-2 sm:flex-row" onSubmit={e=>{e.preventDefault();receive(link);}}>
-     <input id="delegate-qr-link" value={link} onChange={e=>setLink(e.target.value)}
-      type="url" inputMode="url" autoComplete="off"
-      className="field min-h-[48px] flex-1" placeholder="https://.../checkin/s/..."/>
-     <button type="submit" disabled={submitting||!link.trim()}
-      className="inline-flex min-h-[48px] items-center justify-center rounded-lg border border-[#b6d2d8] bg-[#eff7f8] px-5 text-xs font-bold text-[#176376]">Xác nhận</button>
+     <input id="delegate-qr-link" value={link} onChange={e=>setLink(e.target.value)} type="url" inputMode="url" autoComplete="off" className="field min-h-[48px] min-w-0 flex-1" placeholder="https://.../checkin/s/..."/>
+     <button type="submit" disabled={submitting||!link.trim()} className={"inline-flex min-h-12 items-center justify-center rounded-xl border px-5 text-[12px] font-bold disabled:opacity-55 "+theme.secondary}>Xác nhận</button>
     </form>
-    <p className="mt-3 flex items-start gap-2 text-[11px] leading-5 text-[#7693a0]"><ShieldCheck size={15} className="mt-0.5 shrink-0"/>
-     Camera chỉ xử lý hình ảnh trên thiết bị. Barcode trên thẻ dành cho BTC đối chiếu, không dùng để tự điểm danh.
-    </p>
+    <p className="mt-3 flex items-start gap-2 text-[11px] leading-5 text-[#7590a1]"><ShieldCheck size={16} className="mt-0.5 shrink-0"/> Camera chỉ nhận dạng QR trên thiết bị. Barcode trên thẻ dành cho BTC hỗ trợ, không dùng để tự điểm danh.</p>
    </div>
   </div>
  </section>;

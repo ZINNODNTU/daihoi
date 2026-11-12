@@ -43,6 +43,7 @@
 | Tra cứu thiết kế/giải pháp của các bản cũ | [Lịch sử phiên bản](lich-su/README.md) và [bản lưu README gốc](lich-su/README-GOC-2026-11-09.md) |
 
 | **Chuẩn hóa vòng đời ảnh đại biểu/BCH V51 — chống trùng, nén, phân quyền, kiểm toán Storage** | [Hướng dẫn lưu ảnh V51](huong-dan/LUU-TRU-ANH-DAI-HOI-V51.md) — không cần migration, chỉ xóa thumbnail tái tạo được. |
+| **Giao diện điểm danh đại biểu và thẻ sáng theo logo Đoàn/Hội V53** | [Hướng dẫn giao diện V53](huong-dan/GIAO-DIEN-DIEM-DANH-DAI-BIEU-V53.md) — tối ưu QR trên di động, nhận diện từng Đại hội và chế độ in thẻ. |
 
 ## Cấu trúc thư mục
 

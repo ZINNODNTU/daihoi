@@ -50,9 +50,10 @@ export default async function CheckinSessionPage({
   .eq("is_active",true).limit(2);
  if(delegateError||delegates?.length!==1)
   return <Message text="Tài khoản chưa liên kết với đúng một hồ sơ đại biểu tại Đại hội này. Vui lòng liên hệ Ban Tổ chức."/>;
- const {data:congress}=await admin.from("congresses").select("name")
+ const {data:congress}=await admin.from("congresses").select("name,kind")
   .eq("id",session.congress_id).maybeSingle();
  return <SelfCheckinClient sessionId={sessionId} token={token}
   sessionName={session.name} congressName={congress?.name||"Đại hội"}
+   kind={congress?.kind==="hoi_sinh_vien"?"hoi_sinh_vien":"doan"}
   delegate={delegates[0]}/>;
 }
