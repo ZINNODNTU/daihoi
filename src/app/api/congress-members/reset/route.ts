@@ -1,7 +1,7 @@
 import {randomBytes} from "node:crypto";
 import {NextResponse} from "next/server";
 import {createAdminClient} from "@/lib/supabase/admin";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {writeSystemLog} from "@/lib/system-log";
 
 export const runtime="nodejs";
@@ -19,7 +19,7 @@ export async function POST(request:Request){
    typeof userId!=="string"||!UUID.test(userId))return fail("Dữ liệu không hợp lệ.",400);
   const {supabase,user}=await getAuth();
   if(!user)return fail("Vui lòng đăng nhập.",401);
-  if(!(await hasRole(supabase,user.id,congressId,"admin")))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"team.manage")))
    return fail("Chỉ quản trị Đại hội được đặt lại mật khẩu BTC.",403);
   const db=createAdminClient();
   const {data:account,error}=await db.from("btc_accounts").select("user_id")

@@ -57,7 +57,7 @@ const common={
  "next/server":next,
  "@/lib/auth":{
   getAuth:userAuth,getPortalViewerAuth:userAuth,
-  hasRole:async()=>state.manager,hasCongressAbility:async()=>state.staff
+  hasCongressAbility:async(_db,_uid,_cid,ability)=>ability.endsWith(".write")?state.manager:state.staff
  },
  "@/lib/supabase/admin":{createAdminClient:()=>db},
  "@/lib/portrait-storage":{readPortrait:async(path,width)=>{requests.push({path,width});return reading(path,width);},

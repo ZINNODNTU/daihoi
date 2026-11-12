@@ -1,5 +1,5 @@
 import {redirect,notFound} from "next/navigation";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {CongressSettingsClient} from "@/components/congress-settings-client";
 import {CongressDangerZone} from "@/components/congress-danger-zone";
 export const dynamic="force-dynamic";
@@ -7,7 +7,7 @@ export default async function CongressSettingsPage({params}:{params:Promise<{id:
  const {id}=await params;
  const {supabase,user}=await getAuth();
  if(!user)redirect("/login");
- if(!(await hasRole(supabase,user.id,id,"admin")))redirect(`/congresses/${id}`);
+ if(!(await hasCongressAbility(supabase,user.id,id,"settings.manage")))redirect(`/congresses/${id}`);
  const [{data:congress},{data:profile}]=await Promise.all([
   supabase.from("congresses").select("id,name,term,venue,status,slug,kind").eq("id",id).maybeSingle(),
   supabase.from("profiles").select("platform_role").eq("id",user.id).maybeSingle()

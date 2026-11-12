@@ -1,6 +1,6 @@
 import {networkInterfaces} from "node:os";
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {isQrAllowed} from "@/lib/attendance-window";
 import {createSessionEntryQr} from "@/lib/session-entry-qr";
@@ -41,7 +41,7 @@ export async function GET(request:Request){
   const congressId=params.get("congressId")||"";
   const sessionId=params.get("sessionId")||"";
   if(!uuid.test(congressId)||!uuid.test(sessionId))return fail("Phiên không hợp lệ.",400);
-  if(!(await hasRole(supabase,user.id,congressId,"checkin")))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"attendance.scan")))
    return fail("Chỉ BTC được phát mã QR điểm danh.",403);
   const {data:session,error}=await createAdminClient().from("attendance_sessions")
    .select("id,congress_id,name,status,starts_at,ends_at,qr_policy,seating_layout_id")

@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {writeSystemLog} from "@/lib/system-log";
 import {validateWindowDetailed,type QrPolicy} from "@/lib/attendance-window";
@@ -31,7 +31,7 @@ export async function POST(request:Request){
   const body=await request.json();
   const congressId=String(body.congressId||"");
   const name=String(body.name||"").trim().slice(0,160);
-  if(!uuid.test(congressId)||!(await hasRole(supabase,user.id,congressId,"admin")))
+  if(!uuid.test(congressId)||!(await hasCongressAbility(supabase,user.id,congressId,"attendance.sessions")))
    return NextResponse.json({error:"Không có quyền tạo phiên điểm danh."},{status:403});
   if(name.length<3)
    return NextResponse.json({error:"Tên phiên phải có tối thiểu 3 ký tự."},{status:400});
@@ -69,7 +69,7 @@ export async function PATCH(request:Request){
   const congressId=String(body.congressId||"");
   const sessionId=String(body.sessionId||"");
   if(!uuid.test(congressId)||!uuid.test(sessionId)||
-     !(await hasRole(supabase,user.id,congressId,"admin")))
+     !(await hasCongressAbility(supabase,user.id,congressId,"attendance.sessions")))
     return NextResponse.json({error:"Không đủ quyền."},{status:403});
   const update:Record<string,unknown>={};
   if(body.status!==undefined){

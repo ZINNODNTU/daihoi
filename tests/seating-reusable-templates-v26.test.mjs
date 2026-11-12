@@ -54,7 +54,7 @@ test("Từ chối mẫu trống, quá 500 ghế, tọa độ/mã trùng hoặc l
 
 test("API yêu cầu admin cho cả lưu mẫu, danh sách và áp dụng; không cho truy cập cross-tenant",()=>{
  const api=read("../src/app/api/seating/templates/route.ts");
- assert.match(api,/hasRole\(supabase,user\.id,congressId,"admin"\)/);
+ assert.match(api,/hasCongressAbility\(supabase,user\.id,congressId,\"seating\.write\"\)/);
  assert.match(api,/\.eq\("congress_id",congressId\)/);
  assert.match(api,/\.eq\("created_by",user\.id\)/);
  assert.match(api,/\.eq\("organization_id",organizationId\)/);

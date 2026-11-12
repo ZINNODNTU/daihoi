@@ -16,6 +16,7 @@ type PhotoTarget={kind:"form"}|{kind:"existing";candidate:BchCandidate};
 type UploadedPhoto={photo_path:string;updated_at:string;unchanged?:boolean;size?:number};
 type Props={
  congressId:string;congressName:string;congressCode:string;congressKind:string;ballotReady:boolean;canManage:boolean;
+ totalBallots:number|null;
  initialCandidates:BchCandidate[];initialError:string;delegates:DelegateOption[];
 };
 type FormDataState={
@@ -70,9 +71,10 @@ function BchPortrait({candidate,large=false}:{
 }
 
 export function BchCandidatesClient({
- congressId,congressName,congressCode,congressKind,ballotReady,canManage,initialCandidates,initialError,delegates
+ congressId,congressName,congressCode,congressKind,ballotReady,canManage,totalBallots,initialCandidates,initialError,delegates
 }:Props){
  const [candidates,setCandidates]=useState(()=>sortBchCandidates(initialCandidates));
+ const [sharedTotal,setSharedTotal]=useState<number|null>(totalBallots);
  const [search,setSearch]=useState("");
  const [form,setForm]=useState<FormDataState>(initial);
  const [showForm,setShowForm]=useState(false);
@@ -212,6 +214,7 @@ export function BchCandidatesClient({
    const body=await response.json();
    if(!response.ok)throw new Error(body.error||"Không đồng bộ được danh sách.");
    setCandidates(sortBchCandidates(body.candidates as BchCandidate[]));
+   if(canManage&&"ballotTotal" in body)setSharedTotal(body.ballotTotal??null);
   }catch(e){setError(e instanceof Error?e.message:"Không thể làm mới.");}
   finally{setBusy(false);}
  }
@@ -400,6 +403,7 @@ export function BchCandidatesClient({
 
   {congressKind==="doan"&&canManage&&<BchBallotEditor
    congressId={congressId} candidates={sorted} ballotReady={ballotReady} disabled={busy}
+   total={sharedTotal} onTotalSaved={value=>{setSharedTotal(value);void refresh();}}
    onSaved={saved=>{
     setCandidates(previous=>sortBchCandidates(previous.map(item=>
      item.id===saved.id?{...item,...saved}:item)));
@@ -451,10 +455,10 @@ export function BchCandidatesClient({
       <td>{item.ethnicity}</td><td>{item.education_level}</td>
       <td>{item.union_join_year}</td><td>{item.current_position}</td>
        {congressKind==="doan"&&canManage&&<td className="min-w-[145px]">
-        {!ballotReady?<span className="text-xs text-[#9aabb6]">Chờ cập nhật CSDL</span>:ballotPercentage(item.votes_received,item.total_ballots)!==null?
+        {!ballotReady?<span className="text-xs text-[#9aabb6]">Chờ cập nhật CSDL</span>:ballotPercentage(item.votes_received,sharedTotal)!==null?
          <div className="text-xs font-bold tabular-nums text-[#286b83]">
-          {item.votes_received?.toLocaleString("vi-VN")} / {item.total_ballots?.toLocaleString("vi-VN")}
-          <p className="mt-1 text-[16px] font-extrabold text-[#166a86]">{formatBallotPercentage(item.votes_received,item.total_ballots)}</p>
+          {item.votes_received?.toLocaleString("vi-VN")} / {sharedTotal?.toLocaleString("vi-VN")}
+          <p className="mt-1 text-[16px] font-extrabold text-[#166a86]">{formatBallotPercentage(item.votes_received,sharedTotal)}</p>
          </div>:<span className="text-xs text-[#9aabb6]">Chưa nhập</span>}
        </td>}
       {canManage&&<td><div className="flex flex-wrap gap-1.5">
@@ -497,8 +501,8 @@ export function BchCandidatesClient({
        {congressKind==="doan"&&canManage&&<div className="col-span-2 rounded-lg bg-[#eff6fa] p-3">
         <dt className="text-[#51788d]">Kết quả kiểm phiếu</dt>
         <dd className="mt-1 font-bold tabular-nums text-[#206b86]">
-         {!ballotReady?<span className="text-xs text-[#9aabb6]">Chờ cập nhật CSDL</span>:ballotPercentage(item.votes_received,item.total_ballots)!==null?
-          [item.votes_received?.toLocaleString("vi-VN"),item.total_ballots?.toLocaleString("vi-VN")].join(" / ")+" · "+formatBallotPercentage(item.votes_received,item.total_ballots):
+         {!ballotReady?<span className="text-xs text-[#9aabb6]">Chờ cập nhật CSDL</span>:ballotPercentage(item.votes_received,sharedTotal)!==null?
+          [item.votes_received?.toLocaleString("vi-VN"),sharedTotal?.toLocaleString("vi-VN")].join(" / ")+" · "+formatBallotPercentage(item.votes_received,sharedTotal):
           "Chưa nhập số phiếu"}
         </dd>
        </div>

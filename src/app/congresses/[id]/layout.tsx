@@ -1,8 +1,8 @@
 import {redirect,notFound} from "next/navigation";
 import {createClient} from "@/lib/supabase/server";
 import {AppShell} from "@/components/app-shell";
-import {getCongressRole} from "@/lib/auth";
-import {canCongress} from "@/lib/congress-permissions";
+import {getCongressRole,getCongressEffectiveAbilities} from "@/lib/auth";
+
 
 export const dynamic="force-dynamic";
 export default async function CongressLayout({children,params}:{
@@ -13,8 +13,10 @@ export default async function CongressLayout({children,params}:{
  const {data:{user},error:authError}=await supabase.auth.getUser();
  if(authError||!user)redirect("/login");
  // Resolve only verified roles; a revoked or missing BTC account is not staff.
- const accessRole=await getCongressRole(supabase,user.id,id);
- if(!canCongress(accessRole,"workspace.view"))redirect("/my-card");
+ const [accessRole,effectiveAbilities]=await Promise.all([
+  getCongressRole(supabase,user.id,id),getCongressEffectiveAbilities(supabase,user.id,id)
+ ]);
+ if(!effectiveAbilities.includes("workspace.view"))redirect("/my-card");
  const [congressResult,profileResult]=await Promise.all([
   supabase.from("congresses").select("id,name,kind").eq("id",id).maybeSingle(),
   supabase.from("profiles").select("full_name").eq("id",user.id).maybeSingle()
@@ -23,8 +25,8 @@ export default async function CongressLayout({children,params}:{
  const congress=congressResult.data;
  return <AppShell name={profileResult.data?.full_name||user.email||""}
   congressId={id} congressName={congress.name} congressKind={congress.kind}
-  accessRole={accessRole} canManage={canCongress(accessRole,"settings.manage")}
-  canViewBch={canCongress(accessRole,"bch.read")}
-  canCheckin={canCongress(accessRole,"attendance.scan")}
+  accessRole={accessRole} effectiveAbilities={[...effectiveAbilities]} canManage={effectiveAbilities.includes("settings.manage")}
+  canViewBch={effectiveAbilities.includes("bch.read")}
+  canCheckin={effectiveAbilities.includes("attendance.scan")}
   canViewSystemLogs={accessRole==="super_admin"}>{children}</AppShell>;
 }

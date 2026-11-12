@@ -47,7 +47,7 @@ test("Browser reports are staff-only, bounded, rate-limited and sanitized",()=>{
  const api=read("src/app/api/system-logs/report/route.ts");
  const monitor=read("src/components/admin-error-monitor.tsx");
  assert.match(api,/isStaffUser\(supabase,user\.id\)/);
- assert.match(api,/hasRole\(supabase,user\.id,congressId,"viewer"\)/);
+ assert.match(api,/hasCongressAbility\(supabase,user\.id,congressId,\"reports\.read\"\)/);
  assert.match(api,/content-length/);
  assert.match(api,/>=5/);
  assert.match(api,/MESSAGES\[event\]/);

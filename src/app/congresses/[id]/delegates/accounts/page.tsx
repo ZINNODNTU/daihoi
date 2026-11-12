@@ -1,5 +1,5 @@
 import {notFound,redirect} from "next/navigation";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {DelegateAccountsClient} from "@/components/delegate-accounts-client";
 import type {Delegate} from "@/lib/types";
@@ -9,7 +9,7 @@ export default async function DelegateAccountsPage({params}:{params:Promise<{id:
  const {id}=await params;
  const {supabase,user}=await getAuth();
  if(!user)redirect("/login");
- if(!(await hasRole(supabase,user.id,id,"admin")))notFound();
+ if(!(await hasCongressAbility(supabase,user.id,id,"delegates.write")))notFound();
  const db=createAdminClient();
  const [records,congress]=await Promise.all([
   db.from("delegates").select("id,congress_id,code,full_name,unit,student_id,position,login_email,auth_user_id,delegate_type,gender,birth_date,qr_version,barcode_code,is_active,photo_path")

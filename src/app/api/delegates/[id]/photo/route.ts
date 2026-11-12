@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,getPortalViewerAuth,hasRole} from "@/lib/auth";
+import {getAuth,getPortalViewerAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {readPortrait,getPortraitWidth} from "@/lib/portrait-storage";
 import {
@@ -22,7 +22,8 @@ async function authorize(delegateId:string,level:"viewer"|"admin"){
   .select("id,congress_id,photo_path,auth_user_id,is_active").eq("id",delegateId).maybeSingle();
  if(error||!delegate)return {error:fail("Không tìm thấy đại biểu.",404)} as const;
  if(!(delegate.auth_user_id===user.id&&delegate.is_active)&&
-  !(await hasRole(supabase,user.id,delegate.congress_id,level)))
+  !(await hasCongressAbility(supabase,user.id,delegate.congress_id,
+    level==="admin"?"delegates.write":"delegates.read")))
   return {error:fail("Bạn không có quyền truy cập ảnh này.",403)} as const;
  return {delegate,user} as const;
 }

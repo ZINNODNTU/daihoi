@@ -1,139 +1,144 @@
 "use client";
-
 import {useState,type FormEvent} from "react";
-import {CheckCircle2,ClipboardList,Save,AlertCircle,RotateCcw} from "lucide-react";
-import {ballotPercentage,formatBallotPercentage,validateManualBchBallots,
+import {AlertCircle,CheckCircle2,ClipboardList,RotateCcw,Save} from "lucide-react";
+import {ballotPercentage,formatBallotPercentage,validateBchVotes,validateSharedBchTotal,
  type BchCandidate} from "@/lib/bch-candidates";
 
-type Draft={votes_received:string;total_ballots:string};
-const draftOf=(item:BchCandidate):Draft=>({
- votes_received:item.votes_received==null?"":String(item.votes_received),
- total_ballots:item.total_ballots==null?"":String(item.total_ballots)
-});
-
-function BallotRow({item,congressId,onSaved,disabled}:{
- item:BchCandidate;congressId:string;onSaved:(updated:Partial<BchCandidate>&{id:string})=>void;
- disabled:boolean
+function VoteRow({item,congressId,total,disabled,onSaved}:{
+ item:BchCandidate;congressId:string;total:number|null;disabled:boolean;
+ onSaved:(candidate:Partial<BchCandidate>&{id:string})=>void;
 }){
- const [draft,setDraft]=useState<Draft>(()=>draftOf(item));
- const [saving,setSaving]=useState(false);
+ const [draft,setDraft]=useState(item.votes_received===null||item.votes_received===undefined?"":String(item.votes_received));
+ const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
- const [success,setSuccess]=useState("");
- const changed=draft.votes_received!==draftOf(item).votes_received||
-  draft.total_ballots!==draftOf(item).total_ballots;
- const checked=validateManualBchBallots(draft);
- const count=checked.data?.votes_received,denominator=checked.data?.total_ballots;
- const percentage=ballotPercentage(count,denominator);
- async function save(event:FormEvent<HTMLFormElement>){
+ const [notice,setNotice]=useState("");
+ const old=item.votes_received==null?"":String(item.votes_received);
+ const changed=draft!==old;
+ const checked=validateBchVotes(draft,total);
+ const percent=ballotPercentage(checked.votes,total);
+ async function submit(event:FormEvent<HTMLFormElement>){
   event.preventDefault();
-  if(disabled||saving||!changed||!checked.data)return;
-  if(checked.data.votes_received===null&&item.votes_received!==null&&
-   !window.confirm("Xóa số phiếu đã lưu của "+item.full_name+"? Thao tác này sẽ xóa kết quả kiểm phiếu của riêng nhân sự này."))return;
-  setSaving(true);setError("");setSuccess("");
+  if(disabled||busy||!changed||checked.error)return;
+  if(draft===""&&old!==""&&!window.confirm("Xóa số phiếu đã ghi nhận của "+item.full_name+"?"))return;
+  setBusy(true);setError("");setNotice("");
   try{
    const response=await fetch("/api/bch-candidates/ballots",{
-    method:"PATCH",credentials:"same-origin",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({congressId,id:item.id,expectedUpdatedAt:item.updated_at,...checked.data})
+    method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({congressId,id:item.id,votes_received:checked.votes,
+     expectedUpdatedAt:item.updated_at})
    });
-   const result=await response.json();
-   if(!response.ok)throw new Error(result.error||"Không lưu được số phiếu.");
-   onSaved(result.candidate as Partial<BchCandidate>&{id:string});
-   setSuccess(checked.data.votes_received===null?"Đã bỏ kết quả kiểm phiếu.":"Đã lưu kết quả.");
-  }catch(e){setError(e instanceof Error?e.message:"Không lưu được kết quả.");}
-  finally{setSaving(false);}
+   const data=await response.json();
+   if(!response.ok)throw Error(data.error||"Không lưu được số phiếu.");
+   onSaved(data.candidate);
+   setNotice("Đã lưu số phiếu.");
+  }catch(e){setError(e instanceof Error?e.message:"Không lưu được số phiếu.");}
+  finally{setBusy(false);}
  }
- return <form onSubmit={e=>void save(e)}
-  className="rounded-lg border border-[#e1eaf0] bg-[#fbfdfe] px-4 py-4">
-  <div className="grid gap-3 lg:grid-cols-[minmax(145px,1fr)_minmax(125px,155px)_minmax(125px,155px)_minmax(100px,125px)_minmax(100px,120px)] lg:items-end">
+ return <form onSubmit={e=>void submit(e)} className="rounded-lg border border-[#e1eaf0] bg-white p-3 sm:p-4">
+  <div className="grid items-end gap-3 sm:grid-cols-[minmax(160px,1fr)_135px_130px_120px]">
    <div className="min-w-0 self-center">
-    <p className="break-words text-[13px] font-bold text-[#20445a]">{item.full_name}</p>
-    <p className="mt-1 text-[11px] leading-5 text-[#738a9b]">
-     {item.votes_received===null||item.votes_received===undefined?"Chưa nhập kết quả":"Đã lưu "+formatBallotPercentage(item.votes_received,item.total_ballots)}
+    <p className="text-[13px] font-bold leading-5 text-[#264a60]">{item.full_name}</p>
+    <p className="mt-1 text-[11px] text-[#70899a]">{old===""?"Chưa nhập phiếu":"Đã lưu "+item.votes_received?.toLocaleString("vi-VN")+" phiếu"}</p>
+   </div>
+   <label className="block"><span className="text-[11px] font-semibold text-[#486c80]">Số phiếu đạt</span>
+    <input type="number" inputMode="numeric" min={0} max={total??1000000} step={1}
+     name="votes_received" aria-label={"Số phiếu đạt "+item.full_name}
+     disabled={disabled||busy||total===null}
+     value={draft} onChange={e=>{setDraft(e.target.value);setError("");setNotice("");}}
+     placeholder="Nhập số phiếu" className="field mt-1 min-h-11 w-full rounded-lg tabular-nums"/>
+   </label>
+   <div className="rounded-lg border border-[#deeaef] bg-[#f6fafc] px-3 py-2">
+    <p className="text-[10px] text-[#6d8b9a]">Tỷ lệ tự động</p>
+    <p aria-live="polite" className="mt-1 text-[17px] font-bold tabular-nums text-[#176a86]">
+     {percent===null?"—":formatBallotPercentage(checked.votes,total)}
     </p>
    </div>
-   <label className="block">
-    <span className="text-[11px] font-semibold text-[#4f7184]">Số phiếu đạt</span>
-    <input type="number" inputMode="numeric" min={0} max={1000000} step={1}
-     name="votes_received" disabled={disabled||saving}
-     aria-label={"Số phiếu đạt của "+item.full_name}
-     className="field mt-1 !min-h-11 w-full !rounded-lg font-semibold tabular-nums"
-     placeholder="Ví dụ: 175" value={draft.votes_received}
-     onChange={e=>{setDraft(prev=>({...prev,votes_received:e.target.value}));setError("");setSuccess("");}}/>
-   </label>
-   <label className="block">
-    <span className="text-[11px] font-semibold text-[#4f7184]">Tổng số phiếu</span>
-    <input type="number" inputMode="numeric" min={1} max={1000000} step={1}
-     name="total_ballots" disabled={disabled||saving}
-     aria-label={"Tổng phiếu kiểm phiếu của "+item.full_name}
-     className="field mt-1 !min-h-11 w-full !rounded-lg font-semibold tabular-nums"
-     placeholder="Ví dụ: 190" value={draft.total_ballots}
-     onChange={e=>{setDraft(prev=>({...prev,total_ballots:e.target.value}));setError("");setSuccess("");}}/>
-   </label>
-   <div className="rounded-lg border border-[#dce9ef] bg-white px-3 py-2 lg:min-h-11">
-    <span className="block text-[10px] font-medium text-[#8095a3]">Tỷ lệ tự tính</span>
-    <strong aria-live="polite" className={"mt-0.5 block text-[17px] font-bold tabular-nums "+
-     (percentage===null?"text-[#94a6b2]":"text-[#136d8b]")}>
-     {percentage===null?"—":formatBallotPercentage(count,denominator)}
-    </strong>
-   </div>
-   <button type="submit" disabled={disabled||saving||!changed||!checked.data}
-    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#087eaa] px-3 text-[12px] font-bold text-white hover:bg-[#07698f] disabled:cursor-not-allowed disabled:bg-[#e7eef2] disabled:text-[#8799a6]">
-    <Save size={16}/>{saving?"Đang lưu...":"Lưu phiếu"}
+   <button type="submit" disabled={disabled||busy||!changed||!!checked.error}
+    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#117fa9] px-3 text-[12px] font-bold text-white disabled:bg-[#e4edf2] disabled:text-[#879aa6]">
+    <Save size={16}/>{busy?"Đang lưu...":"Lưu phiếu"}
    </button>
   </div>
-  {changed&&checked.error&&<p role="alert" className="mt-2 flex items-start gap-2 text-[11px] leading-5 text-[#a14936]">
-   <AlertCircle size={15} className="mt-0.5 shrink-0"/>{checked.error}
-  </p>}
-  {error&&<p role="alert" className="mt-2 flex items-start gap-2 text-[11px] leading-5 text-[#a14936]">
-   <AlertCircle size={15} className="mt-0.5 shrink-0"/>{error}
-  </p>}
-  {success&&!changed&&<p role="status" className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-[#227d57]">
-   <CheckCircle2 size={15}/>{success}
-  </p>}
-  {changed&&<div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-   <span className="text-[11px] font-medium text-[#87652e]">Có thay đổi chưa lưu</span>
-   <button type="button" disabled={saving||disabled} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#527b94] hover:underline"
-    onClick={()=>{setDraft(draftOf(item));setError("");setSuccess("");}}>
-    <RotateCcw size={13}/> Hoàn tác
-   </button>
-  </div>}
+  {changed&&checked.error&&<p role="alert" className="mt-2 text-[11px] text-[#ab5b37]">{checked.error}</p>}
+  {error&&<p role="alert" className="mt-2 text-[11px] text-[#a43e3e]">{error}</p>}
+  {notice&&!changed&&<p role="status" className="mt-2 flex items-center gap-1 text-[11px] text-[#247750]"><CheckCircle2 size={14}/>{notice}</p>}
+  {changed&&!busy&&<button type="button" onClick={()=>{setDraft(old);setError("");setNotice("");}}
+   className="mt-2 inline-flex items-center gap-1 text-[11px] text-[#587c91] hover:underline">
+   <RotateCcw size={13}/> Hủy thay đổi
+  </button>}
  </form>;
 }
 
-/** This section is separate from personnel editing to avoid accidentally replacing a tally. */
-export function BchBallotEditor({congressId,candidates,ballotReady,disabled,onSaved}:{
+export function BchBallotEditor({congressId,candidates,ballotReady,disabled,total,onTotalSaved,onSaved}:{
  congressId:string;candidates:BchCandidate[];ballotReady:boolean;disabled:boolean;
- onSaved:(item:Partial<BchCandidate>&{id:string})=>void;
+ total:number|null;onTotalSaved:(value:number|null)=>void;
+ onSaved:(updated:Partial<BchCandidate>&{id:string})=>void;
 }){
- const recorded=candidates.filter(item=>ballotPercentage(item.votes_received,item.total_ballots)!==null).length;
- return <section id="ket-qua-kiem-phieu-bch" aria-labelledby="bch-ballot-heading"
-  className="scroll-mt-24 overflow-hidden rounded-xl border border-[#d6e4ec] bg-white">
-  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e6edf2] px-4 py-4 sm:px-5">
+ const [totalDraft,setTotalDraft]=useState(total===null?"":String(total));
+ const [saving,setSaving]=useState(false);
+ const [error,setError]=useState("");
+ const [notice,setNotice]=useState("");
+ const checkedTotal=validateSharedBchTotal(totalDraft);
+ const changed=totalDraft!==(total===null?"":String(total));
+ const recorded=candidates.filter(c=>c.votes_received!==null&&c.votes_received!==undefined).length;
+ async function saveTotal(event:FormEvent<HTMLFormElement>){
+  event.preventDefault();
+  if(disabled||saving||!changed||checkedTotal===undefined)return;
+  if(checkedTotal===null&&total!==null&&!window.confirm("Xóa tổng số phiếu chung? Chỉ được xóa khi chưa có ứng viên nào đã nhập phiếu."))return;
+  setSaving(true);setError("");setNotice("");
+  try{
+   const result=await fetch("/api/bch-candidates/ballots/total",{
+    method:"PATCH",headers:{"Content-Type":"application/json"},credentials:"same-origin",
+    body:JSON.stringify({congressId,total_ballots:checkedTotal})
+   });
+   const body=await result.json();
+   if(!result.ok)throw Error(body.error||"Không lưu được tổng phiếu.");
+   onTotalSaved(body.total_ballots);
+   setNotice("Đã lưu tổng số phiếu chung cho toàn bộ ứng viên.");
+  }catch(e){setError(e instanceof Error?e.message:"Không lưu được tổng phiếu.");}
+  finally{setSaving(false);}
+ }
+ return <section id="ket-qua-kiem-phieu-bch" aria-labelledby="bch-tally-heading"
+  className="scroll-mt-24 overflow-hidden rounded-xl border border-[#d7e6ee] bg-white">
+  <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7eef2] px-4 py-4 sm:px-5">
    <div>
-    <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.09em] text-[#367791]">
-     <ClipboardList size={16}/> NGHIỆP VỤ BCH · NHẬP TAY
-    </p>
-    <h2 id="bch-ballot-heading" className="mt-1 text-[18px] font-bold text-[#1b4258]">Kết quả kiểm phiếu BCH</h2>
-    <p className="mt-1 text-[12px] leading-5 text-[#698495]">
-     Nhập theo biên bản kiểm phiếu chính thức; tỷ lệ = số phiếu đạt / tổng số phiếu × 100.
-     Mỗi nhân sự có nút lưu riêng.
-    </p>
+    <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.11em] text-[#39809c]"><ClipboardList size={16}/> NHẬP KẾT QUẢ KIỂM PHIẾU · ĐẠI HỘI ĐOÀN</p>
+    <h2 id="bch-tally-heading" className="mt-1 text-[19px] font-bold text-[#204356]">Kết quả kiểm phiếu BCH</h2>
+    <p className="mt-1 text-[12px] leading-5 text-[#648093]">Tổng số phiếu là <strong>một giá trị chung</strong> của phiên kiểm phiếu; mỗi ứng viên chỉ nhập số phiếu đạt.</p>
    </div>
-   <span className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#cfe5dc] bg-[#f0f9f4] px-3 text-[12px] font-bold text-[#236f51]">
-    <CheckCircle2 size={16}/>{recorded}/{candidates.length} đã nhập
-   </span>
-  </div>
-  <div className="space-y-3 p-3 sm:p-4">
-   {!ballotReady?<p role="status" className="rounded-lg border border-[#ecd6ad] bg-[#fff9ed] px-4 py-3 text-[12px] leading-6 text-[#926522]">
-    Chức năng kiểm phiếu chưa sẵn sàng trên cơ sở dữ liệu. Vui lòng kiểm tra Supabase V47.
-   </p>:candidates.length===0?<p className="px-3 py-6 text-center text-[13px] text-[#728a9a]">
-    Chưa có nhân sự BCH. Hãy thêm nhân sự trước khi nhập kết quả.
-   </p>:candidates.map(item=><BallotRow key={item.id+"-"+item.updated_at} item={item} congressId={congressId}
-    onSaved={onSaved} disabled={disabled}/>)}
-   <p className="rounded-lg bg-[#f5f8fa] px-4 py-3 text-[11px] leading-5 text-[#667f90]">
-    Số phiếu không được tính từ điểm danh QR. Kết quả ở đây phục vụ BTC đối chiếu, không tự xác định trúng cử và không công bố cho tài khoản đại biểu.
-   </p>
-  </div>
+   <span className="rounded-md bg-[#eff7f4] px-3 py-2 text-[12px] font-bold text-[#237450]">{recorded}/{candidates.length} đã nhập</span>
+  </header>
+  {!ballotReady?<p role="alert" className="m-4 rounded-lg bg-[#fff6e9] p-3 text-[12px] text-[#93652c]">Chưa kích hoạt được dữ liệu kiểm phiếu. Kiểm tra migration Supabase V47/V57.</p>:
+   <div className="space-y-4 p-4 sm:p-5">
+    <form onSubmit={e=>void saveTotal(e)} className="rounded-lg border border-[#d1e3ec] bg-[#f1f7fa] p-4">
+     <div className="flex flex-wrap items-end gap-3">
+      <label className="block w-full max-w-[245px]"><span className="text-[12px] font-bold text-[#2c5971]">Tổng số phiếu chung <span className="text-[#b34747]">*</span></span>
+       <input type="number" name="bch_total_ballots" min={1} max={1000000} step={1}
+        value={totalDraft} disabled={disabled||saving}
+        onChange={e=>{setTotalDraft(e.target.value);setError("");setNotice("");}}
+        placeholder="Ví dụ: 190" className="field mt-2 min-h-11 w-full rounded-lg bg-white tabular-nums"/>
+      </label>
+      <button type="submit" disabled={disabled||saving||!changed||checkedTotal===undefined}
+       className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#156b90] px-4 text-[12px] font-bold text-white disabled:bg-[#dbe7ed] disabled:text-[#8396a4]">
+       <Save size={16}/>{saving?"Đang lưu...":"Lưu tổng phiếu"}
+      </button>
+      {total!==null&&<p className="self-center text-[12px] font-semibold text-[#387e6c]">Đang áp dụng: {total.toLocaleString("vi-VN")} phiếu</p>}
+     </div>
+     {changed&&checkedTotal===undefined&&<p role="alert" className="mt-2 text-[11px] text-[#ad5c3b]">Tổng phiếu phải là số nguyên từ 1 đến 1.000.000.</p>}
+     {error&&<p role="alert" className="mt-2 flex items-center gap-1 text-[12px] text-[#ae4b3c]"><AlertCircle size={15}/>{error}</p>}
+     {notice&&!changed&&<p role="status" className="mt-2 text-[12px] text-[#217b57]">{notice}</p>}
+    </form>
+    <div>
+     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <h3 className="text-[14px] font-bold text-[#2a4c62]">Phiếu đạt của từng ứng viên</h3>
+      {total===null&&<span className="text-[12px] text-[#9c6b30]">Hãy lưu tổng số phiếu chung trước</span>}
+     </div>
+     <div className="space-y-2.5">
+      {candidates.length===0?<p className="rounded-lg bg-[#f8fafb] p-5 text-[12px] text-[#70889a]">Chưa có nhân sự BCH để nhập phiếu.</p>:
+       candidates.map(item=><VoteRow key={item.id+"-"+item.updated_at} item={item}
+        congressId={congressId} total={total} onSaved={onSaved} disabled={disabled||saving}/>)}
+     </div>
+    </div>
+    <p className="text-[11px] leading-5 text-[#73899a]">Tỷ lệ (%) = số phiếu đạt / tổng số phiếu chung × 100. Số phiếu dựa trên biên bản kiểm phiếu thực tế, không tính theo lượt điểm danh QR. Chỉ BTC có quyền được nhập; không công bố tự động cho đại biểu.</p>
+   </div>}
  </section>;
 }

@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
-import {getAuth,getCongressRole} from "@/lib/auth";
-import {canCongress} from "@/lib/congress-permissions";
-import {validateManualBchBallots} from "@/lib/bch-candidates";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
+
+import {validateBchVotes} from "@/lib/bch-candidates";
 import {writeSystemLog} from "@/lib/system-log";
 
 export const runtime="nodejs";
@@ -23,15 +23,14 @@ export async function PATCH(request:Request){
    return fail("Đại hội hoặc nhân sự BCH không hợp lệ.",400);
   const {supabase,user}=await getAuth();
   if(!user)return fail("Vui lòng đăng nhập.",401);
-  const role=await getCongressRole(supabase,user.id,congressId);
-  if(!canCongress(role,"bch.write"))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"bch.write")))
    return fail("Không có quyền nhập kết quả kiểm phiếu BCH.",403);
-  const congress=await supabase.from("congresses").select("kind").eq("id",congressId).maybeSingle();
+  const congress=await supabase.from("congresses").select("kind,bch_total_ballots").eq("id",congressId).maybeSingle();
   if(congress.error||!congress.data)return fail("Không xác minh được Đại hội.",503);
   if(congress.data.kind!=="doan")
    return fail("Chỉ Đại hội Đoàn mới có phần kiểm phiếu BCH.",400);
-  const checked=validateManualBchBallots(body);
-  if(!checked.data)return fail(checked.error||"Số phiếu không hợp lệ.",400);
+  const checked=validateBchVotes(body?.votes_received,congress.data.bch_total_ballots);
+  if(checked.error)return fail(checked.error,400);
 
   // Optimistic concurrency: prevent a stale tab from overwriting a newer result.
   const expectedUpdatedAt=body?.expectedUpdatedAt;
@@ -39,7 +38,8 @@ export async function PATCH(request:Request){
      !/^\d{4}-\d{2}-\d{2}T/.test(expectedUpdatedAt)||!Number.isFinite(Date.parse(expectedUpdatedAt)))
    return fail("Dữ liệu đã thay đổi. Hãy tải lại danh sách trước khi nhập phiếu.",409);
   const {data,error}=await supabase.from("bch_candidates")
-   .update({...checked.data,updated_at:new Date().toISOString()})
+   .update({votes_received:checked.votes,total_ballots:checked.votes===null?null:congress.data.bch_total_ballots,
+    updated_at:new Date().toISOString()})
    .eq("congress_id",congressId).eq("id",id)
    .eq("updated_at",expectedUpdatedAt)
    .select("id,congress_id,votes_received,total_ballots,updated_at").maybeSingle();
@@ -52,7 +52,7 @@ export async function PATCH(request:Request){
   await writeSystemLog({level:"info",source:"api",event:"bch.ballot_updated",
    message:"BTC cập nhật kết quả kiểm phiếu BCH (nhập tay).",actorId:user.id,congressId,
    context:{operation:"bch.ballots.update",endpoint:"/api/bch-candidates/ballots",
-    httpMethod:"PATCH",candidateId:id,hasResult:checked.data.votes_received!==null}});
+    httpMethod:"PATCH",candidateId:id,hasResult:checked.votes!==null}});
   return NextResponse.json({candidate:data},{headers:HEADERS});
  }catch{return fail("Không thể xử lý yêu cầu nhập phiếu.",400);}
 }

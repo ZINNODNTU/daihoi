@@ -1,6 +1,6 @@
 import {randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {renumberGridSeats} from "@/lib/seating";
 import {instantiateTemplateSeats,snapshotTemplateSeats,type SeatTemplateSummary} from "@/lib/seating-templates";
@@ -18,7 +18,7 @@ async function access(congressId:string){
  const {user,supabase}=await getAuth();
  if(!user)return {error:fail("Vui lòng đăng nhập.",401)} as const;
  if(!uuid.test(congressId))return {error:fail("Mã Đại hội không hợp lệ.",400)} as const;
- if(!(await hasRole(supabase,user.id,congressId,"admin")))
+ if(!(await hasCongressAbility(supabase,user.id,congressId,"seating.write")))
   return {error:fail("Chỉ quản trị viên Đại hội được sử dụng thư viện mẫu.",403)} as const;
  const db=createAdminClient();
  const {data:congress,error}=await db.from("congresses")

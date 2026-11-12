@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {writeSystemLog} from "@/lib/system-log";
 import {validateBchReorder} from "@/lib/bch-candidates";
 
@@ -21,7 +21,7 @@ export async function POST(request:Request){
   const ids=body?.orderedIds;
   if(!UUID.test(congressId)||!validateBchReorder(ids))
    return fail("Danh sách thứ tự không hợp lệ.",400);
-  if(!(await hasRole(supabase,user.id,congressId,"admin")))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"bch.write")))
    return fail("Không có quyền sắp xếp nhân sự BCH.",403);
   // SECURITY INVOKER RPC validates the full exact ID set and applies one atomic UPDATE.
   const {error}=await supabase.rpc("reorder_bch_candidates",{p_congress_id:congressId,p_ids:ids});

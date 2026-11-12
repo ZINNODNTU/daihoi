@@ -40,7 +40,7 @@ test("Đại biểu đọc PDF qua Google Drive Preview trên web, file cũ mở
  assert.match(redirect,/googleDrivePreviewUrl\(doc\.drive_file_id\)/);
  assert.match(redirect,/searchParams\.get\("preview"\)/);
  assert.match(redirect,/mime_type!=="application\/pdf"/);
- assert.match(redirect,/hasRole\(supabase,user\.id,doc\.congress_id,"viewer"\)/);
+ assert.match(redirect,/hasCongressAbility\(supabase,user\.id,doc\.congress_id,"documents\.read"\)/);
  assert.match(redirect,/if\(!doc\.delegate_visible\)/);
  assert.match(redirect,/\.eq\("auth_user_id",user\.id\)/);
  assert.doesNotMatch(redirect,/fetchDriveFile|file\.body|Content-Disposition/);
@@ -48,7 +48,7 @@ test("Đại biểu đọc PDF qua Google Drive Preview trên web, file cũ mở
 
 test("BTC upload rồi lưu metadata; cầu nối Script được ưu tiên, OAuth vẫn dự phòng",()=>{
  const api=read("../src/app/api/documents/route.ts");
- assert.match(api,/hasRole\(supabase,user\.id,congressId,"admin"\)/);
+ assert.match(api,/hasCongressAbility\(supabase,user\.id,congressId,\"documents\.write\"\)/);
  assert.match(api,/validateDocumentBytes/);
  assert.match(api,/scriptStorageSelected\(\)/);
  assert.match(api,/uploadScriptDrive\(congressId,file\)/);
@@ -67,7 +67,7 @@ test("BTC upload rồi lưu metadata; cầu nối Script được ưu tiên, OAu
 
 test("Bật công bố đồng bộ quyền Drive rồi mới lưu Supabase; rollback nếu DB lỗi",()=>{
  const api=read("../src/app/api/documents/visibility/route.ts");
- assert.match(api,/hasRole\(supabase,user\.id,congressId,"admin"\)/);
+ assert.match(api,/hasCongressAbility\(supabase,user\.id,congressId,\"documents\.write\"\)/);
  assert.match(api,/shareScriptDrive\(congressId,driveFileId,visible\)/);
  assert.match(api,/setDriveLinkSharing\(token,driveFileId,visible\)/);
  assert.ok(api.indexOf("await share(body.visible)")<api.indexOf('.update({delegate_visible:body.visible})'));

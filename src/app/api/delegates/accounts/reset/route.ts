@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {writeSystemLog} from "@/lib/system-log";
 import {DEFAULT_DELEGATE_PASSWORD} from "@/lib/delegate-password-policy";
@@ -25,7 +25,7 @@ export async function POST(request:Request){
   const congressId=String(body?.congressId||"");
   const delegateId=String(body?.delegateId||"");
   if(!UUID.test(congressId)||!UUID.test(delegateId))return fail("Dữ liệu không hợp lệ.",400);
-  if(!(await hasRole(supabase,user.id,congressId,"admin")))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"delegates.write")))
    return fail("Chỉ quản trị Đại hội được cấp lại mật khẩu.",403);
   if(body?.password!==undefined)
    return fail("Chức năng reset chỉ hỗ trợ mật khẩu mặc định của hệ thống.",400);

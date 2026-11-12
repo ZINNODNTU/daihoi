@@ -16,7 +16,7 @@ test("BCH private photo endpoint permits administrators to upload and authorized
  const api=file("../src/app/api/bch-candidates/[id]/photo/route.ts");
  assert.match(api,/export async function GET/);
  assert.match(api,/export async function PUT/);
- assert.match(api,/hasRole\(supabase,user\.id,candidate\.congress_id,"admin"\)/);
+ assert.match(api,/hasCongressAbility\(supabase,user\.id,candidate\.congress_id,"bch\.write"\)/);
  assert.match(api,/\["delegate","guest"\]\.includes/);
  assert.match(api,/hasCongressAbility\(supabase,user\.id,candidate\.congress_id,"bch.read"\)/);
   assert.match(api,/\.eq\("auth_user_id",user\.id\)/);

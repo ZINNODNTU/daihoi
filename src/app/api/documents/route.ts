@@ -1,6 +1,6 @@
 import {NextResponse} from "next/server";
 import {deleteScriptDrive,scriptStorageSelected,shareScriptDrive,uploadScriptDrive} from "@/lib/google-apps-script";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {writeSystemLog} from "@/lib/system-log";
 import {
@@ -35,7 +35,7 @@ export async function POST(req:Request){
    const publishAfterUpload=form.get("publish")==="true";
    uploadCongressId=congressId;
   if(!UUID.test(congressId))return fail("Đại hội không hợp lệ.",400);
-  if(!(await hasRole(supabase,user.id,congressId,"admin")))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"documents.write")))
    return fail("Chỉ quản trị Đại hội được tải tài liệu.",403);
   const input=form.get("file");
   if(!(input instanceof File))return fail("Chưa chọn tệp tài liệu.",400);

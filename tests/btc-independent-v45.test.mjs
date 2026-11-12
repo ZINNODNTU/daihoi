@@ -85,7 +85,7 @@ test("BTC API creates fresh Auth identity instead of reusing existing delegate o
   })
  };
  const route=compile("src/app/api/congress-members/route.ts",{
-  "@/lib/auth":{getAuth:async()=>({user:{id:superadmin},supabase:{}}),hasRole:async()=>true},
+  "@/lib/auth":{getAuth:async()=>({user:{id:superadmin},supabase:{}}),hasCongressAbility:async()=>true},
   "@/lib/supabase/admin":{createAdminClient:()=>db},
   "@/lib/system-log":{writeSystemLog:async data=>{logs.push(data);return "req";}}
  }).POST;
@@ -107,7 +107,7 @@ test("BTC API creates fresh Auth identity instead of reusing existing delegate o
 test("No BTC creation by delegate, no unconstrained user/email reuse or client-supplied password",async()=>{
  let attempted=false;
  const deny=compile("src/app/api/congress-members/route.ts",{
-  "@/lib/auth":{getAuth:async()=>({user:{id:delegate},supabase:{}}),hasRole:async()=>false},
+  "@/lib/auth":{getAuth:async()=>({user:{id:delegate},supabase:{}}),hasCongressAbility:async()=>false},
   "@/lib/supabase/admin":{createAdminClient:()=>{attempted=true;throw Error("should not reach")}},
   "@/lib/system-log":{writeSystemLog:async()=>""}
  }).POST;

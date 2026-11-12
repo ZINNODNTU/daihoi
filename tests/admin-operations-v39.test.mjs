@@ -37,7 +37,7 @@ test("Delegate profile PATCH limits edits to own congress and immutable QR/auth 
   };
   return compile("src/app/api/delegates/route.ts",{
    "@/lib/auth":{getAuth:async()=>({user:user?{id:actor}:null,supabase:{from:()=>chain}}),
-    hasRole:async()=>admin},
+    hasCongressAbility:async()=>admin},
    "@/lib/delegate-demographics":{normalizeGender:value=>value||null,normalizeBirthDate:value=>value||null},
    "@/lib/system-log":{writeSystemLog:async data=>{logs.push(data);return "log";}}
   }).PATCH;
@@ -67,7 +67,7 @@ test("BCH drag-and-drop reorder validates UUID uniqueness and scopes RPC to auth
  function route(admin=true){
   return compile("src/app/api/bch-candidates/reorder/route.ts",{
    "@/lib/auth":{getAuth:async()=>({user:{id:actor},supabase:{rpc:async(name,args)=>{
-    calls.push({name,args});return {error:null};}}}),hasRole:async()=>admin},
+    calls.push({name,args});return {error:null};}}}),hasCongressAbility:async()=>admin},
    "@/lib/bch-candidates":{validateBchReorder},
    "@/lib/system-log":{writeSystemLog:async data=>{logs.push(data);return "x";}}
   }).POST;

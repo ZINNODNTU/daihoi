@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {parseAndVerifyQr} from "@/lib/qr";
 import {getWindowStatus,isQrAllowed} from "@/lib/attendance-window";
 import {createAdminClient} from "@/lib/supabase/admin";
@@ -29,7 +29,7 @@ export async function POST(request:Request){
   const method=body.method==="qr"?"qr":body.method==="manual"?"manual":body.method==="barcode"?"barcode":null;
   if(!uuid.test(congressId)||!uuid.test(sessionId)||!method)
    return jsonError("Mã Đại hội, phiên hoặc phương thức không hợp lệ.",400);
-  if(!(await hasRole(supabase,user.id,congressId,"checkin")))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"attendance.scan")))
    return jsonError("Tài khoản không được phân quyền điểm danh tại Đại hội này.",403);
   const {data:session,error:sessionError}=await supabase.from("attendance_sessions")
    .select("id,status,starts_at,ends_at,qr_policy")

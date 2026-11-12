@@ -15,7 +15,7 @@ test("Realtime events have deduped FIFO display and incremental fallback",()=>{
  assert.match(hook,/WELCOME_MS=6200/);
  assert.match(api,/q\.get\("mode"\)==="updates"/);
  assert.match(api,/\.gte\("checked_in_at"/);
- assert.match(api,/await hasRole\(supabase,user\.id,congressId,"checkin"\)/);
+ assert.match(api,/await hasCongressAbility\(supabase,user\.id,congressId,\"attendance\.read\"\)/);
  assert.match(screen,/ProjectionArrivalQueue data=\{liveData\} waiting=\{waiting\}/);
  assert.match(migration,/ALTER PUBLICATION supabase_realtime ADD TABLE public\.checkins/);
 });

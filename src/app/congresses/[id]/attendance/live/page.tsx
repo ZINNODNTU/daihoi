@@ -1,4 +1,4 @@
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {SessionQrScreen} from "@/components/session-qr-screen";
 import type {AttendanceSession} from "@/lib/types";
@@ -10,7 +10,7 @@ export default async function AttendanceLivePage({params,searchParams}:{
  const {id}=await params;
  const query=await searchParams;
  const {supabase,user}=await getAuth();
- const authorized=!!user&&await hasRole(supabase,user.id,id,"checkin");
+ const authorized=!!user&&await hasCongressAbility(supabase,user.id,id,"attendance.read");
  if(!authorized)return <div role="alert" className="card p-6 text-sm text-red-700">Chỉ Ban Tổ chức được truy cập màn hình điểm danh.</div>;
  const db=createAdminClient();
  const [sessionsResult,congressResult]=await Promise.all([

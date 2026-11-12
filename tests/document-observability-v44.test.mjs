@@ -63,7 +63,7 @@ test("Document migration creates display order, preserves newest-first, and atom
 test("Document reorder endpoint enforces authorized congress, unique ids and atomic RPC",async()=>{
  const calls=[],logs=[];
  const route=(allowed=true)=>compile("src/app/api/documents/reorder/route.ts",{
-  "@/lib/auth":{getAuth:async()=>({user:{id:actor},supabase:{}}),hasRole:async()=>allowed},
+  "@/lib/auth":{getAuth:async()=>({user:{id:actor},supabase:{}}),hasCongressAbility:async()=>allowed},
   "@/lib/supabase/admin":{createAdminClient:()=>({rpc:async(name,args)=>{calls.push({name,args});return {error:null};}})},
   "@/lib/system-log":{writeSystemLog:async x=>{logs.push(x);return "ok";}}
  }).POST;
@@ -81,7 +81,7 @@ test("Document reorder endpoint enforces authorized congress, unique ids and ato
 test("Document delete removes metadata for one congress without invoking Drive deletion",async()=>{
  const calls=[],logs=[];
  const route=(allowed=true,found=true)=>compile("src/app/api/documents/[id]/route.ts",{
-  "@/lib/auth":{getAuth:async()=>({user:{id:actor},supabase:{}}),hasRole:async()=>allowed},
+  "@/lib/auth":{getAuth:async()=>({user:{id:actor},supabase:{}}),hasCongressAbility:async()=>allowed},
   "@/lib/supabase/admin":{createAdminClient:()=>({
    from:()=>({delete(){calls.push("delete");return this;},eq(k,v){calls.push([k,v]);return this;},
     select(){return this;},async maybeSingle(){return {data:found?{id:first,file_name:"van-kien.pdf"}:null,error:null};}})

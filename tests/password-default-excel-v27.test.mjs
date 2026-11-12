@@ -46,7 +46,7 @@ function fixture({userId=staffAdmin,canManage=true,staff=false,delegateExists=tr
    new Response(JSON.stringify(data),{status:options.status||200,
     headers:{"Content-Type":"application/json",...options.headers}})}};
   if(name==="@/lib/auth")return {getAuth:async()=>({user:userId?{id:userId}:null,supabase:{}}),
-   hasRole:async()=>canManage};
+   hasCongressAbility:async()=>canManage};
   if(name==="@/lib/supabase/admin")return {createAdminClient:()=>db};
   if(name==="@/lib/system-log")return {writeSystemLog:async()=>""};
   if(name==="@/lib/delegate-password-policy")return {DEFAULT_DELEGATE_PASSWORD:expected};

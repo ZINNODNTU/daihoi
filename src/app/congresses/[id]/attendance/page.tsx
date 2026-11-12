@@ -1,4 +1,4 @@
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {AttendanceSessionsClient} from "@/components/attendance-sessions-client";
 import type {AttendanceSession} from "@/lib/types";
@@ -7,8 +7,8 @@ export const dynamic="force-dynamic";
 export default async function AttendancePage({params}:{params:Promise<{id:string}>}){
  const {id}=await params;
  const {supabase,user}=await getAuth();
- const canManage=!!user&&await hasRole(supabase,user.id,id,"admin");
- const canView=!!user&&await hasRole(supabase,user.id,id,"viewer");
+ const canManage=!!user&&await hasCongressAbility(supabase,user.id,id,"attendance.sessions");
+ const canView=!!user&&await hasCongressAbility(supabase,user.id,id,"attendance.read");
  if(!canView)return <p className="card p-6 text-sm text-red-700">Không có quyền quản lý phiên của Đại hội.</p>;
  const db=createAdminClient();
  const [sessionRows,layoutRows]=await Promise.all([

@@ -1,87 +1,68 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {validateManualBchBallots,ballotPercentage,formatBallotPercentage}
+import {validateSharedBchTotal,validateBchVotes,ballotPercentage,formatBallotPercentage}
  from "../src/lib/bch-candidates.ts";
-
 const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 
-test("manual BCH tally validates a complete pair, not voting- or attendance-derived totals",()=>{
- const valid=validateManualBchBallots({votes_received:"175",total_ballots:"190"});
- assert.deepEqual(valid,{data:{votes_received:175,total_ballots:190},error:null});
- assert.equal(formatBallotPercentage(valid.data?.votes_received,valid.data?.total_ballots),"92,11%");
- assert.equal(ballotPercentage(0,200),0);
- const empty=validateManualBchBallots({votes_received:"",total_ballots:""});
- assert.deepEqual(empty.data,{votes_received:null,total_ballots:null});
- assert.equal(validateManualBchBallots({votes_received:null,total_ballots:null}).error,null);
+test("the congress has exactly one total while each candidate enters only votes achieved",()=>{
+ assert.equal(validateSharedBchTotal("190"),190);
+ assert.equal(validateBchVotes("175",190).votes,175);
+ assert.equal(formatBallotPercentage(175,190),"92,11%");
+ assert.equal(ballotPercentage(0,190),0);
+ assert.equal(validateBchVotes("",190).votes,null);
+ assert.equal(validateSharedBchTotal(""),null);
 });
-
-test("manual tally rejects partial, fractional, exponential, negative and impossible counts",()=>{
- for(const [votes,total] of [
-  ["10",""],["","10"],["101","100"],["-1","100"],["1.5","100"],
-  ["1e2","200"],[" 1","100"],[" ","100"],["1","0"],["1","1000001"],
-  [1.1,100],[1000001,1000001]
- ]){
-  const result=validateManualBchBallots({votes_received:votes,total_ballots:total});
-  assert.equal(result.data,null,String(votes)+"/"+String(total));
-  assert.ok(result.error);
+test("reject invalid common total and candidate votes exceeding it",()=>{
+ for(const total of ["-1","0","1000001","1.5","1e2"," 5",{}]){
+  assert.equal(validateSharedBchTotal(total),undefined);
  }
- assert.equal(validateManualBchBallots(null).data,null);
+ for(const count of ["191","-1","1.5","1e2"," 1"]){
+  assert.ok(validateBchVotes(count,190).error);
+ }
+ assert.ok(validateBchVotes("5",null).error);
 });
-
-test("BCH personnel toolbar never links to BTC permissions; top-level panel enables direct vote entry",()=>{
+test("BCH personnel has no BTC permission shortcut and exposes a standalone tally panel",()=>{
  const ui=read("src/components/bch-candidates-client.tsx");
  assert.doesNotMatch(ui,/Phân quyền BTC|\/permissions/);
- assert.doesNotMatch(ui,/import Link from "next\/link"/);
  assert.match(ui,/Nhập kết quả kiểm phiếu/);
  assert.match(ui,/href="#ket-qua-kiem-phieu-bch"/);
  assert.match(ui,/<BchBallotEditor/);
  assert.match(ui,/congressKind==="doan"&&canManage&&<BchBallotEditor/);
+ assert.match(ui,/total=\{sharedTotal\}/);
+ assert.match(ui,/onTotalSaved=\{value=>/);
  assert.match(ui,/onSaved=\{saved=>/);
- assert.match(ui,/congressKind==="doan"&&canManage&&<th>Kết quả kiểm phiếu/);
- assert.match(ui,/congressKind==="doan"&&canManage&&<td/);
- assert.match(ui,/congressKind==="doan"&&canManage&&<div className="col-span-2/);
 });
-
-test("editing personnel preserves existing tallies, because results are written only by tally endpoint",()=>{
+test("biographical edits intentionally never overwrite ballot results",()=>{
  const ui=read("src/components/bch-candidates-client.tsx");
+ const personnel=read("src/app/api/bch-candidates/route.ts");
  assert.match(ui,/validateBchInput\(\{\.\.\.form,votes_received:"",total_ballots:""\}\)/);
  assert.match(ui,/ballotEnabled:false,\.\.\.checked\.data/);
- assert.doesNotMatch(ui,/<fieldset className="rounded-xl border border-\[#d6e5ef\]/);
- const form=ui.slice(ui.indexOf("const formatCandidate="),ui.indexOf("function bchPhotoUrl"));
- assert.match(form,/votes_received:"",total_ballots:""/);
+ assert.match(personnel,/bchWriteData/);
  const api=read("src/app/api/bch-candidates/ballots/route.ts");
- assert.match(api,/\.update\(\{\.\.\.checked\.data,updated_at:/);
+ assert.match(api,/\.update\(\{votes_received:checked\.votes,total_ballots:checked\.votes===null\?null:congress\.data\.bch_total_ballots/);
  assert.doesNotMatch(api,/\.update\(\{\.\.\.body/);
 });
-
-test("ballot endpoint is protected by server congress scope and role plus optimistic concurrency",()=>{
+test("ballot endpoint uses effective account permission plus single common total",()=>{
  const api=read("src/app/api/bch-candidates/ballots/route.ts");
- assert.match(api,/export async function PATCH/);
- assert.match(api,/origin&&new URL\(origin\)\.host!==request\.headers\.get\("host"\)/);
- assert.match(api,/getAuth\(\)/);
- assert.match(api,/getCongressRole\(supabase,user\.id,congressId\)/);
- assert.match(api,/canCongress\(role,"bch\.write"\)/);
- assert.match(api,/congress\.data\.kind!=="doan"/);
- assert.match(api,/validateManualBchBallots\(body\)/);
- assert.match(api,/\.eq\("congress_id",congressId\)\.eq\("id",id\)/);
+ const totalApi=read("src/app/api/bch-candidates/ballots/total/route.ts");
+ assert.match(api,/hasCongressAbility\(supabase,user\.id,congressId,"bch\.write"\)/);
+ assert.match(api,/select\("kind,bch_total_ballots"\)/);
+ assert.match(api,/validateBchVotes\(body\?\.votes_received,congress\.data\.bch_total_ballots\)/);
  assert.match(api,/\.eq\("updated_at",expectedUpdatedAt\)/);
- assert.match(api,/bch\.ballot_updated/);
- assert.doesNotMatch(api,/createAdminClient|service_role/i);
+ assert.match(totalApi,/set_bch_shared_ballot_total/);
+ assert.match(totalApi,/validateSharedBchTotal/);
 });
-
-test("vote editor has individual controlled inputs, percentage previews, feedback and clear confirmation",()=>{
+test("ballot UI accepts one shared total and per-candidate count, no repeated denominators",()=>{
  const ui=read("src/components/bch-ballot-editor.tsx");
  assert.match(ui,/id="ket-qua-kiem-phieu-bch"/);
- assert.match(ui,/candidates\.map\(item=><BallotRow/);
+ assert.match(ui,/name="bch_total_ballots"/);
  assert.match(ui,/name="votes_received"/);
- assert.match(ui,/name="total_ballots"/);
- assert.match(ui,/ballotPercentage\(count,denominator\)/);
- assert.match(ui,/formatBallotPercentage\(count,denominator\)/);
- assert.match(ui,/method:"PATCH",credentials:"same-origin"/);
+ assert.doesNotMatch(ui,/name="total_ballots"/);
+ assert.match(ui,/ballotPercentage\(checked\.votes,total\)/);
+ assert.match(ui,/\/api\/bch-candidates\/ballots\/total/);
+ assert.match(ui,/\/api\/bch-candidates\/ballots"/);
  assert.match(ui,/expectedUpdatedAt:item\.updated_at/);
- assert.match(ui,/window\.confirm\("Xóa số phiếu đã lưu/);
- assert.match(ui,/disabled=\{disabled\|\|saving\|\|!changed\|\|!checked\.data\}/);
+ assert.match(ui,/window\.confirm/);
  assert.match(ui,/role="alert"/);
- assert.match(ui,/Mỗi nhân sự có nút lưu riêng/);
 });

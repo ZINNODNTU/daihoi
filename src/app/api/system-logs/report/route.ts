@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole,isStaffUser} from "@/lib/auth";
+import {getAuth,hasCongressAbility,isStaffUser} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {writeSystemLog} from "@/lib/system-log";
 
@@ -29,7 +29,7 @@ export async function POST(request:Request){
     !/^\/(?:dashboard(?:\/[\w/-]*)?|congresses\/[a-f0-9-]{36}(?:\/[\w/-]*)?)$/.test(route))
    return fail("Sự kiện không hợp lệ.",400);
   const congressId=route.match(/^\/congresses\/([a-f0-9-]{36})(?:\/|$)/)?.[1]||null;
-  if(congressId&&(!UUID.test(congressId)||!(await hasRole(supabase,user.id,congressId,"viewer"))))
+  if(congressId&&(!UUID.test(congressId)||!(await hasCongressAbility(supabase,user.id,congressId,"reports.read"))))
    return fail("Không thuộc Đại hội này.",403);
   const {count,error}=await createAdminClient().from("system_logs")
    .select("id",{count:"exact",head:true})

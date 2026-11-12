@@ -32,6 +32,27 @@ export function formatBallotPercentage(votes:number|null|undefined,total:number|
  return percentage===null?"—":percentage.toLocaleString("vi-VN",{minimumFractionDigits:2,maximumFractionDigits:2})+"%";
 }
 
+/** One common denominator for the congress, entered once by the BTC. */
+export function validateSharedBchTotal(value:unknown):number|null|undefined{
+ if(value===null||value==="")return null;
+ if((typeof value!=="string"&&typeof value!=="number")||
+  !/^[1-9][0-9]*$/.test(String(value)))return undefined;
+ const n=Number(value);
+ return Number.isSafeInteger(n)&&n<=1000000?n:undefined;
+}
+/** A candidate records only the votes achieved against the shared denominator. */
+export function validateBchVotes(value:unknown,total:number|null){
+ if(value===null||value==="")return {votes:null,error:null};
+ if(total===null)return {votes:null,error:"Cần nhập và lưu tổng số phiếu chung trước."};
+ if((typeof value!=="string"&&typeof value!=="number")||
+  !/^(0|[1-9][0-9]*)$/.test(String(value)))
+  return {votes:null,error:"Số phiếu đạt phải là số nguyên không âm."};
+ const votes=Number(value);
+ if(!Number.isSafeInteger(votes)||votes>total)
+  return {votes:null,error:"Số phiếu đạt không được vượt tổng số phiếu chung."};
+ return {votes,error:null};
+}
+
 /** Parse only a manually transcribed tally pair. No personnel fields are accepted.
  * Both blank fields intentionally clear an existing result, never assume zero.
  */

@@ -69,7 +69,7 @@ test("Chỉ phân tích người đã điểm danh; nhiều phiên cùng ngườ
 });
 test("Phân tích chỉ mở cho BTC, kết hợp quyền với đúng phạm vi Đại hội",()=>{
  const page=read("../src/app/congresses/[id]/quality/page.tsx");
- assert.match(page,/hasRole\(supabase,user\.id,id,"viewer"\)/);
+ assert.match(page,/hasCongressAbility\(supabase,user\.id,id,\"quality\.read\"\)/);
  assert.match(page,/\.eq\("congress_id",id\)/);
  assert.match(page,/loadQualitySource\(db,id,selectedSessionId\)/);
  assert.match(page,/calculateDelegateQuality/);
@@ -89,7 +89,7 @@ test("Hồ sơ và Excel lưu giới tính, ngày sinh; chỉnh sửa do admin t
  const api=read("../src/app/api/delegates/route.ts");
  assert.match(api,/gender:normalizeGender\(item\.gender\)/);
  assert.match(api,/birth_date:normalizeBirthDate\(item\.birth_date\)/);
- assert.match(api,/hasRole\(supabase,user\.id,congressId,"admin"\)/);
+ assert.match(api,/hasCongressAbility\(supabase,user\.id,congressId,\"delegates\.write\"\)/);
  assert.match(api,/\.eq\("congress_id",congressId\)/);
  const migration=read("../supabase/upgrade-delegate-demographics-v15.sql");
  assert.match(migration,/ADD COLUMN IF NOT EXISTS gender text/);
@@ -102,7 +102,7 @@ test("Phân tích là phân hệ độc lập; dữ liệu được phân trang,
  const shell=read("../src/components/app-shell.tsx");
  const home=read("../src/app/congresses/[id]/page.tsx");
  const old=read("../src/app/congresses/[id]/delegates/quality/page.tsx");
- assert.match(shell,/canCongress\(accessRole,"quality.read"\)/);
+ assert.match(shell,/canUse\("quality.read"\)/);
  assert.match(shell,/name:"Phân tích chất lượng",href:base\+"\/quality"/);
  assert.match(home,/href:"quality",icon:ChartColumnIncreasing/);
  assert.match(old,/redirect\("\/congresses\/"\+id\+"\/quality"\+query\)/);

@@ -23,6 +23,25 @@ const POLICIES:Record<Exclude<CongressRole,null>,readonly CongressAbility[]>={
  secretary:["workspace.view","bch.read","documents.read","reports.read"]
 };
 
+/** Account-specific permissions are restrictions on role entitlements, never
+ * grants. These do not include privilege management, settings or system logs.
+ */
+export const ACCOUNT_PERMISSION_CAPABILITIES=[
+ "workspace.view","delegates.read","delegates.write","quality.read",
+ "seating.read","seating.write","bch.read","bch.write",
+ "attendance.read","attendance.scan","attendance.sessions",
+ "documents.read","documents.write","reports.read"
+] as const satisfies readonly CongressAbility[];
+export type AccountPermissionAbility=typeof ACCOUNT_PERMISSION_CAPABILITIES[number];
+export function isAccountPermissionAbility(value:unknown):value is AccountPermissionAbility{
+ return typeof value==="string"&&(ACCOUNT_PERMISSION_CAPABILITIES as readonly string[]).includes(value);
+}
+export function canCongressForAccount(
+ role:CongressRole,ability:CongressAbility,restricted:readonly string[]
+){
+ return canCongress(role,ability)&&!restricted.includes(ability);
+}
+
 export function canCongress(role:CongressRole,ability:CongressAbility):boolean{
  return role!==null&&POLICIES[role].includes(ability);
 }

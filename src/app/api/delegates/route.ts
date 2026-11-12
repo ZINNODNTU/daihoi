@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {normalizeGender,normalizeBirthDate} from "@/lib/delegate-demographics";
 import {writeSystemLog} from "@/lib/system-log";
 
@@ -15,7 +15,7 @@ export async function POST(request:Request){
   if(!user)return reply("Cần đăng nhập.",401);
   const body=await request.json();
   const congressId=String(body.congressId||"");
-  if(!(await hasRole(supabase,user.id,congressId,"admin")))return reply("Không có quyền quản lý đại biểu.",403);
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"delegates.write")))return reply("Không có quyền quản lý đại biểu.",403);
   const entries:unknown[]=Array.isArray(body.delegates)?body.delegates:[body];
   if(!entries.length||entries.length>250)return reply("Mỗi lần nhập tối đa 250 đại biểu.",400);
   const rows=entries.map(entry=>{
@@ -61,7 +61,7 @@ export async function PATCH(request:Request){
   const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if(!uuid.test(congressId)||!uuid.test(delegateId))
    return reply("Mã Đại hội hoặc đại biểu không hợp lệ.",400);
-  if(!(await hasRole(supabase,user.id,congressId,"admin")))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"delegates.write")))
    return reply("Không có quyền cập nhật đại biểu.",403);
   // Allow only profile attributes; QR, seat identity and authentication stay unchanged.
   const allowed=new Set(["congressId","delegateId","gender","birth_date","unit","position"]);

@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {checkDriveConnection,DriveStorageError,missingDriveSettings} from "@/lib/drive";
 import {checkScriptDrive,missingScriptSettings,scriptStorageSelected} from "@/lib/google-apps-script";
 export const runtime="nodejs";
@@ -10,7 +10,7 @@ export async function GET(request:Request){
  if(!user)return NextResponse.json({error:"Cần đăng nhập."},{status:401});
  const congressId=new URL(request.url).searchParams.get("congressId")||"";
  if(!UUID.test(congressId))return NextResponse.json({error:"Đại hội không hợp lệ."},{status:400});
- if(!(await hasRole(supabase,user.id,congressId,"admin")))
+ if(!(await hasCongressAbility(supabase,user.id,congressId,"documents.write")))
   return NextResponse.json({error:"Chỉ quản trị Đại hội được kiểm tra kết nối Drive."},{status:403});
  const useScript=scriptStorageSelected();
  const missing=useScript?missingScriptSettings():missingDriveSettings();

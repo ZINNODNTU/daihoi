@@ -11,15 +11,15 @@
    const profile=read("../src/app/congresses/[id]/delegates/page.tsx");
    assert.match(profile,/DelegateAdminTabs/);
    const accounts=read("../src/app/congresses/[id]/delegates/accounts/page.tsx");
-   assert.match(accounts,/hasRole\(supabase,user\.id,id,"admin"\)/);
-   assert.match(accounts,/if\(!\(await hasRole/);
+   assert.match(accounts,/hasCongressAbility\(supabase,user\.id,id,\"delegates\.write\"\)/);
+   assert.match(accounts,/if\(!\(await hasCongressAbility/);
    const delegateUI=read("../src/components/delegates-client.tsx");
    assert.doesNotMatch(delegateUI,/provisionAccounts\(/);
   });
 
   test("Mật khẩu chỉ đặt lại sau khi xác minh quyền và tài khoản được liên kết đúng Đại hội",()=>{
    const api=read("../src/app/api/delegates/accounts/reset/route.ts");
-   assert.match(api,/hasRole\(supabase,user\.id,congressId,"admin"\)/);
+   assert.match(api,/hasCongressAbility\(supabase,user\.id,congressId,\"delegates\.write\"\)/);
    assert.match(api,/\.eq\("congress_id",congressId\)/);
    assert.match(api,/\.eq\("id",delegateId\)/);
    assert.match(api,/auth\.admin\.updateUserById\(delegate\.auth_user_id,\{password\}\)/);
@@ -58,7 +58,7 @@
    assert.match(download,/\.eq\("auth_user_id",user\.id\)/);
    assert.match(download,/\.eq\("is_active",true\)/);
    const toggle=read("../src/app/api/documents/visibility/route.ts");
-   assert.match(toggle,/hasRole\(supabase,user\.id,congressId,"admin"\)/);
+   assert.match(toggle,/hasCongressAbility\(supabase,user\.id,congressId,\"documents\.write\"\)/);
    assert.match(toggle,/\.eq\("id",documentId\)\.eq\("congress_id",congressId\)/);
    const ui=read("../src/components/documents-client.tsx");
    assert.match(ui,/Công bố tài liệu cho đại biểu/);

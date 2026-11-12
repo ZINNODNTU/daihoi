@@ -50,6 +50,8 @@
 
 | **Kiểm phiếu BCH V56 — nhập trực tiếp số phiếu và tỷ lệ, không lẫn phân quyền BTC** | [Hướng dẫn V56](huong-dan/CHUC-NANG-KIEM-PHIEU-BCH-V56.md) — mỗi ứng cử viên có nút lưu riêng, bảo vệ dữ liệu nhân sự và kết quả. |
 
+| **V57 — Phân quyền theo từng tài khoản BTC và một tổng phiếu BCH dùng chung** | [Hướng dẫn V57](huong-dan/PHAN-QUYEN-TAI-KHOAN-TONG-PHIEU-CHUNG-V57.md) — bật/tắt quyền từng người; lưu tổng phiếu một lần và tự tính % cho mọi ứng viên. |
+
 ## Cấu trúc thư mục
 
 ```text

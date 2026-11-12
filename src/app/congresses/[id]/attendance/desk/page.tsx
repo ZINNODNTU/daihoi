@@ -1,4 +1,4 @@
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {notFound} from "next/navigation";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {AttendanceClient} from "@/components/attendance-client";
@@ -12,7 +12,7 @@ export default async function AttendanceDeskPage({params,searchParams}:{
  const {id}=await params;
  const selectedSessionId=(await searchParams).sessionId||"";
  const {supabase,user}=await getAuth();
- if(!user||!(await hasRole(supabase,user.id,id,"checkin")))notFound();
+ if(!user||!(await hasCongressAbility(supabase,user.id,id,"attendance.scan")))notFound();
  const [delegates,sessions,checkins]=await Promise.all([
   supabase.from("delegates")
    .select("id,congress_id,code,full_name,unit,delegate_type,qr_version,barcode_code,is_active,photo_path")
@@ -23,9 +23,9 @@ export default async function AttendanceDeskPage({params,searchParams}:{
   supabase.from("checkins").select("*").eq("congress_id",id)
    .order("checked_in_at",{ascending:false}).limit(1500)
  ]);
- const canScan=!!user&&await hasRole(supabase,user.id,id,"checkin");
- const canManage=!!user&&await hasRole(supabase,user.id,id,"admin");
- const canReadSeating=!!user&&await hasRole(supabase,user.id,id,"viewer");
+ const canScan=!!user&&await hasCongressAbility(supabase,user.id,id,"attendance.scan");
+ const canManage=!!user&&await hasCongressAbility(supabase,user.id,id,"attendance.sessions");
+ const canReadSeating=!!user&&await hasCongressAbility(supabase,user.id,id,"seating.read");
  let seatByDelegate:ReturnType<typeof buildDelegateSeatMap>={};
  if(canReadSeating){
   // Seating tables are intentionally service-only; access the privileged client

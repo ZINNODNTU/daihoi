@@ -4,7 +4,7 @@ import {
  BarChart3,CakeSlice,CalendarDays,ClipboardCheck,Info,
  RefreshCw,Users,VenusAndMars
 } from "lucide-react";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {calculateDelegateQuality,type DemographicPerson} from "@/lib/delegate-demographics";
 import {loadQualitySource} from "@/lib/delegate-quality-source";
@@ -30,7 +30,7 @@ export default async function DelegateQualityPage({params,searchParams}:{
  const {id}=await params,{sessionId:requestedSessionId}=await searchParams;
  const {supabase,user}=await getAuth();
  if(!user)redirect("/login");
- if(!(await hasRole(supabase,user.id,id,"viewer")))notFound();
+ if(!(await hasCongressAbility(supabase,user.id,id,"quality.read")))notFound();
  const db=createAdminClient();
  const [congressResult,sessionsResult]=await Promise.all([
   db.from("congresses").select("name").eq("id",id).maybeSingle(),

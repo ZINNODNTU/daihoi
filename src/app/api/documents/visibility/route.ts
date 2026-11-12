@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {DriveStorageError,getDriveToken,setDriveLinkSharing} from "@/lib/drive";
 import {scriptStorageSelected,shareScriptDrive} from "@/lib/google-apps-script";
@@ -17,7 +17,7 @@ export async function PATCH(request:Request){
  const documentId=String(body?.documentId||"");
  if(!UUID.test(congressId)||!UUID.test(documentId)||typeof body?.visible!=="boolean")
   return fail("Yêu cầu không hợp lệ.",400);
- if(!(await hasRole(supabase,user.id,congressId,"admin")))return fail("Chỉ quản trị Đại hội được công bố tài liệu.",403);
+ if(!(await hasCongressAbility(supabase,user.id,congressId,"documents.write")))return fail("Chỉ quản trị Đại hội được công bố tài liệu.",403);
 
  const db=createAdminClient();
  const {data:record,error:lookupError}=await db.from("documents")

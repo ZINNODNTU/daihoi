@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {BrandMark,type CongressKind} from "@/components/brand-mark";
 import {AdminErrorMonitor} from "@/components/admin-error-monitor";
-import {canCongress,CONGRESS_ROLE_LABELS,type CongressRole} from "@/lib/congress-permissions";
+import {canCongress,CONGRESS_ROLE_LABELS,type CongressRole,type CongressAbility} from "@/lib/congress-permissions";
 
 
 type NavItem={name:string;href:string;icon:typeof LayoutGrid};
@@ -24,9 +24,10 @@ type Props={
   canCheckin?:boolean;
   canViewSystemLogs?:boolean;
   accessRole?:CongressRole;
+  effectiveAbilities?:CongressAbility[];
 };
 
-export function AppShell({children,name,congressId,congressName,congressKind="doan",canViewSystemLogs=false,accessRole=null}:Props){
+export function AppShell({children,name,congressId,congressName,congressKind="doan",canViewSystemLogs=false,accessRole=null,effectiveAbilities}:Props){
   const [mobile,setMobile]=useState(false);
   const path=usePathname();
   const [logoutError,setLogoutError]=useState("");
@@ -35,28 +36,29 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
   const logs:NavItem={name:"Nhật ký hệ thống",href:"/dashboard/system-logs",icon:ScrollText};
   const myAccount:NavItem={name:"Tài khoản & bảo mật",href:"/account",icon:CircleUserRound};
   const base=congressId?"/congresses/"+congressId:"";
+  const canUse=(ability:CongressAbility)=>effectiveAbilities?effectiveAbilities.includes(ability):canCongress(accessRole,ability);
   // These capabilities are computed by the verified server layout, not the browser.
   // Never render delegate-only "Thẻ đại biểu" inside the staff workspace.
   const congressItems:NavItem[]=congressId?[
     {name:"Bảng điều hành",href:base,icon:BarChart3},
-    ...(canCongress(accessRole,"attendance.read")?[
+    ...(canUse("attendance.read")?[
       {name:"Trung tâm điểm danh",href:base+"/attendance",icon:QrCode},
       {name:"Màn hình điểm danh",href:base+"/attendance/live",icon:BarChart3},
       {name:"Quét tại bàn BTC",href:base+"/attendance/desk",icon:QrCode}
     ]:[]),
-    ...(canCongress(accessRole,"delegates.read")?[{name:"Quản lý đại biểu",href:base+"/delegates",icon:Users}]:[]),
-    ...(canCongress(accessRole,"quality.read")?[{name:"Phân tích chất lượng",href:base+"/quality",icon:ChartColumnIncreasing}]:[]),
-    ...(canCongress(accessRole,"seating.read")?[{name:"Sơ đồ ghế",href:base+"/seating",icon:Armchair}]:[]),
-    ...(canCongress(accessRole,"bch.read")?[{name:"Nhân sự BCH",href:base+"/bch-candidates",icon:ClipboardList}]:[]),
-    ...(canCongress(accessRole,"documents.read")?[{name:"Tài liệu",href:base+"/documents",icon:FileText}]:[]),
-    ...(canCongress(accessRole,"reports.read")?[{name:"Báo cáo",href:base+"/reports",icon:ClipboardList}]:[])
+    ...(canUse("delegates.read")?[{name:"Quản lý đại biểu",href:base+"/delegates",icon:Users}]:[]),
+    ...(canUse("quality.read")?[{name:"Phân tích chất lượng",href:base+"/quality",icon:ChartColumnIncreasing}]:[]),
+    ...(canUse("seating.read")?[{name:"Sơ đồ ghế",href:base+"/seating",icon:Armchair}]:[]),
+    ...(canUse("bch.read")?[{name:"Nhân sự BCH",href:base+"/bch-candidates",icon:ClipboardList}]:[]),
+    ...(canUse("documents.read")?[{name:"Tài liệu",href:base+"/documents",icon:FileText}]:[]),
+    ...(canUse("reports.read")?[{name:"Báo cáo",href:base+"/reports",icon:ClipboardList}]:[])
   ]:[];
   const adminItems:NavItem[]=congressId?[
-    ...(canCongress(accessRole,"team.manage")?[
+    ...(canUse("team.manage")?[
       {name:"Phân quyền",href:base+"/permissions",icon:ShieldCheck},
       {name:"Tài khoản BTC",href:base+"/team",icon:UserRoundCog}
      ]:[]),
-    ...(canCongress(accessRole,"settings.manage")?[{name:"Cấu hình Đại hội",href:base+"/settings",icon:Settings2}]:[])
+    ...(canUse("settings.manage")?[{name:"Cấu hình Đại hội",href:base+"/settings",icon:Settings2}]:[])
   ]:[];
   const items=[overview,...(canViewSystemLogs?[logs]:[]),myAccount,...congressItems,...adminItems];
   const active=[...items].sort((a,b)=>b.href.length-a.href.length)
@@ -208,7 +210,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          {congressId&&canCongress(accessRole,"attendance.scan")&&<Link href={"/congresses/"+congressId+"/attendance"} className="btn btn-secondary !min-h-9 hidden !text-[11px] md:inline-flex">
+          {congressId&&canUse("attendance.scan")&&<Link href={"/congresses/"+congressId+"/attendance"} className="btn btn-secondary !min-h-9 hidden !text-[11px] md:inline-flex">
             <QrCode size={15}/> Điểm danh nhanh <ArrowRight size={13}/>
           </Link>}
           <span className="hidden h-7 w-px bg-[#e6eaf1] md:block"/>

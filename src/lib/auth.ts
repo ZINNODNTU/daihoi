@@ -1,7 +1,7 @@
 import "server-only";
 import {createClient} from "@/lib/supabase/server";
 import {cache} from "react";
-import {canCongress,type CongressAbility,type CongressRole} from "@/lib/congress-permissions";
+import {canCongressForAccount,roleAbilities,type CongressAbility,type CongressRole} from "@/lib/congress-permissions";
 
 type Db=Awaited<ReturnType<typeof createClient>>;
 export type Role="admin"|"checkin"|"secretary"|"delegate"|"guest";
@@ -62,10 +62,29 @@ export async function getCongressRole(supabase:Db,userId:string,congressId:strin
  const role=membership.data?.role;
  return role==="admin"||role==="checkin"||role==="secretary"?role:null;
 }
+/** Server-resolved account rights: verified role + user-specific denied actions.
+ * The account restriction table is read-only to clients and RLS self-scoped.
+ * Super administrators cannot be restricted through a BTC account.
+ */
+export async function getCongressEffectiveAbilities(
+ supabase:Db,userId:string,congressId:string
+):Promise<readonly CongressAbility[]>{
+ const role=await getCongressRole(supabase,userId,congressId);
+ if(!role)return [];
+ if(role==="super_admin")return roleAbilities(role);
+ const {data,error}=await supabase.from("btc_account_capability_restrictions")
+  .select("ability").eq("congress_id",congressId).eq("user_id",userId)
+  .eq("allowed",false).limit(30);
+ // Failing closed avoids silently bypassing individual restrictions.
+ if(error)return [];
+ const restrictions=(data||[]).map(row=>row.ability);
+ return roleAbilities(role).filter(ability=>canCongressForAccount(role,ability,restrictions));
+}
 export async function hasCongressAbility(
  supabase:Db,userId:string,congressId:string,ability:CongressAbility
 ){
- return canCongress(await getCongressRole(supabase,userId,congressId),ability);
+ const effective=await getCongressEffectiveAbilities(supabase,userId,congressId);
+ return effective.includes(ability);
 }
 export async function hasRole(
  supabase:Db,userId:string,congressId:string,needed:"admin"|"checkin"|"viewer"

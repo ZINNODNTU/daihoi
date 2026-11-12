@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {googleDriveFileUrl,googleDrivePreviewUrl} from "@/lib/drive-links";
 import {writeSystemLog} from "@/lib/system-log";
@@ -18,7 +18,7 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
   .select("id,congress_id,drive_file_id,mime_type,delegate_visible")
   .eq("id",id).maybeSingle();
  if(error||!doc)return fail(404,"Không tìm thấy tài liệu.");
- const staff=await hasRole(supabase,user.id,doc.congress_id,"viewer");
+ const staff=await hasCongressAbility(supabase,user.id,doc.congress_id,"documents.read");
  if(!staff){
   if(!doc.delegate_visible)return fail(403,"Tài liệu chưa công bố cho đại biểu.");
   const {data:own,error:ownerError}=await db.from("delegates").select("id")
@@ -62,7 +62,7 @@ export async function DELETE(request:Request,{params}:{params:Promise<{id:string
   if(typeof congressId!=="string"||
    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(congressId))
    return fail(400,"Đại hội không hợp lệ.");
-  if(!(await hasRole(supabase,user.id,congressId,"admin")))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"documents.write")))
    return fail(403,"Chỉ quản trị Đại hội được gỡ tài liệu.");
   const db=createAdminClient();
   const {data:removed,error}=await db.from("documents").delete()

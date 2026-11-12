@@ -62,22 +62,22 @@ test("Google Drive upload sử dụng OAuth server, riêng tư theo Đại hội
  assert.match(storage,/oauth_expired/);
  assert.doesNotMatch(storage,/NEXT_PUBLIC_GOOGLE_/);
  const route=file("../src/app/api/documents/route.ts");
- assert.match(route,/hasRole\(supabase,user\.id,congressId,"admin"\)/);
+ assert.match(route,/hasCongressAbility\(supabase,user\.id,congressId,\"documents\.write\"\)/);
  assert.match(route,/validateDocumentBytes/);
  assert.match(route,/uploadDriveFile\(token,folder,file\)/);
  assert.match(route,/deleteDriveFile\(token,uploadedId\)/);
  assert.match(route,/\.eq\("id",congressId\)/);
  assert.match(route,/Cache-Control":"private, no-store"/);
  const status=file("../src/app/api/documents/status/route.ts");
- assert.match(status,/hasRole\(supabase,user\.id,congressId,"admin"\)/);
+ assert.match(status,/hasCongressAbility\(supabase,user\.id,congressId,\"documents\.write\"\)/);
  assert.match(status,/checkDriveConnection/);
  assert.doesNotMatch(status,/refresh_token:/);
 });
 
 test("Chỉ BTC được đăng tải và quản lý; đại biểu chỉ xem tài liệu đã công bố",()=>{
  const docs=file("../src/app/congresses/[id]/documents/page.tsx");
- assert.match(docs,/hasRole\(supabase,user\.id,id,"viewer"\)/);
- assert.match(docs,/hasRole\(supabase,user\.id,id,"admin"\)/);
+ assert.match(docs,/hasCongressAbility\(supabase,user\.id,id,\"documents\.read\"\)/);
+ assert.match(docs,/hasCongressAbility\(supabase,user\.id,id,\"documents\.write\"\)/);
  const download=file("../src/app/api/documents/[id]/route.ts");
  assert.match(download,/getAuth\(\)/);
  assert.match(download,/if\(!doc\.delegate_visible\)/);

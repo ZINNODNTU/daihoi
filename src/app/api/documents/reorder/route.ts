@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {writeSystemLog} from "@/lib/system-log";
 
@@ -20,7 +20,7 @@ export async function POST(req:Request){
    !orderedIds.every((id:unknown)=>typeof id==="string"&&UUID.test(id))||
    new Set(orderedIds.map((id:string)=>id.toLowerCase())).size!==orderedIds.length)
    return fail("Danh sách thứ tự tài liệu không hợp lệ.",400);
-  if(!(await hasRole(supabase,user.id,congressId,"admin")))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"documents.write")))
    return fail("Chỉ quản trị Đại hội được sắp xếp tài liệu.",403);
   const {error}=await createAdminClient().rpc("reorder_congress_documents",{
    p_congress_id:congressId,p_ids:orderedIds

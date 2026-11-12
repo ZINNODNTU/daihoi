@@ -81,7 +81,7 @@ function endpoints(fx,{admin=true,user=userId}={}){
   "next/server":{NextResponse:{json:(payload,options={})=>
    new Response(JSON.stringify(payload),{status:options.status||200,headers:{"Content-Type":"application/json",...options.headers}})}},
   "@/lib/auth":{getAuth:async()=>({user:user?{id:user}:null,supabase:{}}),
-   hasRole:async()=>admin},
+   hasCongressAbility:async()=>admin},
   "@/lib/supabase/admin":{createAdminClient:()=>fx.db},
   "@/lib/seating":{renumberGridSeats},
   "@/lib/seating-templates":helpers

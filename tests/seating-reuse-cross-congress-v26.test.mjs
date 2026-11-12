@@ -68,7 +68,7 @@ function route(fixture,{admin=true,sourceAdmin=true,userId=user}={}){
   "next/server":{NextResponse:{json:(body,options={})=>new Response(JSON.stringify(body),{
    status:options.status||200,headers:{"Content-Type":"application/json",...options.headers}})}},
   "@/lib/auth":{getAuth:async()=>({supabase:{},user:userId?{id:userId}:null}),
-   hasRole:async(_db,_user,congress)=>congress===source?sourceAdmin:admin},
+   hasCongressAbility:async(_db,_user,congress)=>congress===source?sourceAdmin:admin},
   "@/lib/supabase/admin":{createAdminClient:()=>fixture.db},
   "@/lib/seating":{renumberGridSeats},
   "@/lib/seating-templates":helpers

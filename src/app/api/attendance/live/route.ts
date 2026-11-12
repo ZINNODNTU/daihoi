@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {writeSystemLog} from "@/lib/system-log";
 
@@ -19,7 +19,7 @@ export async function GET(request:Request){
   const sessionId=q.get("sessionId")||"";
   if(!uuid.test(congressId)||!uuid.test(sessionId))
    return fail("Mã phiên không hợp lệ.",400);
-  if(!(await hasRole(supabase,user.id,congressId,"checkin")))
+  if(!(await hasCongressAbility(supabase,user.id,congressId,"attendance.read")))
    return fail("Tài khoản không có quyền theo dõi điểm danh Đại hội.",403);
   // All privileged table reads happen only after the Congress role check.
   const db=createAdminClient();

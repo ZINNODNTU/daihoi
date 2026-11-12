@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {validateBchInput,bchWriteData} from "@/lib/bch-candidates";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {writeSystemLog} from "@/lib/system-log";
@@ -16,7 +16,7 @@ async function authorize(congressId:string,write:boolean){
  if(!uuid.test(congressId))return {error:fail("Mã Đại hội không hợp lệ.",400)} as const;
  const {supabase,user}=await getAuth();
  if(!user)return {error:fail("Vui lòng đăng nhập.",401)} as const;
- const canManage=await hasRole(supabase,user.id,congressId,"admin");
+ const canManage=await hasCongressAbility(supabase,user.id,congressId,"bch.write");
  let canView=canManage;
  if(!write&&!canView){
   const {data,error}=await supabase.from("congress_members")
@@ -24,7 +24,7 @@ async function authorize(congressId:string,write:boolean){
   if(error)return {error:fail("Không xác minh được phân quyền nhân sự.",500)} as const;
   // Secretary access additionally requires an active, congress-scoped BTC identity.
   canView=["delegate","guest"].includes(data?.role||"")||
-   (data?.role==="secretary"&&await hasRole(supabase,user.id,congressId,"viewer"));
+   (data?.role==="secretary"&&await hasCongressAbility(supabase,user.id,congressId,"bch.read"));
    if(!canView){
     const own=await createAdminClient().from("delegates").select("id")
      .eq("congress_id",congressId).eq("auth_user_id",user.id)
@@ -57,7 +57,12 @@ export async function GET(request:Request){
      {headers:{"Cache-Control":"no-store"}});
    }
    if(error)return fail("Không đọc được danh sách nhân sự BCH. Kiểm tra migration v8.",500);
-  return NextResponse.json({candidates:data||[]},{headers:{"Cache-Control":"no-store"}});
+  const totalResult=auth.canManage?await auth.supabase.from("congresses")
+   .select("bch_total_ballots").eq("id",congressId).maybeSingle():null;
+  if(totalResult?.error)return fail("Không đọc được tổng số phiếu BCH dùng chung.",503);
+  return NextResponse.json({candidates:data||[],
+   ...(auth.canManage?{ballotTotal:totalResult?.data?.bch_total_ballots??null}:{})
+  },{headers:{"Cache-Control":"no-store"}});
  }catch{return fail("Không thể tải danh sách BCH.",500);}
 }
 export async function POST(request:Request){

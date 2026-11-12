@@ -1,7 +1,7 @@
 import {randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
 import {revalidateTag} from "next/cache";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {renumberGridSeats} from "@/lib/seating";
 import {instantiateTemplateSeats,snapshotTemplateSeats,type SeatTemplateSlot} from "@/lib/seating-templates";
@@ -17,7 +17,7 @@ async function targetAccess(congressId:string){
  const {supabase,user}=await getAuth();
  if(!user)return {error:fail("Cần đăng nhập.",401)} as const;
  if(!uuid.test(congressId))return {error:fail("Mã Đại hội không hợp lệ.",400)} as const;
- if(!(await hasRole(supabase,user.id,congressId,"admin")))
+ if(!(await hasCongressAbility(supabase,user.id,congressId,"seating.write")))
   return {error:fail("Chỉ quản trị viên Đại hội mới được sử dụng sơ đồ.",403)} as const;
  return {supabase,user} as const;
 }
@@ -116,7 +116,7 @@ export async function POST(request:Request){
   if(!uuid.test(sourceCongressId)||!uuid.test(sourceLayoutId))
    return fail("Vui lòng chọn sơ đồ nguồn hợp lệ.",400);
   if(sourceCongressId!==congressId&&
-   !(await hasRole(auth.supabase,auth.user.id,sourceCongressId,"admin")))
+   !(await hasCongressAbility(auth.supabase,auth.user.id,sourceCongressId,"seating.write")))
    return fail("Bạn không có quyền sử dụng sơ đồ của Đại hội nguồn.",403);
   const db=createAdminClient();
   const {data:source,error:layoutError}=await db.from("seating_layouts")

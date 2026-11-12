@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import type {ReportCheckin} from "@/lib/attendance-report";
 export const dynamic="force-dynamic";
 const isUuid=(value:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -11,7 +11,7 @@ export async function GET(request:Request){
  const sessionId=params.get("sessionId")||"";
  if(!isUuid(congressId)||!isUuid(sessionId))
    return NextResponse.json({error:"Mã Đại hội hoặc phiên điểm danh không hợp lệ."},{status:400});
- if(!(await hasRole(supabase,user.id,congressId,"viewer")))
+ if(!(await hasCongressAbility(supabase,user.id,congressId,"reports.read")))
    return NextResponse.json({error:"Bạn không có quyền xem báo cáo của Đại hội này."},{status:403});
  const {data:session,error:sessionError}=await supabase.from("attendance_sessions")
    .select("id,congress_id,name,status").eq("id",sessionId).eq("congress_id",congressId).maybeSingle();

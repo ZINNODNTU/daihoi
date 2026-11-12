@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function PATCH(request:Request){
@@ -8,7 +8,7 @@ export async function PATCH(request:Request){
   if(!user)return NextResponse.json({error:"Cần đăng nhập."},{status:401});
   const body=await request.json();
   const congressId=String(body.congressId||"");
-  if(!uuid.test(congressId)||!(await hasRole(supabase,user.id,congressId,"admin")))
+  if(!uuid.test(congressId)||!(await hasCongressAbility(supabase,user.id,congressId,"settings.manage")))
    return NextResponse.json({error:"Chỉ quản trị Đại hội được cập nhật thông tin."},{status:403});
   const name=String(body.name||"").trim();
   const venue=String(body.venue||"").trim();

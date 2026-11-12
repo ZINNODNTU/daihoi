@@ -55,7 +55,7 @@ function makeMock({assignments=0,sessions=0,version=4,admin=true,user={id:actor}
    "next/cache":{revalidateTag:()=>{}},
   "@/lib/auth":{
    getAuth:async()=>({user,supabase:{}}),
-   hasRole:async()=>admin
+   hasCongressAbility:async()=>admin
   },
   "@/lib/supabase/admin":{createAdminClient:()=>db},
   "@/lib/seating":{validateSeatDrafts:()=>null,seatGridSizeValid:()=>true}

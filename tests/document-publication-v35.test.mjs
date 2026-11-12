@@ -44,7 +44,7 @@ test("BTC có thể công bố lại tài liệu nội bộ, không vô tình c�
  assert.match(ui,/setVisibilityOverrides/);
  assert.match(ui,/body:JSON\.stringify\(\{congressId,documentId:doc\.id,visible:true\}\)/);
  assert.match(ui,/onChange=\{\(\)=>void toggleShare\(doc\)\}/);
- assert.match(api,/hasRole\(supabase,user\.id,congressId,"admin"\)/);
+ assert.match(api,/hasCongressAbility\(supabase,user\.id,congressId,\"documents\.write\"\)/);
  assert.match(api,/\.eq\("congress_id",congressId\)/);
  assert.ok(api.indexOf("await share(body.visible)")<
   api.indexOf(".update({delegate_visible:body.visible})"));

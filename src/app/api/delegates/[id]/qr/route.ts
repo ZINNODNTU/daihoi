@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {issueQr,issueSessionQr} from "@/lib/qr";
 export const runtime="nodejs";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -12,7 +12,7 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
    .select("id,congress_id,qr_version,barcode_code,code,full_name,is_active,auth_user_id")
    .eq("id",id).maybeSingle();
   if(!d||!d.is_active)return NextResponse.json({error:"Không tìm thấy đại biểu."},{status:404});
-  if(!(await hasRole(supabase,user.id,d.congress_id,"checkin"))&&d.auth_user_id!==user.id)
+  if(!(await hasCongressAbility(supabase,user.id,d.congress_id,"attendance.scan"))&&d.auth_user_id!==user.id)
    return NextResponse.json({error:"Không đủ quyền."},{status:403});
   const sessionId=new URL(request.url).searchParams.get("sessionId");
   if(sessionId){

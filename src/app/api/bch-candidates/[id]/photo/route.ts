@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,getPortalViewerAuth,hasCongressAbility,hasRole} from "@/lib/auth";
+import {getAuth,getPortalViewerAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {readPortrait,getPortraitWidth} from "@/lib/portrait-storage";
 import {bchPortraitKey,isAuthorizedBchPhotoKey} from "@/lib/portrait-policy";
@@ -20,7 +20,7 @@ async function authorize(id:string,write:boolean){
  const {data:candidate,error}=await db.from("bch_candidates")
   .select("id,congress_id,photo_path,updated_at").eq("id",id).maybeSingle();
  if(error||!candidate)return {error:fail("Không tìm thấy nhân sự BCH.",404)} as const;
- const admin=await hasRole(supabase,user.id,candidate.congress_id,"admin");
+ const admin=await hasCongressAbility(supabase,user.id,candidate.congress_id,"bch.write");
  if(write&&!admin)return {error:fail("Chỉ quản trị Đại hội được thay ảnh nhân sự BCH.",403)} as const;
  if(!write&&!admin){
   // A former secretary without an enabled BTC account must not see BCH photos.

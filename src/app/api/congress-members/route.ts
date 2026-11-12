@@ -1,6 +1,6 @@
 import {randomBytes} from "node:crypto";
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {writeSystemLog} from "@/lib/system-log";
 
@@ -19,7 +19,7 @@ const password=()=>randomBytes(21).toString("base64url")+"!A7";
 async function authorize(congressId:string){
  const {supabase,user}=await getAuth();
  if(!user)return {error:fail("Vui lòng đăng nhập.",401)} as const;
- if(!UUID.test(congressId)||!(await hasRole(supabase,user.id,congressId,"admin")))
+ if(!UUID.test(congressId)||!(await hasCongressAbility(supabase,user.id,congressId,"team.manage")))
   return {error:fail("Không có quyền quản lý BTC Đại hội này.",403)} as const;
  return {user} as const;
 }
@@ -40,19 +40,22 @@ export async function GET(request:Request){
   const session=await authorize(congressId);
   if("error" in session)return session.error;
   const db=createAdminClient();
-  const [{data:accounts,error}, {data:roles,error:roleError}]=await Promise.all([
+  const [{data:accounts,error}, {data:roles,error:roleError}, {data:restrictions,error:restrictionsError}]=await Promise.all([
    db.from("btc_accounts").select("user_id,login_email,full_name,created_at")
     .eq("congress_id",congressId).is("disabled_at",null)
     .order("created_at",{ascending:false}).limit(300),
    db.from("congress_members").select("user_id,role")
-    .eq("congress_id",congressId).in("role",["admin","checkin","secretary"]).limit(300)
+    .eq("congress_id",congressId).in("role",["admin","checkin","secretary"]).limit(300),
+   db.from("btc_account_capability_restrictions").select("user_id,ability")
+    .eq("congress_id",congressId).eq("allowed",false).limit(5000)
   ]);
-  if(error||roleError)return fail("Không tải được tài khoản BTC. Kiểm tra migration V45.",503);
+  if(error||roleError||restrictionsError)return fail("Không tải được tài khoản BTC hoặc quyền riêng. Kiểm tra migration V57.",503);
   const byUser=new Map((roles||[]).map(m=>[m.user_id,m.role]));
   return NextResponse.json({
    members:(accounts||[]).filter(a=>byUser.has(a.user_id)).map(a=>({
     userId:a.user_id,email:a.login_email,name:a.full_name,
-    role:byUser.get(a.user_id),createdAt:a.created_at
+    role:byUser.get(a.user_id),createdAt:a.created_at,
+    deniedAbilities:(restrictions||[]).filter(item=>item.user_id===a.user_id).map(item=>item.ability)
    }))
   },{headers:HEADERS});
  }catch{return fail("Không thể tải danh sách tài khoản BTC.",503);}

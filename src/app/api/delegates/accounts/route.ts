@@ -2,7 +2,7 @@ import {DEFAULT_DELEGATE_PASSWORD} from "@/lib/delegate-password-policy";
 import {isSameDelegateIdentity} from "@/lib/delegate-identity";
 import {NextResponse} from "next/server";
 import {createAdminClient} from "@/lib/supabase/admin";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {toSupabaseAuthEmail} from "@/lib/login-identity";
 import {writeSystemLog} from "@/lib/system-log";
 
@@ -23,7 +23,7 @@ export async function POST(request:Request){
   let body:{congressId?:unknown;delegateIds?:unknown};
   try{body=await request.json();}catch{return fail("Dữ liệu không hợp lệ.",400);}
   const congressId=String(body.congressId??"");
-  if(!uuid.test(congressId)||!(await hasRole(supabase,user.id,congressId,"admin")))
+  if(!uuid.test(congressId)||!(await hasCongressAbility(supabase,user.id,congressId,"delegates.write")))
    return fail("Không có quyền cấp tài khoản.",403);
   const ids=body.delegateIds;
   if(!Array.isArray(ids)||!ids.length||ids.length>100||

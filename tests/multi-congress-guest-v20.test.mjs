@@ -34,7 +34,7 @@ test("Đại biểu chỉ tự cập nhật thông tin hồ sơ sở hữu, gi�
 test("Đại biểu được đổi ảnh của chính mình nhưng ảnh người khác vẫn bị chặn",()=>{
  const photo=read("../src/app/api/delegates/[id]/photo/route.ts");
  assert.match(photo,/delegate\.auth_user_id===user\.id/);
- assert.match(photo,/hasRole\(supabase,user\.id,delegate\.congress_id,level\)/);
+ assert.match(photo,/hasCongressAbility\(supabase,user\.id,delegate\.congress_id,/);
  assert.match(photo,/const shared=delegate\.auth_user_id===checked\.user\.id/);
  assert.match(photo,/sharedPortraitKey/);
  assert.match(read("../src/lib/portrait-upload.ts"),/\.metadata\(\)/);

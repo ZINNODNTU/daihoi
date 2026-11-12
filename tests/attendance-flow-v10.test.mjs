@@ -90,13 +90,13 @@ test("Quy trình tự quét yêu cầu tài khoản gắn đúng đại biểu, 
  assert.match(api,/method:"qr",qr_scope:"session"/);
  assert.doesNotMatch(api,/body\.delegateId/);
  const issuer=file("../src/app/api/attendance/session-qr/route.ts");
- assert.match(issuer,/hasRole\(supabase,user\.id,congressId,"checkin"\)/);
+ assert.match(issuer,/hasCongressAbility\(supabase,user\.id,congressId,\"attendance\.scan\"\)/);
  assert.match(issuer,/isQrAllowed\(session\.qr_policy,"session"\)/);
  assert.doesNotMatch(issuer,/if\(getWindowStatus\(session\)/);
 });
 test("Bảng trực tiếp chỉ cho BTC xem dữ liệu và không dùng URL công khai",()=>{
  const live=file("../src/app/api/attendance/live/route.ts");
- assert.match(live,/hasRole\(supabase,user\.id,congressId,"checkin"\)/);
+ assert.match(live,/hasCongressAbility\(supabase,user\.id,congressId,\"attendance\.read\"\)/);
  assert.match(live,/createAdminClient\(\)/);
  assert.match(live,/Cache-Control":"private, no-store"/);
  assert.match(live,/\.eq\("congress_id",congressId\)/);

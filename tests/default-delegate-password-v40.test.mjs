@@ -54,7 +54,7 @@ function fixture({exists=false,authorized=true}={}){
   if(name==="@/lib/delegate-password-policy")return {DEFAULT_DELEGATE_PASSWORD:defaultPassword};
   if(name==="@/lib/delegate-identity")return {isSameDelegateIdentity:()=>true};
   if(name==="@/lib/supabase/admin")return {createAdminClient:()=>db};
-  if(name==="@/lib/auth")return {getAuth:async()=>({user:{id:adminId},supabase:{}}),hasRole:async()=>authorized};
+  if(name==="@/lib/auth")return {getAuth:async()=>({user:{id:adminId},supabase:{}}),hasCongressAbility:async()=>authorized};
   if(name==="@/lib/login-identity")return {toSupabaseAuthEmail:()=>authEmail};
   if(name==="@/lib/system-log")return {writeSystemLog:async log=>{calls.logs.push(log);return "ok";}};
   throw Error("Unknown module "+name);

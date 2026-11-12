@@ -63,7 +63,7 @@ test("Every congress page subtree enforces a server-side permission, not just hi
  assert.match(access,/hasCongressAbility/);
  assert.match(access,/notFound\(\)/);
  const shell=read("src/components/app-shell.tsx");
- assert.match(shell,/canCongress\(accessRole/);
+ assert.match(shell,/canUse\(/);
  assert.match(shell,/mobileItems\.map/);
  assert.doesNotMatch(shell,/\{\[congressItems\[0\],congressItems\[1\]/);
  const portal=read("src/app/my-card/layout.tsx");
@@ -90,6 +90,8 @@ test("BTC authorization requires valid enabled same-congress account and verifie
     select(){return this;},
     eq(column,value){constraints.push([column,value]);return this;},
     is(column,value){constraints.push([column,value]);return this;},
+    limit(){return this;},
+    then(ok,err){const error=fault===table?{code:"READ_FAILURE"}:null;return Promise.resolve(row([],error)).then(ok,err);},
     maybeSingle(){
      const error=fault===table?{code:"READ_FAILURE"}:null;
      if(table==="profiles")return Promise.resolve(row({platform_role:platform},error));
