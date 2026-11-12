@@ -2,9 +2,10 @@
 
 import {FormEvent,useEffect,useMemo,useState} from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
  BookOpen,Camera,Download,Edit3,FileSpreadsheet,GraduationCap,RefreshCw,UserRound,
- Plus,Search,Trash2,UserRoundPlus,Users,X,GripVertical,ArrowUp,ArrowDown
+ Plus,Search,Trash2,UserRoundPlus,Users,X,GripVertical,ArrowUp,ArrowDown,ShieldCheck
 } from "lucide-react";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
 import {sortBchCandidates,validateBchInput,ballotPercentage,formatBallotPercentage,
@@ -299,6 +300,10 @@ export function BchCandidatesClient({
     <p className="mt-2 text-xs font-medium text-[#7893a3]">Thông tin kiểm phiếu nhập tay chỉ dành cho BTC · Không thay thế biên bản bầu cử</p>
    </div>
    <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+     {canManage&&<Link href={"/congresses/"+congressId+"/permissions"}
+      className="btn btn-secondary flex-1 justify-center sm:flex-none">
+      <ShieldCheck size={16}/> Phân quyền BTC
+     </Link>}
     <button type="button" className="btn btn-secondary flex-1 justify-center sm:flex-none"
      disabled={busy} onClick={()=>void refresh()}><RefreshCw size={15}/> Làm mới</button>
     <button type="button" className="btn btn-secondary flex-1 justify-center sm:flex-none"
@@ -325,8 +330,8 @@ export function BchCandidatesClient({
    </div>
   </div>
 
-  {congressKind==="doan"&&!ballotReady&&<div role="status" className="rounded-xl border border-[#ebdbb2] bg-[#fff9ed] px-4 py-3 text-[13px] text-[#855f21]">
-    Chức năng nhập phiếu đang chờ cập nhật Supabase V47. Hồ sơ nhân sự hiện có vẫn được xem và chỉnh sửa bình thường.
+  {congressKind==="doan"&&canManage&&!ballotReady&&!initialError&&<div role="status" className="rounded-xl border border-[#ebdbb2] bg-[#fff9ed] px-4 py-3 text-[13px] text-[#855f21]">
+    Cơ sở dữ liệu của Đại hội chưa có hai cột kiểm phiếu V47. Quản trị hệ thống cần chạy migration supabase/upgrade-bch-ballot-results-v47.sql trên đúng Supabase project, sau đó tải lại trang. Nhân sự BCH hiện tại được giữ nguyên; số phiếu chưa thể lưu khi thiếu migration.
    </div>}
    {error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">{error}</div>}
   {notice&&<div role="status" className="rounded-xl border border-[#cce8db] bg-[#eef9f2] px-4 py-3 text-[13px] font-medium text-[#197750]">{notice}</div>}

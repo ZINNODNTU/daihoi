@@ -1,6 +1,7 @@
 "use client";
 
 import {useCallback,useEffect,useState} from "react";
+import Link from "next/link";
 import {BadgeCheck,Check,ClipboardCopy,Eye,EyeOff,KeyRound,LockKeyhole,RefreshCw,ShieldAlert,ShieldCheck,Trash2,UserPlus,UsersRound} from "lucide-react";
 
 type Role="admin"|"checkin"|"secretary";
@@ -122,7 +123,8 @@ export function CongressTeamClient({congressId}:{congressId:string}){
      Không sử dụng chung tài khoản đại biểu hoặc tài khoản BTC của Đại hội khác.
     </p>
    </div>
-   <button className="btn btn-secondary" onClick={()=>{setLoading(true);void load().catch(e=>setError(String(e))).finally(()=>setLoading(false));}} disabled={loading||busy}>
+   <Link href={"/congresses/"+congressId+"/permissions"} className="btn btn-secondary"><ShieldCheck size={16}/> Bảng phân quyền</Link>
+    <button className="btn btn-secondary" onClick={()=>{setLoading(true);void load().catch(e=>setError(String(e))).finally(()=>setLoading(false));}} disabled={loading||busy}>
     <RefreshCw size={16}/> Làm mới
    </button>
   </header>

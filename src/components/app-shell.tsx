@@ -5,7 +5,7 @@ import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {
   Armchair,ArrowRight,BarChart3,ChartColumnIncreasing,ChevronDown,ChevronRight,ClipboardList,FileText,
-  LayoutGrid,LogOut,Menu,QrCode,Settings2,UserRoundCog,Users,X,CircleUserRound,ScrollText
+  LayoutGrid,LogOut,Menu,QrCode,Settings2,ShieldCheck,UserRoundCog,Users,X,CircleUserRound,ScrollText
 } from "lucide-react";
 import {BrandMark,type CongressKind} from "@/components/brand-mark";
 import {AdminErrorMonitor} from "@/components/admin-error-monitor";
@@ -52,7 +52,10 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
     ...(canCongress(accessRole,"reports.read")?[{name:"Báo cáo",href:base+"/reports",icon:ClipboardList}]:[])
   ]:[];
   const adminItems:NavItem[]=congressId?[
-    ...(canCongress(accessRole,"team.manage")?[{name:"Tài khoản BTC",href:base+"/team",icon:UserRoundCog}]:[]),
+    ...(canCongress(accessRole,"team.manage")?[
+      {name:"Phân quyền",href:base+"/permissions",icon:ShieldCheck},
+      {name:"Tài khoản BTC",href:base+"/team",icon:UserRoundCog}
+     ]:[]),
     ...(canCongress(accessRole,"settings.manage")?[{name:"Cấu hình Đại hội",href:base+"/settings",icon:Settings2}]:[])
   ]:[];
   const items=[overview,...(canViewSystemLogs?[logs]:[]),myAccount,...congressItems,...adminItems];

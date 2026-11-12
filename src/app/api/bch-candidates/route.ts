@@ -48,7 +48,7 @@ export async function GET(request:Request){
    (auth.canManage?",votes_received,total_ballots":"")
   ).eq("congress_id",congressId).order("display_order",{ascending:true})
    .order("created_at",{ascending:true}).limit(500);
-  if(error&&auth.canManage){
+  if(error?.code==="42703"&&auth.canManage){
     const legacy=await createAdminClient().from("bch_candidates").select(
      "id,congress_id,full_name,birth_year,hometown,ethnicity,education_level,union_join_year,current_position,photo_path,display_order,created_at,updated_at"
     ).eq("congress_id",congressId).order("display_order",{ascending:true})

@@ -46,6 +46,8 @@
 | **Giao diện điểm danh đại biểu và thẻ sáng theo logo Đoàn/Hội V53** | [Hướng dẫn giao diện V53](huong-dan/GIAO-DIEN-DIEM-DANH-DAI-BIEU-V53.md) — tối ưu QR trên di động, nhận diện từng Đại hội và chế độ in thẻ. |
 | **Bộ chọn Đại hội rõ chữ, điểm danh gọn và in đúng một thẻ V54** | [Hướng dẫn V54](huong-dan/DIEM-DANH-VA-IN-THE-DAI-BIEU-V54.md) — trang in A4 dọc riêng, không lẫn nội dung cổng đại biểu. |
 
+| **Phân quyền BTC và chẩn đoán kết quả phiếu BCH V55** | [Hướng dẫn V55](huong-dan/BCH-PHAN-QUYEN-V55.md) — ma trận quyền theo vai trò; xác minh thiếu migration V47 trên Supabase của dự án. |
+
 ## Cấu trúc thư mục
 
 ```text
