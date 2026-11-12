@@ -52,6 +52,15 @@ node scripts/audit-photo-storage.mjs --remove-derived
 
 **Không tự động xóa ảnh chính chưa có tham chiếu.** Cần sao lưu, kiểm tra tuổi file và mục đích sử dụng trước khi dọn thủ công. Không dùng SQL `DELETE FROM storage.objects` để xóa bytes; phải qua Storage API.
 
+## Sửa lỗi hiển thị ảnh và kiểm thử API — V52 (12/11/2026)
+
+- Sửa kiểm tra định dạng UUID ở `/api/bch-candidates/[id]/photo`: UUID PostgreSQL chuẩn có 5 nhóm `8-4-4-4-12` (không phải `8-4-4-12`). Lỗi cũ làm cả GET và PUT ảnh nhân sự BCH trả HTTP 400 trước khi đọc ảnh.
+- Các yêu cầu **đọc ảnh** sử dụng `getPortalViewerAuth()` để kiểm tra JWT qua Supabase `getClaims`, hạn chế gọi Auth `getUser` cho mọi thumbnail. **Ghi ảnh** vẫn dùng `getAuth()` và xác minh quyền quản trị/người sở hữu bằng database. Mọi ảnh vẫn chỉ đọc được sau khi phân quyền theo Đại hội.
+- Màn hình đại biểu và ứng cử viên BCH có hình thay thế khi API ảnh lỗi; đường dẫn ảnh BCH trên cổng đại biểu kèm phiên bản `updated_at` nhằm đồng bộ thay ảnh.
+- Kiểm toán đọc-only đối với project `pnxdxdagpeyqarucdphk` ngày 12/11/2026: 6 file ảnh chính, 5 đường dẫn đang được hồ sơ tham chiếu, **0 đường dẫn được tham chiếu mà thiếu file**, 1 ảnh không còn liên kết (giữ nguyên, chưa xóa). Không có tệp thumbnail dư thừa.
+- Kiểm thử hành vi `tests/portrait-api-functional-v52.test.mjs`: UUID hợp lệ -> JPEG 200, sai định danh -> 400, chưa đăng nhập -> 401, sai quyền -> 403, đường dẫn lấy đúng từ database, PUT ảnh hợp lệ giữ nguyên quy tắc khóa Storage.
+- Khi ảnh vẫn không xuất hiện trên trình duyệt thật: kiểm tra tab Network với URL `/api/.../photo?w=160`, mã HTTP, cookie đăng nhập và role; kiểm tra `npm run audit:photos` trước khi kết luận thiếu ảnh. Không bật public bucket hoặc lộ secret để xử lý lỗi 403.
+
 ## Kiểm thử
 
 ```bash

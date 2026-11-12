@@ -53,7 +53,9 @@
  }
 
  function CandidateProfile({candidate,foreground}:{candidate:Candidate;foreground:boolean}){
-  const facts:[string,string][]=[
+  const photoUrl="/api/bch-candidates/"+candidate.id+"/photo?w=160&v="+encodeURIComponent(candidate.updated_at);
+   const [failedSrc,setFailedSrc]=useState<string|null>(null);
+   const facts:[string,string][]=[
    ["Năm sinh",String(candidate.birth_year||"—")],
    ["Quê quán",candidate.hometown||"—"],
    ["Dân tộc",candidate.ethnicity||"—"],
@@ -70,8 +72,8 @@
    </header>
    <div className="relative -mt-8 flex flex-1 flex-col px-3 pb-5 text-center sm:px-5 sm:pb-6">
     <div className="mx-auto flex h-[152px] w-[114px] overflow-hidden rounded-[11px] border-[4px] border-white bg-[#e9f1f6] shadow-[0_8px_24px_rgba(20,50,70,.16)] sm:h-[169px] sm:w-[127px]">
-     {candidate.photo_path?<Image unoptimized loading={foreground?"eager":"lazy"}
-      src={"/api/bch-candidates/"+candidate.id+"/photo?w=160"}
+     {candidate.photo_path&&failedSrc!==photoUrl?<Image unoptimized loading={foreground?"eager":"lazy"}
+      src={photoUrl} onError={()=>setFailedSrc(photoUrl)}
       width={127} height={169} alt={"Ảnh nhân sự "+candidate.full_name} draggable={false}
       className="h-full w-full object-cover"/>:
       <span className="flex h-full w-full items-center justify-center text-[#a1b4c3]"><UserRound size={43}/></span>}

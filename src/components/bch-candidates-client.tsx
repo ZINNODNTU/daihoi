@@ -54,11 +54,14 @@ function bchPhotoUrl(candidate:BchCandidate){
 function BchPortrait({candidate,large=false}:{
  candidate:BchCandidate;large?:boolean
 }){
+ const [failedSrc,setFailedSrc]=useState<string|null>(null);
+ const src=bchPhotoUrl(candidate);
  const dimensions=large?{width:64,height:86}:{width:46,height:62};
  const className=large?
   "h-[86px] w-16 shrink-0 rounded-lg border border-[#d8e7ef] bg-white object-cover":
   "h-[62px] w-[46px] shrink-0 rounded-lg border border-[#d8e7ef] bg-white object-cover";
- return candidate.photo_path?<Image unoptimized src={bchPhotoUrl(candidate)}
+ return candidate.photo_path&&failedSrc!==src?<Image unoptimized src={src}
+   onError={()=>setFailedSrc(src)}
   alt={"Ảnh nhân sự "+candidate.full_name} {...dimensions} loading="lazy" className={className}/>:
   <div className={"flex shrink-0 items-center justify-center rounded-lg border border-[#e0eaf0] bg-[#edf4f8] text-[#9bafbb] "+
    (large?"h-[86px] w-16":"h-[62px] w-[46px]")} aria-label={"Chưa có ảnh của "+candidate.full_name}>

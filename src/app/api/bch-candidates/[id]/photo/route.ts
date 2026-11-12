@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasCongressAbility,hasRole} from "@/lib/auth";
+import {getAuth,getPortalViewerAuth,hasCongressAbility,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {readPortrait,getPortraitWidth} from "@/lib/portrait-storage";
 import {bchPortraitKey,isAuthorizedBchPhotoKey} from "@/lib/portrait-policy";
@@ -7,14 +7,14 @@ import {preparePortrait,savePortraitObject,PortraitError} from "@/lib/portrait-u
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fail=(message:string,status:number)=>NextResponse.json({error:message},{
  status,headers:{"Cache-Control":"private, no-store"}
 });
 
 async function authorize(id:string,write:boolean){
  if(!uuid.test(id))return {error:fail("Mã nhân sự BCH không hợp lệ.",400)} as const;
- const {supabase,user}=await getAuth();
+ const {supabase,user}=write?await getAuth():await getPortalViewerAuth();
  if(!user)return {error:fail("Vui lòng đăng nhập.",401)} as const;
  const db=createAdminClient();
  const {data:candidate,error}=await db.from("bch_candidates")

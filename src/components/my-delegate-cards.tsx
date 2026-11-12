@@ -21,6 +21,8 @@ function activeSession(sessions:PortalSession[]){
 function DelegatePass({item,priority}:{item:PortalDelegate;priority:boolean}){
  const session=activeSession(item.sessions);
  const seat=session?.seat;
+ const photoUrl="/api/delegates/"+item.id+"/photo?w=160";
+ const [failedSrc,setFailedSrc]=useState<string|null>(null);
  return <article aria-label={"Thẻ định danh của "+item.fullName}
   className="delegate-pass premium-delegate-id relative isolate mx-auto w-full min-w-0 max-w-[386px] overflow-hidden rounded-[23px] border border-[#c7d4e1] bg-[#fffefa] shadow-[0_26px_58px_rgba(22,50,83,.19),0_3px_9px_rgba(22,50,83,.07)]">
   <div aria-hidden="true" className="absolute inset-x-0 top-0 z-20 h-[5px] bg-gradient-to-r from-[#c93234] via-[#ddbd78] to-[#1882af]"/>
@@ -47,8 +49,8 @@ function DelegatePass({item,priority}:{item:PortalDelegate;priority:boolean}){
   </div>
   <div className="relative -mt-9 flex flex-col items-center px-3 pb-4 sm:px-6 sm:pb-5">
    <div className="overflow-hidden rounded-[9px] border-[5px] border-[#fffefa] bg-[#e6f1f3] shadow-[0_7px_22px_rgba(19,58,75,.15),0_0_0_1px_#cbdde3]">
-    {item.photoPath?<Image unoptimized
-     src={"/api/delegates/"+item.id+"/photo?w=160"}
+    {item.photoPath&&failedSrc!==photoUrl?<Image unoptimized
+     src={photoUrl} onError={()=>setFailedSrc(photoUrl)}
      loading={priority?"eager":"lazy"} fetchPriority={priority?"high":undefined}
      width={128} height={170} alt={"Ảnh chân dung "+item.fullName}
      className="h-[min(40vw,158px)] w-[min(30vw,119px)] object-cover sm:h-[168px] sm:w-[126px]"/>:

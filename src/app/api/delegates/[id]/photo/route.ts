@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,getPortalViewerAuth,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {readPortrait,getPortraitWidth} from "@/lib/portrait-storage";
 import {
@@ -16,7 +16,7 @@ const fail=(message:string,status:number)=>NextResponse.json({error:message},{
 
 async function authorize(delegateId:string,level:"viewer"|"admin"){
  if(!uuid.test(delegateId))return {error:fail("Mã đại biểu không hợp lệ.",400)} as const;
- const {supabase,user}=await getAuth();
+ const {supabase,user}=level==="viewer"?await getPortalViewerAuth():await getAuth();
  if(!user)return {error:fail("Cần đăng nhập.",401)} as const;
  const {data:delegate,error}=await createAdminClient().from("delegates")
   .select("id,congress_id,photo_path,auth_user_id,is_active").eq("id",delegateId).maybeSingle();
