@@ -35,7 +35,8 @@ test("Đại biểu được đổi ảnh của chính mình nhưng ảnh ngư�
  const photo=read("../src/app/api/delegates/[id]/photo/route.ts");
  assert.match(photo,/delegate\.auth_user_id===user\.id/);
  assert.match(photo,/hasCongressAbility\(supabase,user\.id,delegate\.congress_id,/);
- assert.match(photo,/const shared=delegate\.auth_user_id===checked\.user\.id/);
+ assert.match(photo,/const shared=delegate\.auth_user_id===checked\.user\.id&&delegate\.is_active/);
+ assert.match(photo,/sharedPortraitKey\(delegate\.auth_user_id!\)/);
  assert.match(photo,/sharedPortraitKey/);
  assert.match(read("../src/lib/portrait-upload.ts"),/\.metadata\(\)/);
  assert.match(read("../src/lib/portrait-upload.ts"),/metadata\.width!==600\|\|metadata\.height!==800/);

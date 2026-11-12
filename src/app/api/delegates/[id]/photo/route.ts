@@ -1,9 +1,9 @@
 import {NextResponse} from "next/server";
 import {getAuth,getPortalViewerAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
-import {readPortrait,getPortraitWidth} from "@/lib/portrait-storage";
+import {readPortrait,getPortraitWidth,removeUnreferencedPortrait} from "@/lib/portrait-storage";
 import {
- delegatePortraitKey,sharedPortraitKey,isAuthorizedDelegatePhotoKey
+ delegatePortraitKey,sharedPortraitKey,isAuthorizedDelegatePhotoKey,isLinkedDelegatePortraitKey
 } from "@/lib/portrait-policy";
 import {preparePortrait,savePortraitObject,PortraitError} from "@/lib/portrait-upload";
 
@@ -34,8 +34,17 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
   const checked=await authorize(id,"viewer");
   if("error" in checked)return checked.error;
   const photo=checked.delegate;
-  if(!isAuthorizedDelegatePhotoKey(photo.photo_path,photo.congress_id,id,photo.auth_user_id))
-   return fail("Đại biểu chưa có ảnh hợp lệ.",404);
+  if(!isAuthorizedDelegatePhotoKey(photo.photo_path,photo.congress_id,id,photo.auth_user_id)){
+   // Legacy account-linking copied an original congress portrait key to
+   // another congress. Verify the source profile has the SAME Auth owner.
+   if(!photo.auth_user_id||!photo.photo_path)return fail("Đại biểu chưa có ảnh hợp lệ.",404);
+   const {data:sources,error}=await createAdminClient().from("delegates")
+    .select("id,congress_id,auth_user_id,photo_path")
+    .eq("auth_user_id",photo.auth_user_id).eq("photo_path",photo.photo_path)
+    .eq("is_active",true).limit(100);
+   if(error||!isLinkedDelegatePortraitKey(photo.photo_path,photo.auth_user_id,sources||[]))
+    return fail("Đại biểu chưa có ảnh hợp lệ.",404);
+  }
   const width=getPortraitWidth(new URL(request.url).searchParams.get("w"));
   const bytes=await readPortrait(photo.photo_path!,width);
   if(!bytes)return fail("Không tải được ảnh đại biểu.",404);
@@ -64,17 +73,22 @@ export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}
   if(!(file instanceof File))return fail("Vui lòng chọn ảnh JPEG.",400);
   const prepared=await preparePortrait(file);
   const delegate=checked.delegate;
+  // Only the delegate may replace the shared personal portrait across congresses.
+  // BTC permission is scoped to its congress and must not mutate other tenants.
   const shared=delegate.auth_user_id===checked.user.id&&delegate.is_active;
-  const path=shared?sharedPortraitKey(checked.user.id):delegatePortraitKey(delegate.congress_id,id);
+  const path=shared?sharedPortraitKey(delegate.auth_user_id!):delegatePortraitKey(delegate.congress_id,id);
   const admin=createAdminClient();
   let needsLink=delegate.photo_path!==path;
+  const oldPaths=new Set<string>();
   if(shared){
    // All congress profiles for one identity must use the same stable key.
    const all=await admin.from("delegates").select("photo_path")
-    .eq("auth_user_id",checked.user.id).limit(1001);
+    .eq("auth_user_id",delegate.auth_user_id!).limit(1001);
    if(all.error||!all.data||all.data.length>1000)
     return fail("Không thể kiểm tra liên kết ảnh giữa các Đại hội.",503);
    needsLink=all.data.some(item=>item.photo_path!==path);
+   for(const item of all.data)if(item.photo_path&&item.photo_path!==path)
+     oldPaths.add(item.photo_path);
   }
   const saved=await savePortraitObject({
    path,bytes:prepared.bytes,digest:prepared.digest,
@@ -82,13 +96,19 @@ export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}
     if(!changed&&!needsLink)return;
     const query=admin.from("delegates").update({photo_path:path});
     const {data:linked,error}=await (shared?
-     query.eq("auth_user_id",checked.user.id):
+     query.eq("auth_user_id",delegate.auth_user_id!):
      query.eq("id",id).eq("congress_id",delegate.congress_id))
      .select("id");
     if(error||!linked?.length)
      throw new PortraitError("Lưu ảnh thành công nhưng chưa đồng bộ được hồ sơ.",503);
    }
   });
+  // Keep the Storage bucket small: remove a former master only after all
+  // delegate links were updated and no BCH record refers to that master.
+  for(const oldPath of oldPaths){
+   try{await removeUnreferencedPortrait(oldPath,path);}
+   catch{console.warn("Old portrait cleanup unavailable");}
+   }
   return NextResponse.json({ok:true,path,shared,unchanged:!saved.changed,
    size:saved.size},{headers:{"Cache-Control":"private, no-store"}});
  }catch(error){

@@ -22,7 +22,8 @@ test("Form không có ô nhập mã và Excel mẫu hiển thị Đơn vị",()=
  const ui=text("../src/components/delegates-client.tsx");
  assert.doesNotMatch(ui,/name="code"/);
  assert.doesNotMatch(ui,/Mã đại biểu \(tùy chọn\)/);
- assert.match(ui,/\["MSSV","Họ tên","Đơn vị","Chức vụ","Vai trò","Giới tính","Ngày sinh"\]/);
+ assert.match(ui,/DELEGATE_IMPORT_COLUMNS/);
+  assert.match(text("../src/lib/delegate-transfer.ts"),/DELEGATE_IMPORT_COLUMNS=\[\s*"MSSV","Họ tên","Đơn vị","Chức vụ","Vai trò","Giới tính","Ngày sinh"\s*\]/);
  assert.match(ui,/Mã đại biểu được hệ thống tự cấp/);
  assert.match(ui,/DelegatePhotoEditor/);
 });

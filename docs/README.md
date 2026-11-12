@@ -54,6 +54,8 @@
 
 | **V58 — Tách sổ kiểm phiếu BCH và phân quyền từng tài khoản BTC theo nghiệp vụ** | [Sổ kiểm phiếu & phân quyền V58](huong-dan/SO-KIEM-PHIEU-VA-PHAN-QUYEN-TAI-KHOAN-V58.md) — sửa lỗi lưu tổng phiếu V57, quyền xem/nhập phiếu riêng, batch quyền có audit giao dịch. |
 
+| **V59 — Liên kết ảnh thẻ giữa các Đại hội và xuất Excel tất cả/đã chọn** | [Ảnh thẻ & chuyển danh sách liên Đại hội V59](huong-dan/ANH-THE-VA-CHUYEN-DAI-BIEU-LIEN-DAI-HOI-V59.md) — sửa ảnh thẻ Hội Sinh viên dùng chung tài khoản, xuất đúng mẫu để nhập Đại hội khác, bỏ qua MSSV trùng. |
+
 ## Cấu trúc thư mục
 
 ```text

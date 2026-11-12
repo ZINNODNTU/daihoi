@@ -23,7 +23,7 @@ export function DelegatePass({item,priority}:{item:PortalDelegate;priority:boole
  const theme=delegateTheme(item.kind);
  const session=activeSession(item.sessions);
  const seat=session?.seat;
- const photoUrl="/api/delegates/"+item.id+"/photo?w=160";
+ const photoUrl="/api/delegates/"+item.id+"/photo?w=160&v="+encodeURIComponent(item.photoPath||"");
  const [failedSrc,setFailedSrc]=useState<string|null>(null);
  return <article aria-label={"Thẻ định danh của "+item.fullName}
   data-congress-kind={item.kind}

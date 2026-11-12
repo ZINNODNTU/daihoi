@@ -118,8 +118,8 @@ test("One shared identity updates all linked delegate profiles and portrait, wit
  assert.match(profile,/\.update\(changes\)\s*\.eq\("auth_user_id",user\.id\)/);
  assert.match(profile,/\.from\("profiles"\)\.upsert/);
  assert.doesNotMatch(profile,/\.update\(changes\)\s*\.eq\("congress_id"/);
- assert.match(photo,/sharedPortraitKey\(checked\.user\.id\)/);
- assert.match(photo,/\.eq\("auth_user_id",checked\.user\.id\)/);
+ assert.match(photo,/sharedPortraitKey\(delegate\.auth_user_id!\)/);
+ assert.match(photo,/\.eq\("auth_user_id",delegate\.auth_user_id!\)/);
  assert.match(account,/const personal:EditableDelegate\[\]=first\?/);
  assert.match(account,/DelegateProfileEditor initial=\{personal\}/);
 });

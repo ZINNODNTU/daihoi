@@ -3,12 +3,13 @@ import {ChangeEvent,FormEvent,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
 import Image from "next/image";
 import {QRCodeSVG} from "qrcode.react";
-import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,Camera,UserRound} from "lucide-react";
+import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,Camera,UserRound,CheckSquare2} from "lucide-react";
 import {DelegateBarcode} from "@/components/delegate-barcode";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
 import type {Delegate,AttendanceSession} from "@/lib/types";
 import {displayTime} from "@/lib/attendance-report";
 import {normalizeBirthDate,normalizeGender} from "@/lib/delegate-demographics";
+import {DELEGATE_IMPORT_COLUMNS,delegateImportRow,splitDelegateImportBatches,selectDelegateTransfer} from "@/lib/delegate-transfer";
 type Props={
  congressId:string;congressCode:string;delegates:Delegate[];canManage:boolean;
  sessions:AttendanceSession[];
@@ -40,6 +41,7 @@ function saveSvg(id:string,name:string){
 export function DelegatesClient({congressId,congressCode,delegates,canManage,sessions}:Props){
  const router=useRouter();
  const [search,setSearch]=useState(""),[open,setOpen]=useState(false);
+  const [selectedIds,setSelectedIds]=useState<Set<string>>(()=>new Set());
  const [error,setError]=useState(""),[success,setSuccess]=useState(""),[busy,setBusy]=useState(false);
  const [showCard,setShowCard]=useState<Card|null>(null);
  const [cardSession,setCardSession]=useState("");
@@ -89,6 +91,46 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   [d.full_name,d.code,d.unit,d.student_id,d.position,d.login_email,d.barcode_code].join(" ").toLocaleLowerCase("vi")
    .includes(search.toLocaleLowerCase("vi"))
  ),[delegates,search]);
+ const selectedCount=delegates.filter(d=>selectedIds.has(d.id)).length;
+ const filteredIds=filtered.map(d=>d.id);
+ const filteredAllSelected=filteredIds.length>0&&filteredIds.every(id=>selectedIds.has(id));
+ const filteredSomeSelected=filteredIds.some(id=>selectedIds.has(id));
+ const existingStudentIds=new Set(delegates.map(d=>d.student_id?.toUpperCase()).filter(Boolean));
+ const importableRows=uploadRows?.filter(row=>!row.student_id||!existingStudentIds.has(row.student_id.toUpperCase()))||[];
+ const skippedImportCount=uploadRows?uploadRows.length-importableRows.length:0;
+ function selectFiltered(){
+  setSelectedIds(previous=>{
+   const next=new Set(previous);
+   for(const id of filteredIds){if(filteredAllSelected)next.delete(id);else next.add(id);}
+   return next;
+  });
+ }
+ function selectOne(id:string){
+  setSelectedIds(previous=>{
+   const next=new Set(previous);
+   if(next.has(id))next.delete(id);else next.add(id);
+   return next;
+  });
+ }
+ async function exportDelegates(mode:"all"|"selected"){
+  const chosen=selectDelegateTransfer(delegates,mode==="all"?null:selectedIds);
+  if(!chosen.length){setError("Chưa có đại biểu nào để xuất.");return;}
+  setBusy(true);setError("");setSuccess("");
+  try{
+   const {default:writeExcelFile}=await import("write-excel-file/browser");
+   const batches=splitDelegateImportBatches(chosen);
+   const safeCode=congressCode.replace(/[^A-Za-z0-9_-]/g,"-").slice(0,48);
+   for(let i=0;i<batches.length;i++){
+    const name="dai-bieu-"+safeCode+"-"+(mode==="all"?"tat-ca":"da-chon")+
+     (batches.length>1?"-"+String(i+1).padStart(3,"0"):"")+".xlsx";
+    const cells=[ [...DELEGATE_IMPORT_COLUMNS],...batches[i].map(delegateImportRow)];
+    await writeExcelFile([{sheet:"Danh sach dai bieu",stickyRowsCount:1,data:cells}]).toFile(name);
+   }
+   setSuccess("Đã xuất "+chosen.length+" đại biểu thành "+batches.length+
+    " tệp Excel đúng mẫu nhập của Đại hội khác. Ảnh, tài khoản, mã QR và ghế không nằm trong tệp.");
+  }catch(e){setError("Không xuất được Excel: "+(e instanceof Error?e.message:"Lỗi không xác định"));}
+  finally{setBusy(false);}
+ }
  const sessionQrChoices=sessions.filter(s=>s.qr_policy!=="fixed");
  async function save(rows:Row[],photo?:Blob|null){
   setBusy(true);setError("");setSuccess("");
@@ -195,7 +237,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   try{
    const {default:writeExcelFile}=await import("write-excel-file/browser");
    await writeExcelFile([{sheet:"Danh sach dai bieu",stickyRowsCount:1,data:[
-    ["MSSV","Họ tên","Đơn vị","Chức vụ","Vai trò","Giới tính","Ngày sinh"],
+    [...DELEGATE_IMPORT_COLUMNS],
     ["2200000001","Nguyễn Văn A","22DTH1","Bí thư","Chính thức","Nam","24/09/2003"],
     ["","","","","","",""],
     ["","Trần Thị B","Đơn vị khách mời","Đại diện","Khách mời","Nữ","05/04/1988"]
@@ -258,13 +300,24 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     <button type="button" className="btn btn-primary w-full sm:w-auto" aria-expanded={open} onClick={()=>setOpen(!open)}><Plus size={18}/> Thêm đại biểu</button>
    </div>}
   </div>
-  {error&&<p role="alert" className="bg-red-50 text-red-700 p-3 rounded-xl mb-5">{error}</p>}
+  {canManage&&<section aria-label="Xuất danh sách đại biểu để chuyển Đại hội" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#cfe1eb] bg-[#f4f9fc] px-4 py-3.5">
+  <div className="min-w-0"><p className="flex items-center gap-2 text-[13px] font-extrabold text-[#235872]"><CheckSquare2 size={18}/> Xuất danh sách đại biểu</p>
+   <p className="mt-1 text-[11px] leading-5 text-[#66869a]">Đã chọn {selectedCount}/{delegates.length} đại biểu · Tệp tương thích Nhập Excel/CSV ở Đại hội khác.</p></div>
+  <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+   <button type="button" className="btn btn-secondary flex-1 justify-center !text-xs sm:flex-none" disabled={busy||!delegates.length} onClick={()=>void exportDelegates("all")}><Download size={16}/> Xuất tất cả ({delegates.length})</button>
+   <button type="button" className="btn btn-primary flex-1 justify-center !text-xs sm:flex-none" disabled={busy||!selectedCount} onClick={()=>void exportDelegates("selected")}><Download size={16}/> Xuất đã chọn ({selectedCount})</button>
+   {selectedCount>0&&<button type="button" className="btn btn-secondary !text-xs" disabled={busy} onClick={()=>setSelectedIds(new Set())}>Bỏ chọn</button>}
+  </div>
+  <p className="w-full text-[10px] leading-5 text-[#7d95a5]">Chỉ xuất các trường hồ sơ có thể nhập lại. Không xuất mật khẩu, mã QR, ảnh hay ghế; ảnh sẽ được liên kết theo tài khoản khi cấp tài khoản tại Đại hội nhận.</p>
+ </section>}
+ {error&&<p role="alert" className="bg-red-50 text-red-700 p-3 rounded-xl mb-5">{error}</p>}
   {success&&<p role="status" className="bg-green-50 text-green-700 p-3 rounded-xl mb-5">{success}</p>}
   {uploadRows&&<div className="card p-5 mb-5">
-   <p className="font-bold">Đã đọc {uploadRows.length} dòng</p>
+   <p className="font-bold">Đã đọc {uploadRows.length} dòng · Có thể thêm {importableRows.length} đại biểu</p>
+    {skippedImportCount>0&&<p className="mt-2 rounded-lg border border-[#e7d6ae] bg-[#fff9ec] px-3 py-2 text-xs text-[#88642e]">Đã bỏ qua {skippedImportCount} MSSV có sẵn tại Đại hội hiện tại, tránh nhập trùng. Chỉ các dòng mới được thêm.</p>}
    <p className="helper my-3">MSSV · Họ tên · Đơn vị · Chức vụ · Vai trò · Giới tính · Ngày sinh (dd/mm/yyyy). Mã đại biểu được tự cấp sau khi lưu. Email đăng nhập tự tạo từ MSSV@dntu.edu.vn.</p>
    <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Đơn vị</th><th>Vai trò</th><th>Giới tính</th><th>Ngày sinh</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.unit}</td><td>{kindLabel(r.delegate_type)}</td><td>{r.gender||"—"}</td><td>{r.birth_date||"—"}</td></tr>)}</tbody></table></div>
-   <div className="flex gap-2"><button disabled={busy} className="btn btn-primary" onClick={()=>void save(uploadRows)}>Xác nhận nhập</button>
+   <div className="flex gap-2"><button type="button" className="btn btn-primary" onClick={()=>void save(importableRows)} disabled={busy||!importableRows.length}>Xác nhận nhập</button>
     <button className="btn btn-secondary" onClick={()=>setUploadRows(null)}>Hủy</button></div>
   </div>}
   {open&&canManage&&<div className="card p-6 mb-6"><h2 className="section-title mb-5">Thêm đại biểu</h2>
@@ -302,15 +355,18 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   </div>}
   <div className="card overflow-hidden">
    <div className="p-4 sm:p-5 flex items-center justify-between flex-wrap gap-3">
-    <h2 className="font-semibold flex gap-2 items-center"><Users size={20} className="text-[#007eae]"/>Danh sách</h2>
+    <h2 className="font-semibold flex flex-wrap gap-2 items-center"><Users size={20} className="text-[#007eae]"/>Danh sách
+    {canManage&&<span className="rounded-full bg-[#edf6f9] px-2.5 py-1 text-[11px] font-semibold text-[#2a718d]">{selectedCount} đã chọn</span>}</h2>
     <div className="relative w-full sm:w-[300px]"><Search size={18} className="absolute left-3 top-3 text-[#90a5b8]"/>
      <input value={search} onChange={e=>setSearch(e.target.value)} className="field pl-10!"
       placeholder="MSSV, họ tên, đơn vị, chức vụ..."/></div>
    </div>
    <div className="table-wrap desktop-table"><table className="data"><thead><tr>
-    <th>Ảnh</th><th>Mã đại biểu</th><th>Họ tên</th><th>MSSV / Email</th><th className="hide-mobile">Đơn vị / Chức vụ</th><th>Vai trò</th><th>Giới tính / Ngày sinh</th><th>Tài khoản</th><th>Ảnh / Thẻ</th>
+    {canManage&&<th><label className="inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold"><input type="checkbox" aria-label="Chọn tất cả đại biểu đang hiển thị" checked={filteredAllSelected} onChange={selectFiltered} disabled={busy||!filteredIds.length} className="h-4 w-4 accent-[#167aa3]"/>Chọn{filteredSomeSelected&&!filteredAllSelected?" *":""}</label></th>}
+     <th>Ảnh</th><th>Mã đại biểu</th><th>Họ tên</th><th>MSSV / Email</th><th className="hide-mobile">Đơn vị / Chức vụ</th><th>Vai trò</th><th>Giới tính / Ngày sinh</th><th>Tài khoản</th><th>Ảnh / Thẻ</th>
    </tr></thead><tbody>
     {filtered.map(d=><tr key={d.id}>
+     {canManage&&<td><input type="checkbox" aria-label={"Chọn xuất đại biểu "+d.full_name} checked={selectedIds.has(d.id)} onChange={()=>selectOne(d.id)} disabled={busy} className="h-4 w-4 accent-[#167aa3]"/></td>}
      <td>{d.photo_path?<Image unoptimized src={"/api/delegates/"+d.id+"/photo"}
       alt={"Ảnh "+d.full_name} width={40} height={54} loading="lazy"
       className="h-[54px] w-10 rounded-lg border border-[#d7e4ec] bg-white object-cover"/>:
@@ -334,11 +390,12 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       </button>}
       <button className="btn btn-secondary !min-h-9 !px-2.5 !text-xs" disabled={busy} onClick={()=>void openCard(d)}>
        <ScanBarcode size={15}/> QR / Barcode</button></div></td></tr>)}
-    {!filtered.length&&<tr><td colSpan={9} className="helper text-center py-9!">Không tìm thấy đại biểu.</td></tr>}
+    {!filtered.length&&<tr><td colSpan={canManage?10:9} className="helper text-center py-9!">Không tìm thấy đại biểu.</td></tr>}
    </tbody></table></div>
   </div>
   <div className="mobile-cards px-3 pb-4">
     {filtered.map(d=><article key={d.id} className="mobile-record">
+     {canManage&&<label className="mb-3 inline-flex items-center gap-2 rounded-lg border border-[#d4e5ee] bg-white px-3 py-2 text-[11px] font-bold text-[#2d7797]"><input type="checkbox" checked={selectedIds.has(d.id)} onChange={()=>selectOne(d.id)} disabled={busy} aria-label={"Chọn xuất đại biểu "+d.full_name} className="h-4 w-4 accent-[#167aa3]"/> Chọn để xuất</label>}
      <div className="flex items-start justify-between gap-3">
       {d.photo_path?<Image unoptimized src={"/api/delegates/"+d.id+"/photo"}
        alt={"Ảnh "+d.full_name} width={54} height={72} loading="lazy"

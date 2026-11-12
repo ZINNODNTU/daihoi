@@ -34,6 +34,19 @@ export function isAuthorizedDelegatePhotoKey(
  if(path.toLowerCase()===delegatePortraitKey(congressId,delegateId))return true;
  return Boolean(authUserId&&path.toLowerCase()===sharedPortraitKey(authUserId));
 }
+/** V45 account-linking may reuse a source congress's local portrait key.
+ * The API must first query the active SOURCE delegate by Auth ID. Never grant
+ * access just because a local path appears in another congress profile.
+ */
+export function isLinkedDelegatePortraitKey(
+ path:string|null,authUserId:string|null,
+ sources:readonly {id:string;congress_id:string;auth_user_id:string|null;photo_path:string|null}[]
+):boolean{
+ if(!path||!authUserId||!LOCAL.test(path))return false;
+ return sources.some(source=>source.auth_user_id===authUserId&&
+  source.photo_path?.toLowerCase()===path.toLowerCase()&&
+  delegatePortraitKey(source.congress_id,source.id)===path.toLowerCase());
+}
 export function isAuthorizedBchPhotoKey(path:string|null,congressId:string,candidateId:string):boolean{
  return Boolean(path&&path.toLowerCase()===bchPortraitKey(congressId,candidateId));
 }
