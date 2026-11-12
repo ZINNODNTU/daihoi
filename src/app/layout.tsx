@@ -6,6 +6,7 @@ import "@fontsource/be-vietnam-pro/700.css";
 import "@fontsource/be-vietnam-pro/800.css";
 import "./globals.css";
 import "./editorial-v33.css";
+import "./admin-sidebar-v63.css";
 export const metadata:Metadata={
  title:"ĐẠI HỘI SỐ | Nền tảng điều hành đại hội",
  description:"Quản lý nhiều đại hội Đoàn – Hội, đại biểu, check-in QR, tài liệu và thống kê.",

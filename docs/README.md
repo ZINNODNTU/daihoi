@@ -61,6 +61,8 @@
 
 | **V62 — Nhập phiếu thuận/ngược, xếp theo % cao nhất và ra mắt BCH khóa mới** | [Hướng dẫn kiểm phiếu V62](huong-dan/PHIEU-THUAN-NGUOC-RA-MAT-BCH-V62.md) — chọn đúng N người, cảnh báo đồng phiếu và trình chiếu nhân sự; không cần migration mới. |
 
+| **V63 — Sidebar quản trị chuyên nghiệp** | [Chuẩn hóa thanh bên V63](huong-dan/THANH-BEN-QUAN-TRI-V63.md) — nhóm nghiệp vụ, thu gọn desktop, tìm kiếm, mobile drawer, bảo toàn RBAC. |
+
 ## Cấu trúc thư mục
 
 ```text

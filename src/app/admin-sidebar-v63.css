@@ -1,0 +1,230 @@
+/* V63 — purpose-built administrative sidebar.
+   Refinements follow established dashboard conventions (sticky regions,
+   hierarchical navigation, responsive drawer and compact icon rail).
+   No external UI runtime or icon dependency is added. */
+.admin-workspace .admin-sidebar.app-sidebar{
+ background:#0d3048;
+ border-right:1px solid #1d4962;
+ box-shadow:3px 0 22px rgba(10,44,63,.10);
+ color:#e8f4fa;
+}
+.admin-sidebar .admin-sidebar-brand{
+ background:#092a40;
+}
+.admin-sidebar .admin-sidebar-icon-button{
+ color:#b7d1df;
+ transition:background-color .16s,color .16s;
+}
+.admin-sidebar .admin-sidebar-icon-button:hover{
+ background:rgba(255,255,255,.10);
+ color:#fff;
+}
+.admin-sidebar .admin-sidebar-icon-button:focus-visible,
+.admin-sidebar .admin-sidebar-group-heading:focus-visible,
+.admin-sidebar .admin-sidebar-congress-change:focus-visible,
+.admin-sidebar .admin-nav-link:focus-visible{
+ outline:2px solid #e3bf7b;
+ outline-offset:2px;
+}
+.admin-sidebar .admin-sidebar-congress{
+ border:1px solid rgba(161,204,227,.20);
+ background:rgba(255,255,255,.055);
+ border-radius:11px;
+ padding:14px 13px 13px;
+}
+.admin-sidebar .admin-sidebar-group-heading{
+ color:#9fbfd1;
+ font-weight:750;
+ letter-spacing:.10em;
+ border-radius:7px;
+}
+.admin-sidebar .admin-sidebar-group-heading:hover{
+ color:#e6f3f8;
+ background:rgba(255,255,255,.055);
+}
+.admin-sidebar .admin-sidebar-group-active .admin-sidebar-group-heading{
+ color:#bdd9e6;
+}
+.admin-sidebar .admin-nav-link.nav-item{
+ position:relative;
+ display:flex;
+ min-height:42px;
+ align-items:center;
+ padding:10px 11px;
+ margin:0;
+ gap:11px;
+ border:1px solid transparent;
+ border-radius:8px;
+ color:#c0d5e0;
+ font-weight:550;
+ font-size:12.5px;
+ letter-spacing:0;
+ box-shadow:none;
+ background:transparent;
+ transition:background-color .14s,color .14s;
+}
+.admin-sidebar .admin-nav-link.nav-item:hover{
+ background:rgba(255,255,255,.085);
+ color:#fff;
+ transform:none;
+}
+.admin-sidebar .admin-nav-link.nav-item-active,
+.admin-sidebar .admin-nav-link.nav-item-active:hover{
+ background:#176184;
+ color:#fff;
+ border-color:rgba(117,197,222,.36);
+ box-shadow:inset 3px 0 0 #dfb976;
+ font-weight:750;
+}
+.admin-sidebar .admin-nav-current{
+ position:absolute;
+ right:10px;
+ top:50%;
+ width:5px;
+ height:5px;
+ border-radius:50%;
+ background:#f2cb7e;
+ transform:translateY(-50%);
+}
+.admin-sidebar .admin-nav-counter{
+ display:inline-flex;
+ min-width:21px;
+ min-height:19px;
+ justify-content:center;
+ align-items:center;
+ border-radius:5px;
+ padding:0 5px;
+ color:#fff;
+ background:#a9404a;
+ font-weight:800;
+ font-size:10px;
+}
+.admin-sidebar .admin-sidebar-scroll{
+ scrollbar-width:thin;
+ scrollbar-color:rgba(172,208,223,.32) transparent;
+}
+.admin-sidebar .admin-sidebar-footer{
+ background:#092a40;
+}
+.admin-sidebar .admin-sidebar-footer .nav-item{
+ margin-bottom:4px;
+}
+.admin-sidebar .admin-sidebar-profile{
+ color:#fff;
+}
+.admin-workspace .admin-topbar.app-topbar{
+ background:rgba(255,255,255,.98);
+ border-bottom:1px solid #dfe8ed;
+ backdrop-filter:blur(10px);
+ box-shadow:none;
+}
+.admin-sidebar-compact .admin-sidebar-brand{
+ padding-left:16px;
+ padding-right:16px;
+}
+.admin-sidebar-compact .admin-sidebar-brand-text,
+.admin-sidebar-compact .admin-sidebar-collapse,
+.admin-sidebar-compact .admin-sidebar-search,
+.admin-sidebar-compact .admin-sidebar-congress-header,
+.admin-sidebar-compact .admin-sidebar-congress-title,
+.admin-sidebar-compact .admin-sidebar-group-title,
+.admin-sidebar-compact .admin-sidebar-group-chevron,
+.admin-sidebar-compact .admin-nav-text,
+.admin-sidebar-compact .admin-nav-current,
+.admin-sidebar-compact .admin-sidebar-profile-text{
+ display:none!important;
+}
+.admin-sidebar-compact .admin-sidebar-scroll{
+ padding-left:10px;
+ padding-right:10px;
+}
+.admin-sidebar-compact .admin-sidebar-congress{
+ margin-top:13px;
+ padding:3px;
+ border-radius:10px;
+ text-align:center;
+}
+.admin-sidebar-compact .admin-sidebar-congress-change{
+ width:100%;
+ height:42px;
+ margin:0;
+ justify-content:center;
+ font-size:0;
+ border-radius:7px;
+}
+.admin-sidebar-compact .admin-sidebar-congress-change svg{
+ width:19px;
+ height:19px;
+}
+.admin-sidebar-compact .admin-sidebar-menu{
+ margin-top:13px;
+ gap:12px;
+}
+.admin-sidebar-compact .admin-sidebar-group-heading{
+ height:11px;
+ min-height:11px;
+ cursor:default;
+ padding:0;
+ border-radius:0;
+ border-top:1px solid rgba(216,238,247,.14);
+ pointer-events:none;
+}
+.admin-sidebar-compact .admin-sidebar-group-heading:hover{
+ background:transparent;
+}
+.admin-sidebar-compact .admin-sidebar-group-links{
+ margin-top:5px;
+}
+.admin-sidebar-compact .admin-nav-link.nav-item{
+ width:100%;
+ height:45px;
+ min-height:45px;
+ padding:0;
+ margin:0;
+ justify-content:center;
+ gap:0;
+}
+.admin-sidebar-compact .admin-nav-link svg{
+ flex-shrink:0;
+}
+.admin-sidebar-compact .admin-nav-counter{
+ position:absolute;
+ top:1px;
+ right:1px;
+ width:8px;
+ height:8px;
+ min-height:8px;
+ min-width:8px;
+ overflow:hidden;
+ color:transparent;
+ font-size:0;
+ padding:0;
+ border:1px solid #0d3048;
+ border-radius:50%;
+}
+.admin-sidebar-compact .admin-sidebar-footer{
+ padding:10px;
+}
+.admin-sidebar-compact .admin-sidebar-profile{
+ flex-direction:column;
+ gap:7px;
+ padding:8px 2px;
+}
+.admin-sidebar-compact .admin-sidebar-logout{
+ width:42px;
+}
+.admin-sidebar-compact .admin-sidebar-empty{
+ display:none;
+}
+@media(max-width:1023px){
+ .admin-sidebar .admin-sidebar-group-heading{min-height:36px}
+ .admin-sidebar .admin-nav-link.nav-item{min-height:45px}
+ .admin-sidebar-compact .admin-sidebar-group-title,
+ .admin-sidebar-compact .admin-sidebar-brand-text,
+ .admin-sidebar-compact .admin-nav-text{display:initial}
+}
+@media(prefers-reduced-motion:reduce){
+ .admin-sidebar,
+ .admin-sidebar .admin-nav-link,
+ .admin-sidebar .admin-sidebar-icon-button{transition-duration:0.01ms!important}
+}

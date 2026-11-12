@@ -32,7 +32,7 @@ test("permission page requires verified server entitlement and nav checks accoun
  assert.match(layout,/getCongressEffectiveAbilities/);
  assert.match(layout,/effectiveAbilities=\{\[\.\.\.effectiveAbilities\]\}/);
  assert.match(shell,/canUse\("team\.manage"\)/);
- assert.match(shell,/name:"Phân quyền",href:base\+"\/permissions"/);
+ assert.match(shell,/name:"Phân quyền Đại hội",href:base\+"\/permissions"/);
 });
 test("account-specific permission configuration uses batch writes and a secure audit timeline",()=>{
  const ui=read("src/components/congress-permissions-client.tsx");
