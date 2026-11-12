@@ -12,7 +12,7 @@ import {sortBchCandidates,validateBchInput,
 
 type DelegateOption={id:string;full_name:string;position:string;code:string;photo_path:string|null};
 type PhotoTarget={kind:"form"}|{kind:"existing";candidate:BchCandidate};
-type UploadedPhoto={photo_path:string;updated_at:string};
+type UploadedPhoto={photo_path:string;updated_at:string;unchanged?:boolean;size?:number};
 type Props={
  congressId:string;congressName:string;congressCode:string;canManage:boolean;
  initialCandidates:BchCandidate[];initialError:string;delegates:DelegateOption[];
@@ -108,7 +108,7 @@ export function BchCandidatesClient({
    candidate.id===photoTarget.candidate.id?{...candidate,...updated}:candidate
   ));
   setPhotoTarget(null);
-  setNotice("Đã cập nhật ảnh chân dung cho "+photoTarget.candidate.full_name+".");
+  setNotice(updated.unchanged?"Ảnh BCH giống bản đang lưu, không tạo thêm tệp.":"Đã cập nhật ảnh chân dung cho "+photoTarget.candidate.full_name+".");
  }
  async function copyDelegatePhoto(){
   if(!selectedDelegate?.photo_path||busy)return;

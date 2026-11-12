@@ -17,23 +17,24 @@ test("BCH private photo endpoint permits administrators to upload and authorized
  assert.match(api,/export async function GET/);
  assert.match(api,/export async function PUT/);
  assert.match(api,/hasRole\(supabase,user\.id,candidate\.congress_id,"admin"\)/);
- assert.match(api,/\["secretary","delegate","guest"\]\.includes/);
+ assert.match(api,/\["delegate","guest"\]\.includes/);
+ assert.match(api,/hasCongressAbility\(supabase,user\.id,candidate\.congress_id,"bch.read"\)/);
   assert.match(api,/\.eq\("auth_user_id",user\.id\)/);
  assert.match(api,/db\.from\("bch_candidates"\)/);
- assert.match(api,/candidate\.photo_path!==expected/);
+ assert.match(api,/isAuthorizedBchPhotoKey/);
  assert.match(api,/private, no-store/);
- assert.match(api,/readPortrait\(expected,width\)/);
- assert.match(api,/expectedPath\(auth\.candidate\.congress_id,id\)/);
+ assert.match(api,/readPortrait\(expectedPath\(candidate\.congress_id,id\),width\)/);
+ assert.match(api,/expectedPath\(candidate\.congress_id,id\)/);
 });
 test("BCH photo upload validates JPEG dimensions and uses safe server re-encoding",()=>{
  const api=file("../src/app/api/bch-candidates/[id]/photo/route.ts");
- assert.match(api,/file\.type!=="image\/jpeg"/);
- assert.match(api,/file\.size>2\*1024\*1024/);
- assert.match(api,/metadata\.width!==600\|\|metadata\.height!==800/);
- assert.match(api,/sharp\(raw,\{limitInputPixels:5_000_000\}\)/);
- assert.match(api,/flatten\(\{background:"#ffffff"\}\)/);
- assert.match(api,/upsert:true/);
- assert.match(api,/\.eq\("id",id\)\.eq\("congress_id",auth\.candidate\.congress_id\)/);
+ assert.match(file("../src/lib/portrait-upload.ts"),/file\.type!=="image\/jpeg"/);
+ assert.match(file("../src/lib/portrait-upload.ts"),/file\.size<1000\|\|file\.size>MAX_UPLOAD/);
+ assert.match(file("../src/lib/portrait-upload.ts"),/metadata\.width!==600\|\|metadata\.height!==800/);
+ assert.match(file("../src/lib/portrait-upload.ts"),/sharp\(raw,\{limitInputPixels:MAX_PIXELS\}\)/);
+ assert.match(file("../src/lib/portrait-upload.ts"),/flatten\(\{background:"#ffffff"\}\)/);
+ assert.match(file("../src/lib/portrait-upload.ts"),/upsert:true/);
+ assert.match(api,/\.eq\("id",id\)\.eq\("congress_id",candidate\.congress_id\)/);
 });
 test("BCH photo is present in response models and private storage cleaned on delete",()=>{
  const bch=file("../src/app/api/bch-candidates/route.ts");

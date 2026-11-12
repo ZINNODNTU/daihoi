@@ -31,12 +31,12 @@ test("API ảnh bắt buộc quyền và JPEG 600x800, kho riêng tư",()=>{
  assert.match(route,/authorize\(id,"viewer"\)/);
  assert.match(route,/authorize\(id,"admin"\)/);
  assert.match(route,/createAdminClient\(\)/);
- assert.match(route,/meta\.width!==600\|\|meta\.height!==800/);
- assert.match(route,/Cache-Control":"private, max-age=45/);
+ assert.match(text("../src/lib/portrait-upload.ts"),/metadata\.width!==600\|\|metadata\.height!==800/);
+ assert.match(route,/Cache-Control":"private, no-store/);
  assert.match(route,/authorize\(id,"viewer"\)/);
- assert.match(route,/invalidatePortrait\(path\)/);
- assert.match(route,/removeDerivedPortraits\(path\)/);
- assert.match(route,/delegate-photos/);
+ assert.match(text("../src/lib/portrait-upload.ts"),/invalidatePortrait\(path\)/);
+ assert.match(text("../src/lib/portrait-upload.ts"),/removeDerivedPortraits\(path\)/);
+ assert.match(text("../src/lib/portrait-storage.ts"),/delegate-photos/);
 });
 test("Tách nền AI chạy trên trình duyệt và ảnh đầu ra nền trắng",()=>{
  const editor=text("../src/components/delegate-photo-editor.tsx");

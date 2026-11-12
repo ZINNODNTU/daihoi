@@ -65,7 +65,7 @@ export function DelegateProfileEditor({initial}:{initial:EditableDelegate[]}){
    setVersion(old=>({...old,[selected.id]:Date.now()}));
    setItems(old=>old.map(item=>item.id===selected.id?{...item,photo_path:result.path||item.photo_path}:item));
    setPhotoId(null);
-   setMessage("Đã đồng bộ ảnh đại biểu trên tất cả Đại hội của bạn.");
+   setMessage(result.unchanged?"Ảnh giống bản đang lưu; hệ thống không tải lên trùng.":"Đã đồng bộ ảnh đại biểu trên tất cả Đại hội của bạn.");
    router.refresh();
   }catch(e){
    setError(e instanceof Error?e.message:"Không thể tải ảnh lên.");

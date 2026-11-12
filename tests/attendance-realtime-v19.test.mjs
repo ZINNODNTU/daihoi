@@ -30,7 +30,7 @@ test("Photos use private on-demand thumbnails and QR decoder is lazy",()=>{
  const photos=file("../src/app/api/delegates/[id]/photo/route.ts");
  const staff=file("../src/components/attendance-client.tsx");
  const delegate=file("../src/components/delegate-checkin-scanner.tsx");
- assert.match(photos,/readPortrait\(path,width\)/);
+ assert.match(photos,/readPortrait\(photo\.photo_path!,width\)/);
  assert.match(photos,/getPortraitWidth/);
  assert.doesNotMatch(photos,/\.upload\(path\.replace/);
  assert.match(photos,/await authorize\(id,"viewer"\)/);

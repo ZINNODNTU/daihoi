@@ -41,6 +41,8 @@
 | Nhận diện thương hiệu | [Giao diện hiện hành](giao-dien/GIAO-DIEN-HIEN-HANH.md) |
 | Tra cứu thiết kế/giải pháp của các bản cũ | [Lịch sử phiên bản](lich-su/README.md) và [bản lưu README gốc](lich-su/README-GOC-2026-11-09.md) |
 
+| **Chuẩn hóa vòng đời ảnh đại biểu/BCH V51 — chống trùng, nén, phân quyền, kiểm toán Storage** | [Hướng dẫn lưu ảnh V51](huong-dan/LUU-TRU-ANH-DAI-HOI-V51.md) — không cần migration, chỉ xóa thumbnail tái tạo được. |
+
 ## Cấu trúc thư mục
 
 ```text

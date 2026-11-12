@@ -1,15 +1,14 @@
 import {NextResponse} from "next/server";
-import sharp from "sharp";
-import {getAuth,hasRole} from "@/lib/auth";
+import {getAuth,hasCongressAbility,hasRole} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
-import {readPortrait,getPortraitWidth,invalidatePortrait,removeDerivedPortraits} from "@/lib/portrait-storage";
+import {readPortrait,getPortraitWidth} from "@/lib/portrait-storage";
+import {bchPortraitKey,isAuthorizedBchPhotoKey} from "@/lib/portrait-policy";
+import {preparePortrait,savePortraitObject,PortraitError} from "@/lib/portrait-upload";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-
-const BUCKET="delegate-photos";
-const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const fail=(error:string,status:number)=>NextResponse.json({error},{
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const fail=(message:string,status:number)=>NextResponse.json({error:message},{
  status,headers:{"Cache-Control":"private, no-store"}
 });
 
@@ -19,45 +18,44 @@ async function authorize(id:string,write:boolean){
  if(!user)return {error:fail("Vui lòng đăng nhập.",401)} as const;
  const db=createAdminClient();
  const {data:candidate,error}=await db.from("bch_candidates")
-  .select("id,congress_id,photo_path").eq("id",id).maybeSingle();
+  .select("id,congress_id,photo_path,updated_at").eq("id",id).maybeSingle();
  if(error||!candidate)return {error:fail("Không tìm thấy nhân sự BCH.",404)} as const;
  const admin=await hasRole(supabase,user.id,candidate.congress_id,"admin");
  if(write&&!admin)return {error:fail("Chỉ quản trị Đại hội được thay ảnh nhân sự BCH.",403)} as const;
  if(!write&&!admin){
-  const [member,delegate]=await Promise.all([
+  // A former secretary without an enabled BTC account must not see BCH photos.
+  const [staff,member,delegate]=await Promise.all([
+   hasCongressAbility(supabase,user.id,candidate.congress_id,"bch.read"),
    supabase.from("congress_members").select("role").eq("congress_id",candidate.congress_id)
     .eq("user_id",user.id).maybeSingle(),
    db.from("delegates").select("id").eq("congress_id",candidate.congress_id)
     .eq("auth_user_id",user.id).eq("is_active",true).limit(1)
   ]);
-  if(member.error||delegate.error||
-   !["secretary","delegate","guest"].includes(member.data?.role||"")&&!delegate.data?.length)
+  const delegateMembership=!member.error&&["delegate","guest"].includes(member.data?.role||"");
+  if(!staff&&(member.error||delegate.error||(!delegateMembership&&!delegate.data?.length)))
    return {error:fail("Bạn không có quyền xem ảnh nhân sự BCH.",403)} as const;
  }
  return {candidate,supabase} as const;
 }
 function expectedPath(congressId:string,candidateId:string){
- return congressId+"/bch/"+candidateId+".jpg";
+ return bchPortraitKey(congressId,candidateId);
 }
 
 export async function GET(request:Request,{params}:{params:Promise<{id:string}>}){
  try{
   const {id}=await params;
-  const auth=await authorize(id,false);
-  if("error" in auth)return auth.error;
-  const expected=expectedPath(auth.candidate.congress_id,id);
-  // Never trust client-writable photo_path to load an arbitrary private file.
-  if(auth.candidate.photo_path!==expected)return fail("Nhân sự chưa có ảnh chân dung.",404);
-   const width=getPortraitWidth(new URL(request.url).searchParams.get("w"));
-   const bytes=await readPortrait(expected,width);
-   if(!bytes)return fail("KhÃ´ng táº£i Ä‘Æ°á»£c áº£nh nhÃ¢n sá»±.",404);
+  const checked=await authorize(id,false);
+  if("error" in checked)return checked.error;
+  const candidate=checked.candidate;
+  if(!isAuthorizedBchPhotoKey(candidate.photo_path,candidate.congress_id,id))
+   return fail("Nhân sự chưa có ảnh hợp lệ.",404);
+  const width=getPortraitWidth(new URL(request.url).searchParams.get("w"));
+  const bytes=await readPortrait(expectedPath(candidate.congress_id,id),width);
+  if(!bytes)return fail("Không tải được ảnh nhân sự.",404);
   return new Response(new Uint8Array(bytes),{
-   headers:{
-    "Content-Type":"image/jpeg","Cache-Control":"private, max-age=45",
-     "Vary":"Cookie",
-    "X-Content-Type-Options":"nosniff","Content-Disposition":"inline",
-    "Cross-Origin-Resource-Policy":"same-origin"
-   }
+   headers:{"Content-Type":"image/jpeg","Cache-Control":"private, no-store",
+    "Vary":"Cookie","X-Content-Type-Options":"nosniff",
+    "Content-Disposition":"inline","Cross-Origin-Resource-Policy":"same-origin"}
   });
  }catch{return fail("Không thể truy cập ảnh BCH.",500);}
 }
@@ -65,36 +63,39 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
 export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}){
  try{
   const {id}=await params;
+  const origin=request.headers.get("origin");
+  if(origin){
+   try{if(new URL(origin).host!==request.headers.get("host"))return fail("Nguồn tải ảnh không hợp lệ.",403);}
+   catch{return fail("Nguồn tải ảnh không hợp lệ.",403);}
+  }
+  if(Number(request.headers.get("content-length")||0)>3*1024*1024)
+   return fail("Ảnh gửi lên vượt giới hạn.",413);
   const auth=await authorize(id,true);
   if("error" in auth)return auth.error;
   const form=await request.formData();
   const file=form.get("photo");
-  if(!(file instanceof File)||file.type!=="image/jpeg"||file.size<1000||file.size>2*1024*1024)
-   return fail("Ảnh đã xử lý phải là JPEG từ 1 KB đến 2 MB.",400);
-  const raw=Buffer.from(await file.arrayBuffer());
-  const metadata=await sharp(raw,{limitInputPixels:5_000_000}).metadata();
-  if(metadata.format!=="jpeg"||metadata.width!==600||metadata.height!==800)
-   return fail("Ảnh phải có kích thước 600 × 800 px (tỷ lệ 3:4).",400);
-  const encoded=await sharp(raw,{limitInputPixels:5_000_000})
-   .flatten({background:"#ffffff"}).jpeg({quality:78,mozjpeg:true}).toBuffer();
-  const path=expectedPath(auth.candidate.congress_id,id);
-  const {error:uploadError}=await createAdminClient().storage.from(BUCKET).upload(
-   path,encoded,{contentType:"image/jpeg",cacheControl:"60",upsert:true}
-  );
-  if(uploadError){
-   console.error("bch photo upload failed",uploadError.name);
-   return fail("Không tải ảnh BCH lên kho lưu trữ. Vui lòng thử lại.",502);
-  }
-  const {data:updated,error:updateError}=await auth.supabase.from("bch_candidates")
-   .update({photo_path:path,updated_at:new Date().toISOString()})
-   .eq("id",id).eq("congress_id",auth.candidate.congress_id)
-   .select("photo_path,updated_at").maybeSingle();
-  if(updateError||!updated)return fail("Ảnh đã tải lên nhưng chưa liên kết được với hồ sơ BCH.",500);
-   invalidatePortrait(path);
-   // Derivatives are reproducible from the master; do not retain 3 files.
-   await removeDerivedPortraits(path);
-  return NextResponse.json({ok:true,photo_path:updated.photo_path,updated_at:updated.updated_at},{
-   headers:{"Cache-Control":"private, no-store"}
+  if(!(file instanceof File))return fail("Vui lòng chọn ảnh JPEG.",400);
+  const prepared=await preparePortrait(file);
+  const candidate=auth.candidate;
+  const path=expectedPath(candidate.congress_id,id);
+  let updatedAt=candidate.updated_at;
+  const saved=await savePortraitObject({
+   path,bytes:prepared.bytes,digest:prepared.digest,
+   async commit(changed){
+    if(!changed&&candidate.photo_path===path)return;
+    const result=await auth.supabase.from("bch_candidates")
+     .update({photo_path:path,updated_at:new Date().toISOString()})
+     .eq("id",id).eq("congress_id",candidate.congress_id)
+     .select("photo_path,updated_at").maybeSingle();
+    if(result.error||!result.data)
+     throw new PortraitError("Lưu ảnh thành công nhưng chưa đồng bộ được hồ sơ BCH.",503);
+    updatedAt=result.data.updated_at;
+   }
   });
- }catch{return fail("Ảnh không hợp lệ hoặc máy chủ không xử lý được.",400);}
+  return NextResponse.json({ok:true,photo_path:path,updated_at:updatedAt,
+   unchanged:!saved.changed,size:saved.size},{headers:{"Cache-Control":"private, no-store"}});
+ }catch(error){
+  if(error instanceof PortraitError)return fail(error.message,error.status);
+  return fail("Không thể xử lý ảnh BCH. Vui lòng thử lại.",400);
+ }
 }

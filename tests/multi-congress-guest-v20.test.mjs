@@ -35,10 +35,10 @@ test("Đại biểu được đổi ảnh của chính mình nhưng ảnh ngư�
  const photo=read("../src/app/api/delegates/[id]/photo/route.ts");
  assert.match(photo,/delegate\.auth_user_id===user\.id/);
  assert.match(photo,/hasRole\(supabase,user\.id,delegate\.congress_id,level\)/);
- assert.match(photo,/sharedPortrait/);
- assert.match(photo,/people\//);
- assert.match(photo,/metadata\(\)/);
- assert.match(photo,/meta\.width!==600\|\|meta\.height!==800/);
+ assert.match(photo,/const shared=delegate\.auth_user_id===checked\.user\.id/);
+ assert.match(photo,/sharedPortraitKey/);
+ assert.match(read("../src/lib/portrait-upload.ts"),/\.metadata\(\)/);
+ assert.match(read("../src/lib/portrait-upload.ts"),/metadata\.width!==600\|\|metadata\.height!==800/);
 });
 
 test("Khách mời chỉ thấy tài liệu công bố và BCH thuộc Đại hội được cấp quyền",()=>{
@@ -56,7 +56,7 @@ test("Khách mời chỉ thấy tài liệu công bố và BCH thuộc Đại h�
  assert.match(bch,/getPortalCongressContext/);
  assert.match(bch,/\.eq\("congress_id",congressId\)/);
  const candidatePhoto=read("../src/app/api/bch-candidates/[id]/photo/route.ts");
- assert.match(candidatePhoto,/\["secretary","delegate","guest"\]/);
+ assert.match(candidatePhoto,/\["delegate","guest"\]/);
  assert.match(candidatePhoto,/if\(write&&!admin\)/);
  const shell=read("../src/components/delegate-shell.tsx");
  assert.match(shell,/guestOnly/);

@@ -21,6 +21,7 @@
      "diagnose:drive-upload": "node scripts/diagnose-drive-upload.mjs",
      "backup:supabase": "node scripts/backup-supabase.mjs",
      "setup:delegate-photos": "node scripts/setup-delegate-photos.mjs",
+    "audit:photos": "node scripts/audit-photo-storage.mjs",
      "setup:supabase": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/configure-supabase.ps1"
    },
    "dependencies": {

@@ -89,7 +89,8 @@
    assert.match(ui,/current_position/);
    const photo=read("../src/app/api/bch-candidates/[id]/photo/route.ts");
    assert.match(photo,/\.eq\("auth_user_id",user\.id\)/);
-   assert.match(photo,/\["secretary","delegate","guest"\]\.includes/);
+   assert.match(photo,/\["delegate","guest"\]\.includes/);
+ assert.match(photo,/hasCongressAbility\(supabase,user\.id,candidate\.congress_id,"bch.read"\)/);
   });
 
   test("Thẻ ID thiết kế premium, cổng đại biểu và trang chính dùng chung palette",()=>{

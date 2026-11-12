@@ -13,14 +13,17 @@ export const derivedPortraitPaths=(path:string)=>
  * Resize lazily with Sharp. Cached bytes are private to the Node process and
  * this function MUST only be called after checking congress-scoped photo access.
  */
-const EXPIRE_MS=45_000;
+// Short server cache: photo keys are stable and Vercel instances cannot broadcast invalidations.
+const EXPIRE_MS=10_000;
 const MAX_BYTES=16*1024*1024;
 const MAX_ENTRIES=160;
 const cache=new Map<string,{bytes:Buffer;expires:number}>();
 const inflight=new Map<string,Promise<Buffer|null>>();
 let cachedBytes=0;
+const revisions=new Map<string,number>();
 
 export function invalidatePortrait(path:string){
+ revisions.set(path,(revisions.get(path)||0)+1);
  for(const [key,value] of cache){
   if(key.startsWith(path+"@")){cachedBytes-=value.bytes.length;cache.delete(key);}
  }
@@ -52,6 +55,7 @@ export async function readPortrait(path:string,width:PortraitWidth):Promise<Buff
  }
  const pending=inflight.get(key);
  if(pending)return pending;
+ const revision=revisions.get(path)||0;
  const promise=(async()=>{
   let source:Buffer;
   if(width===600){
@@ -66,7 +70,9 @@ export async function readPortrait(path:string,width:PortraitWidth):Promise<Buff
   const resized=width===600?source:await sharp(source,{limitInputPixels:5_000_000})
    .resize(width,Math.round(width*4/3),{fit:"cover"})
    .jpeg({quality:75,mozjpeg:true}).toBuffer();
-  cachePortrait(key,resized);
+  // A concurrent upload may invalidate this in-flight read. Never re-cache
+  // an older image after the mutation commits on this same worker.
+  if((revisions.get(path)||0)===revision)cachePortrait(key,resized);
   return resized;
  })();
  inflight.set(key,promise);

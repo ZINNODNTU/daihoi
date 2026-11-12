@@ -59,8 +59,9 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   const response=await fetch("/api/delegates/"+encodeURIComponent(delegateId)+"/photo",{
    method:"PUT",body:data
   });
-  const body=await response.json();
+  const body=await response.json() as {error?:string;unchanged?:boolean};
   if(!response.ok)throw new Error(body.error||"Không lưu được ảnh đại biểu.");
+  return body;
  }
  async function photoSaved(blob:Blob){
   if(!photoTarget)return;
@@ -70,9 +71,9 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    setPhotoTarget(null);
    return;
   }
-  await uploadPhoto(photoTarget.delegate.id,blob);
+  const uploaded=await uploadPhoto(photoTarget.delegate.id,blob);
   setPhotoTarget(null);
-  setSuccess("Đã lưu ảnh nền trắng cho "+photoTarget.delegate.full_name+".");
+  setSuccess((uploaded.unchanged?"Ảnh giống bản hiện tại, không tải lên lại: ":"Đã lưu ảnh nền trắng cho ")+photoTarget.delegate.full_name+".");
   router.refresh();
  }
 

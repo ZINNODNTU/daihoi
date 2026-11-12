@@ -101,8 +101,8 @@ test("Photo endpoints never create extra 96/160 uploads and check authorization 
   "src/app/api/bch-candidates/[id]/photo/route.ts"]){
   const route=read(p);
   assert.match(route,/await readPortrait\(/);
-  assert.match(route,/await removeDerivedPortraits\(path\)/);
-  assert.match(route,/\.jpeg\(\{quality:78,mozjpeg:true\}\)/);
+  assert.match(route,/await savePortraitObject\(/);
+  assert.match(read("src/lib/portrait-upload.ts"),/\.jpeg\(\{quality:78,mozjpeg:true/);
   assert.doesNotMatch(route,/upload\(path\.replace/);
   assert.doesNotMatch(route,/\[96,160\]\.map\(async/);
   assert.match(route,/authorize\(id,(?:"viewer"|false)\)/);

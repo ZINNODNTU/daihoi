@@ -34,7 +34,8 @@ while(dirs.length){
   for(const row of data||[]){
    const path=prefix?prefix+"/"+row.name:row.name;
    if(!row.id||!row.metadata){dirs.push(path);continue;}
-   records.push({path,size:Number(row.metadata.size||0)});
+   records.push({path,size:Number(row.metadata.size||0),
+    updatedAt:row.updated_at||row.created_at||null});
   }
   if((data||[]).length<PAGE)break;
  }
@@ -60,6 +61,13 @@ async function references(table){
 const [delegateRefs,bchRefs]=await Promise.all([references("delegates"),references("bch_candidates")]);
 const referenced=new Set([...delegateRefs,...bchRefs]);
 const unreferencedPrimary=records.filter(r=>!isDerived(r.path)&&knownMaster(r.path)&&!referenced.has(r.path));
+const missingMasters=[...referenced].filter(path=>!allPaths.has(path));
+const unknownStorageKeys=records.filter(row=>!knownMaster(row.path)&&!isDerived(row.path));
+const OLD_MS=30*24*60*60*1000;
+const agedOrphans=unreferencedPrimary.filter(row=>{
+ const lastChanged=Date.parse(row.updatedAt||"");
+ return Number.isFinite(lastChanged)&&Date.now()-lastChanged>=OLD_MS;
+});
 const bytes=rows=>rows.reduce((total,item)=>total+item.size,0);
 const mb=value=>+(value/(1024*1024)).toFixed(3);
 const report={
@@ -70,6 +78,10 @@ const report={
  suspectDerivativesWithoutOriginal:unknownDerived.length,
  unreferencedPrimaryCandidates:unreferencedPrimary.length,
  unreferencedPrimaryMegabytes:mb(bytes(unreferencedPrimary)),
+ oldUnreferencedPrimaryCandidates:agedOrphans.length,
+ oldUnreferencedPrimaryMegabytes:mb(bytes(agedOrphans)),
+ referencedButMissingPrimary:missingMasters.length,
+ unexpectedStorageKeys:unknownStorageKeys.length,
  referencedPhotoPaths:referenced.size,
  cleanupRequested:process.argv.includes("--remove-derived")
 };
