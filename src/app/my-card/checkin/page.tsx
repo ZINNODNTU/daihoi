@@ -4,6 +4,7 @@ import {getWindowStatus,getWindowLabel,isQrAllowed} from "@/lib/attendance-windo
 import {getMyDelegateData} from "@/lib/delegate-page";
 import {getPortalViewerAuth} from "@/lib/auth";
 import {getPortalCongressContext} from "@/lib/active-congress";
+import {hasPortalAbility} from "@/lib/rbac-server";
 import {BrandMark} from "@/components/brand-mark";
 import {delegateTheme} from "@/lib/delegate-brand-theme";
 import {DelegateCheckinScanner} from "@/components/delegate-checkin-scanner";
@@ -30,6 +31,8 @@ export default async function DelegateCheckinPage(){
  const allSessions=items.flatMap(d=>d.sessions.map(s=>({...s,congressName:d.congressName})));
  const activeId=context?.activeCongressId;
  if(!activeId)return <DelegateUnavailable message="Hãy chọn Đại hội ở thanh phía trên trước khi điểm danh."/>;
+  if(!(await hasPortalAbility(user.id,activeId,"portal.checkin")))
+   return <DelegateUnavailable message="Tài khoản không có quyền quét điểm danh tại Đại hội đang chọn."/>;
  const current=items.find(d=>d.congressId===activeId);
  if(!current)return <DelegateUnavailable message="Tài khoản không có hồ sơ đại biểu hoạt động tại Đại hội đã chọn."/>;
  const theme=delegateTheme(current.kind);

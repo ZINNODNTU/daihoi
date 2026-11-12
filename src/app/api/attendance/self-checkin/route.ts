@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {getAuth} from "@/lib/auth";
+import {hasPortalAbility} from "@/lib/rbac-server";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {getWindowStatus,isQrAllowed} from "@/lib/attendance-window";
 import {verifySessionEntryQr} from "@/lib/session-entry-qr";
@@ -24,7 +25,9 @@ export async function POST(request:Request){
    .eq("id",sessionId).maybeSingle();
   if(sessionError)return fail("Không thể đọc cấu hình điểm danh.",500);
   if(!session)return fail("Phiên điểm danh không tồn tại.",404);
-  if(!verifySessionEntryQr(token,session.congress_id,sessionId))
+  if(!(await hasPortalAbility(user.id,session.congress_id,"portal.checkin")))
+   return fail("Tài khoản không có quyền điểm danh tại Đại hội này.",403);
+   if(!verifySessionEntryQr(token,session.congress_id,sessionId))
    return fail("Mã QR không hợp lệ với phiên này. Vui lòng quét mã do Ban Tổ chức cung cấp.",410);
   if(!isQrAllowed(session.qr_policy,"session"))
    return fail("Phiên không chấp nhận QR theo phiên.",409);

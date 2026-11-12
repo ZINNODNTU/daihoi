@@ -2,6 +2,7 @@ import {Armchair} from "lucide-react";
 import {redirect} from "next/navigation";
 import {getPortalViewerAuth} from "@/lib/auth";
 import {getSelectedCongressId} from "@/lib/active-congress";
+import {hasPortalAbility} from "@/lib/rbac-server";
 import {getMyDelegateData} from "@/lib/delegate-page";
 import {loadMyHallMap} from "@/lib/delegate-seat-map";
 import {DelegateSeatHall} from "@/components/delegate-seat-hall";
@@ -17,6 +18,8 @@ export default async function DelegateSeatsPage({searchParams}:{
  try{congressId=await getSelectedCongressId(user.id);}
  catch{return <DelegateUnavailable message="Không xác minh được quyền xem Đại hội. Hãy thử lại."/>;}
  if(!congressId)redirect("/my-card");
+  if(!(await hasPortalAbility(user.id,congressId,"portal.seating")))
+   return <DelegateUnavailable message="Tài khoản chưa được cấp quyền xem sơ đồ ghế."/>;
  const {items,error}=await getMyDelegateData();
  const selected=items.filter(item=>item.congressId===congressId);
  const {sessionId}=await searchParams;

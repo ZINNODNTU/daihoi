@@ -23,6 +23,8 @@ function makeDb({owner=own,owners=[owner],readError=null,updateError=null,emptyU
    (kind==="read"?readFilters:updateFilters).push(Object.fromEntries(filters));
    if(kind==="read"){
     if(readError)return {data:null,error:{code:readError}};
+     if(!filters.has("id"))return {data:owners.filter(item=>item&&item.is_active&&
+      item.auth_user_id===filters.get("auth_user_id")).map(item=>({congress_id:item.congress_id})),error:null};
     return {data:owner&&filters.get("id")===owner.id&&
      filters.get("auth_user_id")===owner.auth_user_id&&
      filters.get("is_active")===true?
@@ -31,12 +33,15 @@ function makeDb({owner=own,owners=[owner],readError=null,updateError=null,emptyU
    if(updateError)return {data:null,error:{code:updateError}};
    if(emptyUpdate)return {data:[],error:null};
    const matched=filters.get("is_active")===true?
-    owners.filter(item=>item&&item.is_active&&item.auth_user_id===filters.get("auth_user_id")):[];
+    owners.filter(item=>item&&item.is_active&&item.auth_user_id===filters.get("auth_user_id")&&
+      (!filters.has("congress_id")||filters.get("congress_id").includes(item.congress_id))):[];
    return {data:matched.map(item=>({id:item.id,congress_id:item.congress_id,...changes})),error:null};
   }
   return {
    select(){return this;},
    eq(key,value){filters.set(key,value);return this;},
+    in(key,value){filters.set(key,value);return this;},
+    limit(){return this;},
    maybeSingle:async()=>finish(),
    then(resolve,reject){return Promise.resolve(finish()).then(resolve,reject);}
   };
@@ -51,7 +56,7 @@ function makeDb({owner=own,owners=[owner],readError=null,updateError=null,emptyU
  }};
  return {db,updates,readFilters,updateFilters,profileUpdates};
 }
-function handler({user={id:userId},db}){
+function handler({user={id:userId},db,allowedCongresses=null}){
  const compiledModule={exports:{}};
  const fakeRequire=(specifier)=>{
   if(specifier==="next/server")return {NextResponse:{json:(body,options={})=>new Response(JSON.stringify(body),{
@@ -60,6 +65,7 @@ function handler({user={id:userId},db}){
   if(specifier==="@/lib/auth")return {getAuth:async()=>({user})};
   if(specifier==="@/lib/supabase/admin")return {createAdminClient:()=>db};
   if(specifier==="@/lib/delegate-demographics")return {normalizeGender,normalizeBirthDate};
+   if(specifier==="@/lib/rbac-server")return {hasPortalAbility:async(id,congress)=>!allowedCongresses||allowedCongresses.includes(congress)};
   throw new Error("Unexpected import "+specifier);
  };
  new Function("require","module","exports",compiled)(fakeRequire,compiledModule,compiledModule.exports);
@@ -81,7 +87,9 @@ test("API lưu được thông tin từ điện thoại với UUID thật, đún
  assert.equal(result.delegate.gender,"male");
  assert.deepEqual(fixture.updates,[fields]);
  assert.equal(fixture.readFilters[0].auth_user_id,userId);
- assert.deepEqual(fixture.updateFilters[0],{auth_user_id:userId,is_active:true});
+ assert.equal(fixture.updateFilters[0].auth_user_id,userId);
+  assert.equal(fixture.updateFilters[0].is_active,true);
+  assert.ok(fixture.updateFilters[0].congress_id.includes(congressId));
  assert.deepEqual(fixture.profileUpdates,[{id:userId,full_name:fields.full_name}]);
  assert.equal(response.headers.get("Cache-Control"),"private, no-store");
 });
@@ -98,8 +106,21 @@ test("Một lần lưu đồng bộ mọi hồ sơ cùng tài khoản, không ch
  const result=await response.json();
  assert.equal(result.updatedCongressCount,2);
  assert.equal(fixture.updates.length,1);
- assert.deepEqual(fixture.updateFilters[0],{auth_user_id:userId,is_active:true});
+ assert.equal(fixture.updateFilters[0].auth_user_id,userId);
+  assert.equal(fixture.updateFilters[0].is_active,true);
+  assert.ok(fixture.updateFilters[0].congress_id.includes(congressId));
  assert.equal(fixture.profileUpdates.length,1);
+});
+
+test("RBAC portal.card của Đại hội B bị thu hồi thì cập nhật hồ sơ A không chạm B",async()=>{
+ const second={id:"7df0ce28-2dc4-41b5-8a46-72931f1b79d9",
+  congress_id:"8fee0096-d9db-4602-a54d-a791b5820100",auth_user_id:userId,is_active:true};
+ const fixture=makeDb({owners:[own,second]});
+ const response=await handler({...fixture,allowedCongresses:[congressId]})(request(payload));
+ assert.equal(response.status,200);
+ const result=await response.json();
+ assert.equal(result.updatedCongressCount,1);
+ assert.deepEqual(fixture.updateFilters[0].congress_id,[congressId]);
 });
 
 test("API từ chối hồ sơ người khác dù mã UUID đúng, tuyệt đối không cập nhật",async()=>{

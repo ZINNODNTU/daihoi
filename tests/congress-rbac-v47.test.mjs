@@ -77,7 +77,8 @@ test("BTC authorization requires valid enabled same-congress account and verifie
  const auth=compiled("src/lib/auth.ts",{
   "@/lib/supabase/server":{createClient:async()=>({})},
   "@/lib/congress-permissions":permissions,
-  react:{cache:x=>x}
+  react:{cache:x=>x},
+   "@/lib/rbac-schema":{isRbacMigrationPending:()=>false}
  });
  const congressA="aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa";
  const congressB="bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb";
@@ -95,6 +96,7 @@ test("BTC authorization requires valid enabled same-congress account and verifie
     maybeSingle(){
      const error=fault===table?{code:"READ_FAILURE"}:null;
      if(table==="profiles")return Promise.resolve(row({platform_role:platform},error));
+      if(table==="rbac_account_assignments")return Promise.resolve(row(null,error));
      if(table==="congress_members")
       return Promise.resolve(row(constraints.some(([k,v])=>k==="congress_id"&&v===congressA)?{role}:null,error));
      if(table==="btc_accounts")

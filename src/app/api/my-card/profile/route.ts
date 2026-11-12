@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {getAuth} from "@/lib/auth";
+import {hasPortalAbility} from "@/lib/rbac-server";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {normalizeGender,normalizeBirthDate} from "@/lib/delegate-demographics";
 
@@ -75,10 +76,23 @@ export async function PATCH(request:Request){
    return fail("Không xác minh được hồ sơ. Vui lòng thử lại.",503,"ownership_unavailable");
   }
   if(!owned)return fail("Không có quyền cập nhật hồ sơ này.",403,"not_owner");
+   if(!(await hasPortalAbility(user.id,owned.congress_id,"portal.card")))
+    return fail("Tài khoản không được phép chỉnh sửa hồ sơ của Đại hội này.",403,"rbac_denied");
 
-  const {data,error}=await db.from("delegates").update(changes)
+  // Shared name sync is restricted to congresses where this account still
+   // has a portal-card permission. Editing A must never change a denied B.
+   const {data:ownedScopes,error:scopeError}=await db.from("delegates")
+    .select("congress_id").eq("auth_user_id",user.id).eq("is_active",true).limit(100);
+   if(scopeError)return fail("Không xác minh được phạm vi hồ sơ.",503,"scope_unavailable");
+   const ids=[...new Set((ownedScopes||[]).map(row=>row.congress_id))];
+   const allowedScopes=await Promise.all(ids.map(id=>hasPortalAbility(user.id,id,"portal.card")));
+   const editableCongressIds=ids.filter((_,i)=>allowedScopes[i]);
+   if(!editableCongressIds.includes(owned.congress_id))
+    return fail("Tài khoản không được phép sửa hồ sơ này.",403,"rbac_denied");
+   const {data,error}=await db.from("delegates").update(changes)
    .eq("auth_user_id",user.id).eq("is_active",true)
-   .select("id,congress_id,full_name,unit,position,gender,birth_date");
+   .in("congress_id",editableCongressIds)
+    .select("id,congress_id,full_name,unit,position,gender,birth_date");
   if(error){
    console.error("Delegate profile update failed:",error.code||"unknown");
    const missingColumn=error.code==="42703"||error.code==="PGRST204";

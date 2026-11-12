@@ -1,7 +1,8 @@
 import "server-only";
 import {createClient} from "@/lib/supabase/server";
 import {cache} from "react";
-import {roleAbilities,type CongressAbility,type CongressRole} from "@/lib/congress-permissions";
+import {roleAbilities,ACCOUNT_PERMISSION_CAPABILITIES,type CongressAbility,type CongressRole} from "@/lib/congress-permissions";
+import {isRbacMigrationPending} from "@/lib/rbac-schema";
 
 type Db=Awaited<ReturnType<typeof createClient>>;
 export type Role="admin"|"checkin"|"secretary"|"delegate"|"guest";
@@ -86,7 +87,20 @@ export async function getCongressEffectiveAbilities(
  }
  // Write access never exists without read access (including on stale overrides).
  if(!effective.has("ballots.read"))effective.delete("ballots.write");
- return [...effective];
+ // A group can only restrict the verified base permissions.
+  const assignment=await supabase.from("rbac_account_assignments").select("group_id")
+   .eq("congress_id",congressId).eq("user_id",userId).maybeSingle();
+  if(assignment.error)return isRbacMigrationPending(assignment.error)?[...effective]:[];
+  if(assignment.data){
+   const group=await supabase.from("rbac_groups").select("role,abilities")
+    .eq("congress_id",congressId).eq("id",assignment.data.group_id).maybeSingle();
+   if(group.error||!group.data||group.data.role!==role)return [];
+   for(const ability of ACCOUNT_PERMISSION_CAPABILITIES){
+    if(!group.data.abilities.includes(ability))effective.delete(ability);
+   }
+  }
+  if(!effective.has("ballots.read"))effective.delete("ballots.write");
+  return [...effective];
 }
 export async function hasCongressAbility(
  supabase:Db,userId:string,congressId:string,ability:CongressAbility

@@ -2,7 +2,7 @@ import {redirect} from "next/navigation";
 import Link from "next/link";
 import {
   Activity,ArrowRight,Building2,CalendarDays,
-  ChevronRight,LayoutGrid,Plus,ShieldCheck,ScrollText
+  ChevronRight,LayoutGrid,Plus,ShieldCheck,ScrollText,UsersRound
 } from "lucide-react";
 import {createClient} from "@/lib/supabase/server";
 import {isStaffUser} from "@/lib/auth";
@@ -63,6 +63,7 @@ export default async function Dashboard(){
           <div className="mt-7 flex flex-wrap gap-2.5">
             {canCreate&&<a href="#tao-dai-hoi" className="btn command-action shrink-0"><Plus size={17}/> Tạo Đại hội mới</a>}
            {canViewSystemLogs&&<Link href="/dashboard/system-logs" className="btn command-action shrink-0"><ScrollText size={17}/> Nhật ký hệ thống</Link>}
+             {canViewSystemLogs&&<Link href="/dashboard/access" className="btn command-action shrink-0"><UsersRound size={17}/> RBAC tài khoản</Link>}
             {items.length>0&&<Link href={"/congresses/"+items[0].id}
               className="dashboard-hero-secondary inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 text-[12px] font-bold text-white transition hover:bg-white/20">
               Mở Đại hội gần nhất <ArrowRight size={15}/>

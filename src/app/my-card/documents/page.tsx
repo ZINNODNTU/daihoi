@@ -3,6 +3,7 @@ import {BookOpen,ShieldCheck} from "lucide-react";
 import {getPortalViewerAuth} from "@/lib/auth";
 import {redirect} from "next/navigation";
 import {getPortalCongressContext} from "@/lib/active-congress";
+import {hasPortalAbility} from "@/lib/rbac-server";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {DelegatePageHeading,DelegateUnavailable} from "@/components/delegate-page-elements";
 import {DelegateDocumentsList} from "@/components/delegate-documents-list";
@@ -21,6 +22,8 @@ export default async function DelegateDocumentsPage(){
  // against current delegate / guest membership every time.
  const congress=context.options.find(item=>item.id===congressId);
  if(!congress)return <DelegateUnavailable message="Không có quyền xem tài liệu Đại hội này."/>;
+  if(!(await hasPortalAbility(user.id,congressId,"portal.documents")))
+   return <DelegateUnavailable message="Tài khoản không được cấp quyền xem tài liệu tại Đại hội này."/>;
  const db=createAdminClient();
  const result=await db.from("documents")
   .select("id,congress_id,file_name,mime_type,byte_size,drive_file_id,created_at,delegate_visible,display_order")

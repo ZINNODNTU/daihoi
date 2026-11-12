@@ -34,6 +34,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
   const [unresolvedLogs,setUnresolvedLogs]=useState(0);
   const overview:NavItem={name:congressId?"Tất cả Đại hội":"Tổng quan hệ thống",href:"/dashboard",icon:LayoutGrid};
   const logs:NavItem={name:"Nhật ký hệ thống",href:"/dashboard/system-logs",icon:ScrollText};
+  const globalAccess:NavItem={name:"RBAC · Toàn bộ tài khoản",href:"/dashboard/access",icon:ShieldCheck};
   const myAccount:NavItem={name:"Tài khoản & bảo mật",href:"/account",icon:CircleUserRound};
   const base=congressId?"/congresses/"+congressId:"";
   const canUse=(ability:CongressAbility)=>effectiveAbilities?effectiveAbilities.includes(ability):canCongress(accessRole,ability);
@@ -61,7 +62,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
      ]:[]),
     ...(canUse("settings.manage")?[{name:"Cấu hình Đại hội",href:base+"/settings",icon:Settings2}]:[])
   ]:[];
-  const items=[overview,...(canViewSystemLogs?[logs]:[]),myAccount,...congressItems,...adminItems];
+  const items=[overview,...(canViewSystemLogs?[logs,globalAccess]:[]),myAccount,...congressItems,...adminItems];
   const active=[...items].sort((a,b)=>b.href.length-a.href.length)
     .find(item=>path===item.href||
       (item.href!=="/dashboard"&&item.href!==base&&path.startsWith(item.href+"/")))||
@@ -144,7 +145,7 @@ export function AppShell({children,name,congressId,congressName,congressKind="do
       <div className="app-sidebar-scroll flex-1 overflow-y-auto px-3.5 pb-4">
         <div className="pt-7">
           <p className="sidebar-group-label">{congressId?"Không gian làm việc":"Hệ thống"}</p>
-          <nav aria-label="Hệ thống">{navLink(overview)}{canViewSystemLogs&&navLink(logs)}{navLink(myAccount)}</nav>
+          <nav aria-label="Hệ thống">{navLink(overview)}{canViewSystemLogs&&navLink(logs)}{canViewSystemLogs&&navLink(globalAccess)}{navLink(myAccount)}</nav>
         </div>
 
         {congressId&&<>

@@ -2,6 +2,7 @@ import {Users} from "lucide-react";
 import {redirect} from "next/navigation";
 import {getPortalViewerAuth} from "@/lib/auth";
 import {getPortalCongressContext} from "@/lib/active-congress";
+import {hasPortalAbility} from "@/lib/rbac-server";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {DelegatePageHeading,DelegateUnavailable} from "@/components/delegate-page-elements";
 import {DelegateBchCarousel} from "@/components/delegate-bch-carousel";
@@ -18,6 +19,8 @@ export default async function DelegateBchPage(){
  if(!congressId)redirect("/my-card");
  const congress=context.options.find(item=>item.id===congressId);
  if(!congress)return <DelegateUnavailable message="Không có quyền xem nhân sự BCH tại Đại hội này."/>;
+  if(!(await hasPortalAbility(user.id,congressId,"portal.bch")))
+   return <DelegateUnavailable message="Quyền xem nhân sự BCH của tài khoản đã bị giới hạn."/>;
  const db=createAdminClient();
  const {data,error}=await db.from("bch_candidates").select(
   "id,congress_id,full_name,birth_year,hometown,ethnicity,education_level,union_join_year,current_position,photo_path,display_order,created_at,updated_at"

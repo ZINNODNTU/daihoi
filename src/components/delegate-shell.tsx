@@ -16,9 +16,15 @@ const links:NavItem[]=[
  {href:"/my-card/history",label:"Lịch sử",mobile:"Lịch sử",icon:History},
  {href:"/account",label:"Tài khoản",mobile:"Cá nhân",icon:UserRound}
 ];
-export function DelegateShell({children,name,guestOnly=false,congresses=[],activeCongressId=null}:{children:React.ReactNode;name:string;guestOnly?:boolean;congresses?:CongressChoice[];activeCongressId?:string|null}){
+export function DelegateShell({children,name,guestOnly=false,congresses=[],activeCongressId=null,allowedAbilities=null}:{children:React.ReactNode;name:string;guestOnly?:boolean;congresses?:CongressChoice[];activeCongressId?:string|null;allowedAbilities?:string[]|null}){
  const path=usePathname();
-  const visibleLinks=guestOnly?links.filter(link=>["/my-card/documents","/my-card/bch","/account"].includes(link.href)):links;
+  const bySection:Record<string,string>={
+    "/my-card":"portal.card","/my-card/checkin":"portal.checkin",
+    "/my-card/seats":"portal.seating","/my-card/documents":"portal.documents",
+    "/my-card/bch":"portal.bch","/my-card/history":"portal.history"
+   };
+   const visibleLinks=(guestOnly?links.filter(link=>["/my-card/documents","/my-card/bch","/account"].includes(link.href)):links)
+    .filter(link=>!allowedAbilities||!bySection[link.href]||allowedAbilities.includes(bySection[link.href]));
  const primaryLinks=guestOnly?visibleLinks.filter(link=>link.href!=="/account"):
    visibleLinks.filter(link=>["/my-card","/my-card/checkin","/my-card/seats","/my-card/documents"].includes(link.href));
   const moreLinks=guestOnly?[]:visibleLinks.filter(link=>!primaryLinks.some(primary=>primary.href===link.href));
