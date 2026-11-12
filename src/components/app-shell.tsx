@@ -33,6 +33,7 @@ export function AppShell({children,name,congressId,congressName,
  const [unresolvedLogs,setUnresolvedLogs]=useState(0);
  const path=usePathname();
  const searchRef=useRef<HTMLInputElement>(null);
+ const sidebarScrollRef=useRef<HTMLDivElement>(null);
  const closeRef=useRef<HTMLButtonElement>(null);
  const triggerRef=useRef<HTMLButtonElement>(null);
  const overview:NavItem={name:congressId?"Tất cả Đại hội":"Tổng quan hệ thống",href:"/dashboard",icon:LayoutGrid};
@@ -141,6 +142,20 @@ export function AppShell({children,name,congressId,congressName,
   return()=>{mounted=false;window.clearInterval(timer);};
  },[canViewSystemLogs,path]);
 
+ // Keep the active section discoverable on long, permission-dependent menus.
+ // Scroll only inside the sidebar; never move the main page scroll position.
+ useEffect(()=>{
+  const scroller=sidebarScrollRef.current;
+  const activeLink=scroller?.querySelector<HTMLElement>('a[aria-current="page"]');
+  if(!scroller||!activeLink||activeLink.getClientRects().length===0)return;
+  const visible=scroller.getBoundingClientRect();
+  const target=activeLink.getBoundingClientRect();
+  if(target.bottom>visible.bottom-16)
+   scroller.scrollTop+=target.bottom-visible.bottom+16;
+  else if(target.top<visible.top+16)
+   scroller.scrollTop-=visible.top+16-target.top;
+ },[path,compact,mobile]);
+
  async function logout(){
   setLogoutError("");
   try{
@@ -212,7 +227,7 @@ export function AppShell({children,name,congressId,congressName,
     </button>
    </div>
 
-   <div className="admin-sidebar-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 pb-5">
+   <div ref={sidebarScrollRef} className="admin-sidebar-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 pb-5">
     {congressId&&<div className="admin-sidebar-congress mt-4">
      <div className="admin-sidebar-congress-header flex items-center justify-between gap-2">
       <span className="text-[10px] font-bold uppercase tracking-[.1em] text-[#a2c4d6]">ĐẠI HỘI ĐANG CHỌN</span>
@@ -306,7 +321,7 @@ export function AppShell({children,name,congressId,congressName,
        <Link href="/dashboard" className="hover:text-[#146e97]">Hệ thống</Link>
        <ChevronRight size={12}/>
        {congressId&&<><Link href={base} className="max-w-[175px] truncate hover:text-[#146e97]" title={congressName}>
-        Đại hội đang chọn
+        {congressName||"Đại hội đang chọn"}
        </Link><ChevronRight size={12}/></>}
        <span className="max-w-[220px] truncate font-semibold text-[#4b7086]">{active.name}</span>
       </nav>

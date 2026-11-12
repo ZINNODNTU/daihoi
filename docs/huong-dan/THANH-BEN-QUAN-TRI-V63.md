@@ -33,7 +33,8 @@ Các ý tưởng được **áp dụng vào chính AppShell của dự án**; kh
 - Ô tìm chức năng theo tên hoặc nhóm chỉ lọc trong **các mục đã được cấp quyền**.
 - Nút đang chọn có màu, viền và dấu chỉ dẫn thống nhất. Trang con ưu tiên đường dẫn cụ thể nhất.
 - Mobile dùng drawer có backdrop, phím Escape để đóng, vòng lặp Tab trong drawer, khóa cuộn nền và giữ điều hướng nhanh ở chân màn hình.
-- Header cung cấp breadcrumb Hệ thống → Đại hội đang chọn → phân hệ; sidebar có vùng danh tính tài khoản cố định ở cuối.
+- Header cung cấp breadcrumb Hệ thống → tên Đại hội hiện tại → phân hệ; sidebar có vùng danh tính tài khoản cố định ở cuối.
+- Khi chuyển trang, sidebar tự cuộn nội bộ đến mục đang chọn nếu cần, không kéo trang nội dung theo.
 - Tuân thủ `prefers-reduced-motion`. Không phát sinh truy vấn mới đến Supabase chỉ để hiển thị menu.
 
 ## Bảo mật

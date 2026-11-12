@@ -68,6 +68,9 @@ test("desktop sidebar collapses to icons; mobile uses focus-managed accessible d
  assert.match(shell,/event.key==="Tab"/);
  assert.match(shell,/aria-expanded=\{mobile\}/);
  assert.match(shell,/mobileItems.map/);
+ assert.match(shell,/sidebarScrollRef/);
+ assert.match(shell,/scroller\.scrollTop\+=target\.bottom-visible\.bottom/);
+ assert.match(shell,/\{congressName\|\|"Đại hội đang chọn"\}/);
  assert.match(css,/\.admin-sidebar-compact \.admin-nav-text/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
