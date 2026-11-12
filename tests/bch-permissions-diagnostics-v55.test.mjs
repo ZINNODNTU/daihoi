@@ -63,7 +63,8 @@ test("BCH reading verifies staff membership and only fallback on a genuinely abs
  assert.match(page,/fallback=people\.error\?\.code==="42703"&&canManage/);
  assert.match(page,/ballotReady=canManage&&!people\.error/);
  assert.match(api,/error\?\.code==="42703"&&auth\.canManage/);
- assert.match(ui,/Phân quyền BTC/);
+ assert.doesNotMatch(ui,/Phân quyền BTC/);
+ assert.match(ui,/BchBallotEditor/);
  assert.match(ui,/congressKind==="doan"&&canManage&&!ballotReady&&!initialError/);
  assert.match(ui,/upgrade-bch-ballot-results-v47\.sql/);
 });

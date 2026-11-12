@@ -32,6 +32,31 @@ export function formatBallotPercentage(votes:number|null|undefined,total:number|
  return percentage===null?"—":percentage.toLocaleString("vi-VN",{minimumFractionDigits:2,maximumFractionDigits:2})+"%";
 }
 
+/** Parse only a manually transcribed tally pair. No personnel fields are accepted.
+ * Both blank fields intentionally clear an existing result, never assume zero.
+ */
+export function validateManualBchBallots(body:unknown):{
+ data:{votes_received:number|null;total_ballots:number|null}|null;error:string|null
+}{
+ if(!body||typeof body!=="object"||Array.isArray(body))
+  return {data:null,error:"Kết quả kiểm phiếu không hợp lệ."};
+ const item=body as Record<string,unknown>;
+ const rawVotes=item.votes_received,rawTotal=item.total_ballots;
+ const blank=(value:unknown)=>value===null||value==="";
+ if(blank(rawVotes)&&blank(rawTotal))
+  return {data:{votes_received:null,total_ballots:null},error:null};
+ if(blank(rawVotes)||blank(rawTotal))
+  return {data:null,error:"Phải nhập đồng thời số phiếu đạt và tổng số phiếu."};
+ const positiveInteger=/^(0|[1-9][0-9]*)$/;
+ if(!([rawVotes,rawTotal].every(value=>
+  (typeof value==="string"||typeof value==="number")&&positiveInteger.test(String(value)))))
+  return {data:null,error:"Số phiếu phải là số nguyên không âm (không dùng số thập phân)."};
+ const votes=Number(rawVotes),total=Number(rawTotal);
+ if(!Number.isSafeInteger(votes)||!Number.isSafeInteger(total)||total<1||total>1000000||votes>total)
+  return {data:null,error:"Tổng phiếu phải từ 1 đến 1.000.000 và phiếu đạt không vượt tổng phiếu."};
+ return {data:{votes_received:votes,total_ballots:total},error:null};
+}
+
 /** Preserve old BCH editing while an additive tally migration is pending.
  * A legacy personnel update must not erase an already-recorded tally. */
 export function bchWriteData(data:BchCandidateInput,includeBallots:boolean){

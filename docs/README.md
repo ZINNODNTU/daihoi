@@ -48,6 +48,8 @@
 
 | **Phân quyền BTC và chẩn đoán kết quả phiếu BCH V55** | [Hướng dẫn V55](huong-dan/BCH-PHAN-QUYEN-V55.md) — ma trận quyền theo vai trò; xác minh thiếu migration V47 trên Supabase của dự án. |
 
+| **Kiểm phiếu BCH V56 — nhập trực tiếp số phiếu và tỷ lệ, không lẫn phân quyền BTC** | [Hướng dẫn V56](huong-dan/CHUC-NANG-KIEM-PHIEU-BCH-V56.md) — mỗi ứng cử viên có nút lưu riêng, bảo vệ dữ liệu nhân sự và kết quả. |
+
 ## Cấu trúc thư mục
 
 ```text
