@@ -56,6 +56,9 @@
 
 | **V59 — Liên kết ảnh thẻ giữa các Đại hội và xuất Excel tất cả/đã chọn** | [Ảnh thẻ & chuyển danh sách liên Đại hội V59](huong-dan/ANH-THE-VA-CHUYEN-DAI-BIEU-LIEN-DAI-HOI-V59.md) — sửa ảnh thẻ Hội Sinh viên dùng chung tài khoản, xuất đúng mẫu để nhập Đại hội khác, bỏ qua MSSV trùng. |
 
+| **V60 — RBAC toàn bộ tài khoản và nhóm quyền theo Đại hội** | [Hướng dẫn RBAC V60](huong-dan/RBAC-TOAN-HE-THONG-V60.md) — phân quyền theo vai trò, nhóm và từng tài khoản; migration đã áp dụng trên Supabase production ngày 12/11/2026. |
+| **V61 — Admin xem đúng giao diện thực tế của đại biểu** | Sử dụng chung các trang cổng đại biểu, giữ nguyên phiên Admin và khóa thao tác ghi trong chế độ xem hộ. |
+
 ## Cấu trúc thư mục
 
 ```text

@@ -193,7 +193,7 @@ const actions=[
  {href:"/my-card/bch",icon:Users,label:"Nhân sự BCH",detail:"Hồ sơ trích ngang"}
 ] as const;
 
-export function MyDelegateCards({items}:{items:PortalDelegate[]}){
+export function MyDelegateCards({items,readOnly=false}:{items:PortalDelegate[];readOnly?:boolean}){
  const [viewer,setViewer]=useState<PortalDelegate|null>(null);
   const [selectedId,setSelectedId]=useState(items[0]?.id||"");
   const visible=items.filter(item=>item.id===selectedId);
@@ -239,11 +239,11 @@ export function MyDelegateCards({items}:{items:PortalDelegate[]}){
       className="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-[#cbdfea] bg-white px-3 text-[12px] font-bold text-[#246d91] hover:bg-[#eff7fc]">
       <Maximize2 size={17}/> Xem toàn bộ thẻ
      </button>
-     <Link href={"/print/delegate/"+item.id} target="_blank" rel="noopener noreferrer"
+     {!readOnly&&<Link href={"/print/delegate/"+item.id} target="_blank" rel="noopener noreferrer"
       aria-label={"Mở trang in thẻ đại biểu của "+item.fullName}
       className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#cbdfea] bg-white px-3 text-[12px] font-bold text-[#246d91] hover:bg-[#eff7fc]">
       <Printer size={17}/> In thẻ
-     </Link>
+     </Link>}
     </div>
     <DelegatePass item={item} priority={index===0}/>
    </div>)}
@@ -254,7 +254,7 @@ export function MyDelegateCards({items}:{items:PortalDelegate[]}){
      <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#3e87a8]">CỔNG ĐẠI BIỂU</p>
      <h2 className="mt-1 text-[23px] font-extrabold tracking-[-.04em] text-[#1d4253]">Tiện ích tham dự</h2>
     </div>
-    {currentDelegate&&<Link href={"/print/delegate/"+currentDelegate.id} target="_blank" rel="noopener noreferrer"
+    {currentDelegate&&!readOnly&&<Link href={"/print/delegate/"+currentDelegate.id} target="_blank" rel="noopener noreferrer"
      aria-label="In thẻ đại biểu" title="Mở trang in riêng một thẻ"
      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#d7e6e9] bg-white text-[#527889] hover:bg-[#f2f7f7]">
      <Printer size={19}/>

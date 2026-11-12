@@ -78,7 +78,8 @@ test("BTC authorization requires valid enabled same-congress account and verifie
   "@/lib/supabase/server":{createClient:async()=>({})},
   "@/lib/congress-permissions":permissions,
   react:{cache:x=>x},
-   "@/lib/rbac-schema":{isRbacMigrationPending:()=>false}
+   "@/lib/rbac-schema":{isRbacMigrationPending:()=>false},
+    "@/lib/portal-preview-context":{currentPortalPreview:()=>null}
  });
  const congressA="aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa";
  const congressB="bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb";

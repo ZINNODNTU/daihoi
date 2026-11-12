@@ -7,6 +7,16 @@ import {getPortalAbilities} from "@/lib/rbac-server";
 import {loadDelegatePortal} from "@/lib/delegate-portal";
 import {RBAC_ABILITY_LABELS,RBAC_LABELS,type ManagedRole} from "@/lib/access-rbac";
 import {writeSystemLog} from "@/lib/system-log";
+import {setVerifiedPortalPreview} from "@/lib/portal-preview-context";
+import {getPortalCongressContext} from "@/lib/active-congress";
+import {DelegateShell} from "@/components/delegate-shell";
+import {PortalPreviewNavigation} from "@/components/portal-preview-navigation";
+import MyCardPage from "@/app/my-card/page";
+import DelegateCheckinPage from "@/app/my-card/checkin/page";
+import DelegateSeatsPage from "@/app/my-card/seats/page";
+import DelegateDocumentsPage from "@/app/my-card/documents/page";
+import DelegateBchPage from "@/app/my-card/bch/page";
+import DelegateHistoryPage from "@/app/my-card/history/page";
 
 export const dynamic="force-dynamic";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,9 +37,9 @@ function card(title:string,body:string){
  </div>;
 }
 export default async function AccessPreview({params,searchParams}:{
- params:Promise<{userId:string}>;searchParams:Promise<{congressId?:string;view?:string}>
+ params:Promise<{userId:string}>;searchParams:Promise<{congressId?:string;view?:string;sessionId?:string}>
 }){
- const [{userId},{congressId,view}]=await Promise.all([params,searchParams]);
+ const [{userId},{congressId,view,sessionId}]=await Promise.all([params,searchParams]);
  if(!UUID.test(userId)||!congressId||!UUID.test(congressId))notFound();
  const {supabase,user}=await getAuth();
  if(!user)redirect("/login");
@@ -57,6 +67,64 @@ export default async function AccessPreview({params,searchParams}:{
  const role=rawRole as ManagedRole;
  const name=profileResult.data?.full_name||delegateResult.data?.[0]?.full_name||
   authResult.data.user.email||"Tài khoản";
+ if(!isStaff){
+  // Reuse the actual server-rendered delegate pages and client components.
+  // This request-scoped target is set only AFTER super_admin + membership
+  // verification above; the admin's Supabase Auth session is never exchanged.
+  const portalRights=await getPortalAbilities(userId,congressId,role);
+  if(!portalRights.includes("portal.access"))notFound();
+  setVerifiedPortalPreview(userId,congressId);
+  const portalContext=await getPortalCongressContext(userId);
+  const active=portalContext.options.find(item=>item.id===congressId);
+  if(!active)notFound();
+  const views=[
+   {id:"overview",ability:"portal.card"},
+   {id:"checkin",ability:"portal.checkin"},
+   {id:"seating",ability:"portal.seating"},
+   {id:"documents",ability:"portal.documents"},
+   {id:"bch",ability:"portal.bch"},
+   {id:"history",ability:"portal.history"}
+  ];
+  const available=views.filter(item=>portalRights.includes(item.ability as never));
+  const preferred=view==="attendance"?"checkin":view==="seats"?"seating":view;
+  const selectedView=available.find(item=>item.id===preferred)?.id||available[0]?.id||"none";
+  const basePath="/dashboard/access/preview/"+userId;
+  const guestOnly=!portalContext.delegateCongressIds.length&&Boolean(portalContext.guestCongressIds.length);
+  await writeSystemLog({level:"info",source:"auth",event:"rbac.readonly_preview_opened",
+   message:"Quản trị xem giao diện cổng đại biểu thực tế ở chế độ chỉ đọc.",
+   actorId:user.id,congressId,context:{operation:"rbac.preview",targetId:userId,view:selectedView}}).catch(()=>{});
+  return <PortalPreviewNavigation basePath={basePath} congressId={congressId}>
+   <div className="sticky top-0 z-[60] border-b border-amber-200 bg-[#fff5df] px-3 py-2.5 print:hidden sm:px-6">
+    <div className="mx-auto flex max-w-[1220px] flex-wrap items-center justify-between gap-2">
+     <div className="min-w-0">
+      <p className="flex items-center gap-2 text-[11px] font-extrabold text-[#805522]">
+       <Eye size={16}/> ADMIN ĐANG XEM HỘ · CHỈ ĐỌC
+      </p>
+      <p className="mt-0.5 truncate text-[11px] text-[#846c4a]">
+       {name} · {active.name} · Không chuyển tài khoản, không lưu hay điểm danh
+      </p>
+     </div>
+     <Link href={"/dashboard/access?congressId="+congressId}
+      className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#765027] px-3 text-[12px] font-bold text-white">
+      <ArrowLeft size={16}/> Thoát xem thử
+     </Link>
+    </div>
+   </div>
+   <DelegateShell name={name} guestOnly={guestOnly} congresses={portalContext.options}
+    activeCongressId={congressId} allowedAbilities={portalRights}
+    previewBasePath={basePath} previewView={selectedView}>
+    {selectedView==="overview"?<MyCardPage/>:
+     selectedView==="checkin"?<DelegateCheckinPage/>:
+     selectedView==="seating"?<DelegateSeatsPage searchParams={Promise.resolve({sessionId})}/>:
+     selectedView==="documents"?<DelegateDocumentsPage/>:
+     selectedView==="bch"?<DelegateBchPage/>:
+     selectedView==="history"?<DelegateHistoryPage/>:
+     <div className="rounded-xl border border-[#dce8ee] bg-white p-6 text-sm text-[#526d7f]">
+      Tài khoản không được cấp quyền xem phân hệ nào tại Đại hội này.
+     </div>}
+   </DelegateShell>
+  </PortalPreviewNavigation>;
+ }
  const rights:string[]=isStaff?
   [...await getCongressEffectiveAbilities(db,userId,congressId)]:
   [...await getPortalAbilities(userId,congressId,role)];

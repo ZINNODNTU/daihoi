@@ -3,6 +3,7 @@ import {cookies} from "next/headers";
 import {cache} from "react";
 import {loadSharedCongressInfo} from "@/lib/portal-shared-reads";
 import {getPortalCongressAccess} from "@/lib/portal-congress-access";
+import {currentPortalPreview} from "@/lib/portal-preview-context";
 
 export const ACTIVE_CONGRESS_COOKIE="daihoi_active_congress";
 
@@ -27,7 +28,10 @@ export const getPortalCongressContext=cache(async (userId:string):Promise<Portal
   id:c.id,name:c.name,term:c.term||"",status:c.status||"",kind:c.kind||"doan",
   asDelegate:delegated.has(c.id),asGuest:guests.has(c.id)
  })).sort((a,b)=>a.name.localeCompare(b.name,"vi"));
- const value=(await cookies()).get(ACTIVE_CONGRESS_COOKIE)?.value||"";
+ const preview=currentPortalPreview();
+  // Preview selection is request-local; never change the admin's cookie.
+  const value=preview?.userId===userId?preview.congressId:
+   (await cookies()).get(ACTIVE_CONGRESS_COOKIE)?.value||"";
  return {options,activeCongressId:options.some(c=>c.id===value)?value:null,
   delegateCongressIds:access.delegateCongressIds,
   guestCongressIds:access.guestCongressIds};

@@ -9,6 +9,7 @@ import {BrandMark} from "@/components/brand-mark";
 import {delegateTheme} from "@/lib/delegate-brand-theme";
 import {DelegateCheckinScanner} from "@/components/delegate-checkin-scanner";
 import {DelegateUnavailable} from "@/components/delegate-page-elements";
+import {currentPortalPreview} from "@/lib/portal-preview-context";
 
 export const dynamic="force-dynamic";
 
@@ -82,7 +83,12 @@ export default async function DelegateCheckinPage(){
      </p>}
      {open.length>1&&<p className="mt-2 text-[12px] text-[#53788b]">Có {open.length} phiên đang mở. Hãy quét đúng mã QR của phiên cần tham dự.</p>}
     </section>
-    <DelegateCheckinScanner kind={current.kind}/>
+    {currentPortalPreview()?
+      <div className="rounded-xl border border-[#d5e5ec] bg-[#eaf4f8] px-5 py-8 text-center text-[13px] leading-6 text-[#356983]">
+       <strong>Chế độ xem thử điểm danh</strong>
+       <p className="mt-2">Trạng thái phiên và thông tin đại biểu là dữ liệu thật. Camera và xác nhận QR được vô hiệu hóa để bảo vệ tài khoản.</p>
+      </div>:
+      <DelegateCheckinScanner kind={current.kind}/>}
     {otherOpen.length>0&&<p className="rounded-lg border border-[#d8e7ee] bg-white px-4 py-3 text-[12px] leading-5 text-[#527489]">
      Ngoài Đại hội đang chọn, bạn có {otherOpen.length} phiên khác đang mở. Các mã QR hợp lệ vẫn được phép quét theo quyền tham dự của tài khoản.
     </p>}

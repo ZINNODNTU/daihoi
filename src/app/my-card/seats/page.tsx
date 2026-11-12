@@ -7,6 +7,7 @@ import {getMyDelegateData} from "@/lib/delegate-page";
 import {loadMyHallMap} from "@/lib/delegate-seat-map";
 import {DelegateSeatHall} from "@/components/delegate-seat-hall";
 import {DelegatePageHeading,DelegateUnavailable} from "@/components/delegate-page-elements";
+import {currentPortalPreview} from "@/lib/portal-preview-context";
 
 export const dynamic="force-dynamic";
 export default async function DelegateSeatsPage({searchParams}:{
@@ -41,6 +42,8 @@ export default async function DelegateSeatsPage({searchParams}:{
    !selected.length?<DelegateUnavailable message="Bạn chưa có hồ sơ đại biểu tại Đại hội này."/>:
    !choices.length?<div className="rounded-2xl border border-[#deeaed] bg-white px-5 py-12 text-center text-xs text-[#75939f]">Đại hội này chưa có phiên điểm danh được công bố.</div>:
    mapError?<DelegateUnavailable message={mapError}/>:
-   <DelegateSeatHall map={map} choices={choices}/>}
+   <DelegateSeatHall map={map} choices={choices}
+     previewHref={currentPortalPreview()?"/dashboard/access/preview/"+user.id+
+      "?congressId="+encodeURIComponent(congressId)+"&view=seating&sessionId=":undefined}/>}
  </div>;
 }

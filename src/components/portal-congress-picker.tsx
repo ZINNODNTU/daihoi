@@ -8,7 +8,7 @@ import {BrandMark} from "@/components/brand-mark";
 export type CongressChoice={
  id:string;name:string;term:string;status:string;kind:"doan"|"hoi_sinh_vien";asDelegate:boolean;asGuest:boolean;
 };
-type Props={options:CongressChoice[];activeId:string|null;variant?:"compact"|"welcome"};
+type Props={options:CongressChoice[];activeId:string|null;variant?:"compact"|"welcome";previewBasePath?:string};
 
 function normalize(value:string){
  return value.toLocaleLowerCase("vi").normalize("NFD")
@@ -38,7 +38,7 @@ function CongressRow({item,selected,busy,onSelect}:{item:CongressChoice;selected
  </button>;
 }
 
-export function PortalCongressPicker({options,activeId,variant="compact"}:Props){
+export function PortalCongressPicker({options,activeId,variant="compact",previewBasePath}:Props){
  const router=useRouter();
  const [open,setOpen]=useState(false);
  const [query,setQuery]=useState("");
@@ -82,7 +82,12 @@ export function PortalCongressPicker({options,activeId,variant="compact"}:Props)
   if(congressId===activeId&&variant==="compact"){
    setOpen(false);return;
   }
-  setBusy(true);setError("");
+  if(previewBasePath){
+    setOpen(false);setQuery("");
+    router.push(previewBasePath+"?congressId="+encodeURIComponent(congressId)+"&view=overview");
+    return;
+   }
+   setBusy(true);setError("");
   try{
    const response=await fetch("/api/my-card/congress",{
     method:"POST",headers:{"Content-Type":"application/json"},

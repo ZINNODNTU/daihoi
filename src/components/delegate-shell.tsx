@@ -16,15 +16,24 @@ const links:NavItem[]=[
  {href:"/my-card/history",label:"Lịch sử",mobile:"Lịch sử",icon:History},
  {href:"/account",label:"Tài khoản",mobile:"Cá nhân",icon:UserRound}
 ];
-export function DelegateShell({children,name,guestOnly=false,congresses=[],activeCongressId=null,allowedAbilities=null}:{children:React.ReactNode;name:string;guestOnly?:boolean;congresses?:CongressChoice[];activeCongressId?:string|null;allowedAbilities?:string[]|null}){
+export function DelegateShell({children,name,guestOnly=false,congresses=[],activeCongressId=null,allowedAbilities=null,previewBasePath,previewView}:{children:React.ReactNode;name:string;guestOnly?:boolean;congresses?:CongressChoice[];activeCongressId?:string|null;allowedAbilities?:string[]|null;previewBasePath?:string;previewView?:string}){
  const path=usePathname();
+  const previewSections:Record<string,string>={
+   "/my-card":"overview","/my-card/checkin":"checkin","/my-card/seats":"seating",
+   "/my-card/documents":"documents","/my-card/bch":"bch","/my-card/history":"history"
+  };
+  const navHref=(href:string)=>previewBasePath&&previewSections[href]?
+   previewBasePath+"?congressId="+encodeURIComponent(activeCongressId||"")+
+    "&view="+previewSections[href]:href;
+  const isActive=(href:string)=>previewBasePath?previewView===previewSections[href]:path===href;
   const bySection:Record<string,string>={
     "/my-card":"portal.card","/my-card/checkin":"portal.checkin",
     "/my-card/seats":"portal.seating","/my-card/documents":"portal.documents",
     "/my-card/bch":"portal.bch","/my-card/history":"portal.history"
    };
    const visibleLinks=(guestOnly?links.filter(link=>["/my-card/documents","/my-card/bch","/account"].includes(link.href)):links)
-    .filter(link=>!allowedAbilities||!bySection[link.href]||allowedAbilities.includes(bySection[link.href]));
+    .filter(link=>!allowedAbilities||!bySection[link.href]||allowedAbilities.includes(bySection[link.href]))
+     .filter(link=>!previewBasePath||link.href!=="/account");
  const primaryLinks=guestOnly?visibleLinks.filter(link=>link.href!=="/account"):
    visibleLinks.filter(link=>["/my-card","/my-card/checkin","/my-card/seats","/my-card/documents"].includes(link.href));
   const moreLinks=guestOnly?[]:visibleLinks.filter(link=>!primaryLinks.some(primary=>primary.href===link.href));
@@ -57,7 +66,7 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
   <a href="#noi-dung-dai-bieu" className="skip-link">Đến nội dung</a>
   <header className="sticky top-0 z-30 border-b border-[#dce5ee] bg-white/95 backdrop-blur-xl print:hidden">
    <div className="mx-auto flex h-[67px] max-w-[1220px] items-center justify-between gap-3 px-4 sm:h-[78px] sm:px-7">
-    <Link href="/my-card" aria-label="Về trang thẻ đại biểu" className="flex min-w-0 shrink-0 items-center gap-3">
+    <Link href={navHref("/my-card")} aria-label="Về trang thẻ đại biểu" className="flex min-w-0 shrink-0 items-center gap-3">
      <BrandMark kind={congresses.find(item=>item.id===activeCongressId)?.kind||"doan"} className="brand-symbol-light !h-10 !w-10 !flex-[0_0_40px] !rounded-[10px]"/>
      <span className="leading-tight">
       <span className="block text-[15px] font-extrabold tracking-[-.025em] text-[#172b48]">ĐẠI HỘI SỐ</span>
@@ -66,8 +75,8 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
     </Link>
     <nav aria-label="Chức năng đại biểu" className="hidden items-center gap-0.5 lg:flex">
      {visibleLinks.map(({href,label,icon:Icon})=>{
-      const active=path===href;
-      return <Link key={href} href={href} prefetch={false} aria-current={active?"page":undefined}
+      const active=isActive(href);
+      return <Link key={href} href={navHref(href)} prefetch={false} aria-current={active?"page":undefined}
        className={"inline-flex min-h-11 items-center gap-1.5 rounded-[10px] px-2.5 text-[11px] font-bold transition "+
         (active?"bg-[#e6f2f9] text-[#007fae]":"text-[#5c7891] hover:bg-[#f1f5f9]")}>
        <Icon size={16} strokeWidth={active?2.2:1.75}/>{label}
@@ -76,19 +85,19 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
     </nav>
     <div className="flex shrink-0 items-center gap-1.5">
      <span className="hidden max-w-[110px] truncate text-[11px] font-bold text-[#668098] xl:block" title={name}>{name}</span>
-     <Link href="/account" aria-label="Tài khoản của tôi" title="Tài khoản"
-      className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#dce6ed] bg-[#f8fafc] text-[#416b87] lg:hidden"><UserRound size={18}/></Link>
-     <button type="button" onClick={()=>void logout()} disabled={loggingOut}
+     {!previewBasePath&&<Link href="/account" aria-label="Tài khoản của tôi" title="Tài khoản"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#dce6ed] bg-[#f8fafc] text-[#416b87] lg:hidden"><UserRound size={18}/></Link>}
+     {!previewBasePath&&<button type="button" onClick={()=>void logout()} disabled={loggingOut}
       aria-label="Đăng xuất" title="Đăng xuất"
       className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#dce6ed] bg-[#f8fafc] text-[#416b87] transition hover:bg-[#eaf3f9]">
       <LogOut size={18}/>
-     </button>
+     </button>}
     </div>
    </div>
    {logoutError&&<p role="alert" className="mx-auto max-w-[1200px] px-5 pb-2 text-xs font-semibold text-[#b34c3c]">{logoutError}</p>}
   </header>
   {congresses.length>0&&(activeCongressId||path!=="/my-card")&&<div className="mx-auto w-full max-w-[1220px] px-3 pt-3 sm:px-6 lg:px-8 lg:pt-5 print:hidden">
-   <PortalCongressPicker options={congresses} activeId={activeCongressId}/>
+   <PortalCongressPicker options={congresses} activeId={activeCongressId} previewBasePath={previewBasePath}/>
   </div>}
   <main id="noi-dung-dai-bieu"
    className="mx-auto w-full max-w-[1220px] min-w-0 px-3 pb-[calc(7.4rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pt-8 lg:pb-16 lg:px-8">
@@ -104,10 +113,10 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
     className="fixed inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-40 rounded-2xl border border-[#d6e4ec] bg-white p-3 shadow-[0_14px_50px_rgba(22,48,71,.18)] lg:hidden print:hidden">
     <p className="px-3 pb-2 pt-1 text-[11px] font-extrabold uppercase tracking-wider text-[#70899b]">Chức năng khác</p>
     <div className="grid gap-1">{moreLinks.map(({href,label,icon:Icon},index)=><Link
-     ref={index===0?firstMoreLink:undefined} key={href} href={href} prefetch={false}
-     aria-current={path===href?"page":undefined} onClick={()=>setMoreOpen(false)}
+     ref={index===0?firstMoreLink:undefined} key={href} href={navHref(href)} prefetch={false}
+     aria-current={isActive(href)?"page":undefined} onClick={()=>setMoreOpen(false)}
      className={"flex min-h-12 items-center gap-3 rounded-xl px-3 text-[13px] font-bold "+
-      (path===href?"bg-[#e6f2f9] text-[#007fae]":"text-[#365872] hover:bg-[#f2f7fa]")}>
+      (isActive(href)?"bg-[#e6f2f9] text-[#007fae]":"text-[#365872] hover:bg-[#f2f7fa]")}>
      <Icon size={18}/>{label}
     </Link>)}</div>
    </section>
@@ -115,8 +124,8 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
   <nav aria-label="Điều hướng trên điện thoại"
    className="delegate-tabbar fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-0.5 border-t border-[#dce5ee] bg-white/98 px-1.5 pb-[max(.55rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-7px_26px_rgba(18,45,76,.075)] lg:hidden print:hidden">
    {primaryLinks.map(({href,mobile,icon:Icon})=>{
-    const active=path===href;
-    return <Link key={href} href={href} prefetch={false} aria-current={active?"page":undefined}
+    const active=isActive(href);
+    return <Link key={href} href={navHref(href)} prefetch={false} aria-current={active?"page":undefined}
      className={"flex min-h-[59px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[9px] px-0.5 text-center text-[9px] font-bold transition "+
       (active?"bg-[#e6f2f9] text-[#007fae]":"text-[#6f879e] hover:bg-[#f1f6fa]")}>
      <Icon size={19} strokeWidth={active?2.1:1.7}/>
@@ -127,7 +136,7 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
     aria-controls="delegate-more-menu" aria-expanded={moreOpen}
     onClick={()=>setMoreOpen(open=>!open)}
     className={"flex min-h-[59px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[9px] px-0.5 text-center text-[10px] font-bold transition "+
-     (moreOpen||moreLinks.some(link=>link.href===path)?"bg-[#e6f2f9] text-[#007fae]":"text-[#6f879e] hover:bg-[#f1f6fa]")}>
+     (moreOpen||moreLinks.some(link=>isActive(link.href))?"bg-[#e6f2f9] text-[#007fae]":"text-[#6f879e] hover:bg-[#f1f6fa]")}>
     <Ellipsis size={20} strokeWidth={2.2}/><span>Thêm</span>
    </button>}
   </nav>

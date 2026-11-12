@@ -8,6 +8,7 @@ import {PortalCongressPicker} from "@/components/portal-congress-picker";
 import {DelegatePageHeading,DelegateUnavailable} from "@/components/delegate-page-elements";
 import {redirect} from "next/navigation";
 import {hasPortalAbility} from "@/lib/rbac-server";
+import {currentPortalPreview} from "@/lib/portal-preview-context";
 
 export const dynamic="force-dynamic";
 
@@ -50,7 +51,7 @@ export default async function MyCardPage(){
   <DelegatePageHeading eyebrow="CỔNG ĐẠI BIỂU / THẺ ĐIỆN TỬ"
    title="Thẻ đại biểu" description={"Đại hội: "+selected.name+". Mã đại biểu, mã vạch và vị trí ghế dành riêng cho Đại hội này."} icon={IdCard}/>
   {error?<DelegateUnavailable message={error}/>:
-   visible.length?<MyDelegateCards items={visible}/>:
+   visible.length?<MyDelegateCards items={visible} readOnly={Boolean(currentPortalPreview())}/>:
    <DelegateUnavailable message="Chưa tìm thấy thẻ đại biểu của bạn tại Đại hội này."/>}
  </div>;
 }

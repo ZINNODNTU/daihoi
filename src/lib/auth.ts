@@ -3,6 +3,7 @@ import {createClient} from "@/lib/supabase/server";
 import {cache} from "react";
 import {roleAbilities,ACCOUNT_PERMISSION_CAPABILITIES,type CongressAbility,type CongressRole} from "@/lib/congress-permissions";
 import {isRbacMigrationPending} from "@/lib/rbac-schema";
+import {currentPortalPreview} from "@/lib/portal-preview-context";
 
 type Db=Awaited<ReturnType<typeof createClient>>;
 export type Role="admin"|"checkin"|"secretary"|"delegate"|"guest";
@@ -20,7 +21,11 @@ export const getAuth=cache(async ()=>{
 // Mutating and privileged API routes continue using getAuth() / getUser().
 export const getPortalViewerAuth=cache(async ()=>{
  const supabase=await createClient();
- const {data,error}=await supabase.auth.getClaims();
+ const preview=currentPortalPreview();
+  // Only a verified admin preview server render can set this request-local
+  // identity. Mutation APIs and the real Auth session are never changed.
+  if(preview)return {supabase,user:{id:preview.userId,email:undefined}};
+  const {data,error}=await supabase.auth.getClaims();
  const claims=data?.claims;
  if(error||!claims?.sub)return {supabase,user:null};
  return {supabase,user:{

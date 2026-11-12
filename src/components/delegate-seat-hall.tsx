@@ -20,7 +20,7 @@ function freeformBounds(seats:HallSeat[]){
  };
 }
 
-export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choice[]}){
+export function DelegateSeatHall({map,choices,previewHref}:{map:MyHallMap|null;choices:Choice[];previewHref?:string}){
  const router=useRouter();
  const [pending,startTransition]=useTransition();
  const [zoom,setZoom]=useState(.58);
@@ -273,7 +273,7 @@ export function DelegateSeatHall({map,choices}:{map:MyHallMap|null;choices:Choic
      Sơ đồ hội trường theo phiên
     </label>
     <select id="my-seat-session" value={map?.session.id||""} disabled={pending||!choices.length}
-     onChange={e=>startTransition(()=>router.replace("/my-card/seats?sessionId="+encodeURIComponent(e.target.value),{scroll:false}))}
+     onChange={e=>startTransition(()=>router.replace((previewHref||"/my-card/seats?sessionId=")+encodeURIComponent(e.target.value),{scroll:false}))}
      className="field mt-2 !min-h-[49px] w-full !rounded-xl">
      {choices.map(s=><option key={s.id} value={s.id}>{s.name} · {s.congressName}</option>)}
     </select>
