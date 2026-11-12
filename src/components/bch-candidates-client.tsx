@@ -7,23 +7,25 @@ import {
  Plus,Search,Trash2,UserRoundPlus,Users,X,GripVertical,ArrowUp,ArrowDown
 } from "lucide-react";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
-import {sortBchCandidates,validateBchInput,
+import {sortBchCandidates,validateBchInput,ballotPercentage,formatBallotPercentage,
  type BchCandidate} from "@/lib/bch-candidates";
 
 type DelegateOption={id:string;full_name:string;position:string;code:string;photo_path:string|null};
 type PhotoTarget={kind:"form"}|{kind:"existing";candidate:BchCandidate};
 type UploadedPhoto={photo_path:string;updated_at:string;unchanged?:boolean;size?:number};
 type Props={
- congressId:string;congressName:string;congressCode:string;canManage:boolean;
+ congressId:string;congressName:string;congressCode:string;congressKind:string;ballotReady:boolean;canManage:boolean;
  initialCandidates:BchCandidate[];initialError:string;delegates:DelegateOption[];
 };
 type FormDataState={
  full_name:string;birth_year:string;hometown:string;ethnicity:string;
  education_level:string;union_join_year:string;current_position:string;display_order:string;
+ votes_received:string;total_ballots:string;
 };
 const initial:FormDataState={
  full_name:"",birth_year:"",hometown:"",ethnicity:"",
- education_level:"",union_join_year:"",current_position:"",display_order:"0"
+ education_level:"",union_join_year:"",current_position:"",display_order:"0",
+ votes_received:"",total_ballots:""
 };
 type Field=keyof FormDataState;
 const fields:{key:Field;label:string;placeholder:string;type?:"number";required?:boolean}[]=[
@@ -40,7 +42,9 @@ const formatCandidate=(c:BchCandidate):FormDataState=>({
  full_name:c.full_name,birth_year:String(c.birth_year),
  hometown:c.hometown,ethnicity:c.ethnicity,education_level:c.education_level,
  union_join_year:String(c.union_join_year),current_position:c.current_position,
- display_order:String(c.display_order)
+ display_order:String(c.display_order),
+ votes_received:c.votes_received==null?"":String(c.votes_received),
+ total_ballots:c.total_ballots==null?"":String(c.total_ballots)
 });
 
 function bchPhotoUrl(candidate:BchCandidate){
@@ -63,7 +67,7 @@ function BchPortrait({candidate,large=false}:{
 }
 
 export function BchCandidatesClient({
- congressId,congressName,congressCode,canManage,initialCandidates,initialError,delegates
+ congressId,congressName,congressCode,congressKind,ballotReady,canManage,initialCandidates,initialError,delegates
 }:Props){
  const [candidates,setCandidates]=useState(()=>sortBchCandidates(initialCandidates));
  const [search,setSearch]=useState("");
@@ -211,14 +215,14 @@ export function BchCandidatesClient({
  async function save(event:FormEvent<HTMLFormElement>){
   event.preventDefault();
   if(!canManage||busy)return;
-  const checked=validateBchInput(form);
+  const checked=validateBchInput(congressKind==="doan"?form:{...form,votes_received:"",total_ballots:""});
   if(!checked.data){setError(checked.error||"Thông tin chưa hợp lệ.");return;}
   setBusy(true);setError("");setNotice("");
   try{
    const method=editing?"PATCH":"POST";
    const response=await fetch("/api/bch-candidates",{
     method,headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({congressId,id:editing,...checked.data})
+    body:JSON.stringify({congressId,id:editing,ballotEnabled:congressKind==="doan"&&ballotReady,...checked.data})
    });
    const result=await response.json();
    if(!response.ok)throw new Error(result.error||"Không lưu được nhân sự.");
@@ -264,12 +268,17 @@ export function BchCandidatesClient({
    const {default:writeExcelFile}=await import("write-excel-file/browser");
    const columns=["STT","Họ tên","Năm sinh","Quê quán","Dân tộc",
     "Trình độ","Năm vào Đoàn","Chức vụ hiện tại"];
+    if(congressKind==="doan"&&ballotReady)columns.push("Số phiếu đạt","Tổng số phiếu","Tỷ lệ (%)");
    const rows:(string|number)[][]=[
     columns,
     ...sorted.map((candidate,index)=>[
      index+1,candidate.full_name,candidate.birth_year,candidate.hometown,
      candidate.ethnicity,candidate.education_level,candidate.union_join_year,
-     candidate.current_position
+     candidate.current_position,
+      ...(congressKind==="doan"&&ballotReady?[
+       candidate.votes_received??"",candidate.total_ballots??"",
+       ballotPercentage(candidate.votes_received,candidate.total_ballots)===null?"":Number(ballotPercentage(candidate.votes_received,candidate.total_ballots)!.toFixed(2))
+      ]:[])
     ])
    ];
    await writeExcelFile([{
@@ -284,7 +293,7 @@ export function BchCandidatesClient({
     <p className="page-kicker">CÔNG TÁC TỔ CHỨC · NHÂN SỰ ĐẠI HỘI</p>
     <h1 className="page-title mt-3">Danh sách trích ngang nhân sự BCH</h1>
     <p className="page-description mt-2">Tổng hợp thông tin nhân sự được giới thiệu tham gia Ban Chấp hành của {congressName}.</p>
-    <p className="mt-2 text-xs font-medium text-[#7893a3]">Danh sách giới thiệu · Không phải kết quả bầu cử</p>
+    <p className="mt-2 text-xs font-medium text-[#7893a3]">Thông tin kiểm phiếu nhập tay chỉ dành cho BTC · Không thay thế biên bản bầu cử</p>
    </div>
    <div className="flex w-full flex-wrap gap-2 sm:w-auto">
     <button type="button" className="btn btn-secondary flex-1 justify-center sm:flex-none"
@@ -313,7 +322,10 @@ export function BchCandidatesClient({
    </div>
   </div>
 
-  {error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">{error}</div>}
+  {congressKind==="doan"&&!ballotReady&&<div role="status" className="rounded-xl border border-[#ebdbb2] bg-[#fff9ed] px-4 py-3 text-[13px] text-[#855f21]">
+    Chức năng nhập phiếu đang chờ cập nhật Supabase V47. Hồ sơ nhân sự hiện có vẫn được xem và chỉnh sửa bình thường.
+   </div>}
+   {error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">{error}</div>}
   {notice&&<div role="status" className="rounded-xl border border-[#cce8db] bg-[#eef9f2] px-4 py-3 text-[13px] font-medium text-[#197750]">{notice}</div>}
 
   {showForm&&canManage&&<section className="overflow-hidden rounded-xl border border-[#d3e5f1] bg-white shadow-[0_10px_30px_rgba(17,60,80,.05)]">
@@ -367,6 +379,27 @@ export function BchCandidatesClient({
        value={form.display_order} onChange={e=>setField("display_order",e.target.value)}/>
      </label>
     </div>
+    {congressKind==="doan"&&ballotReady&&<fieldset className="rounded-xl border border-[#d6e5ef] bg-[#f4f8fb] p-4 sm:p-5">
+      <legend className="px-2 text-[14px] font-extrabold text-[#285b78]">Kết quả kiểm phiếu (nhập tay)</legend>
+      <p className="mb-3 text-xs leading-5 text-[#627e90]">Nhập số phiếu theo biên bản kiểm phiếu của ứng cử viên. Để trống cả hai nếu chưa kiểm phiếu. Số đại biểu điểm danh không tự động là tổng phiếu.</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+       <label className="block"><span className="label">Số phiếu đạt được</span>
+        <input type="number" inputMode="numeric" min={0} max={1000000} step={1} className="field mt-2"
+         value={form.votes_received} placeholder="Ví dụ: 175" onChange={e=>setField("votes_received",e.target.value)}/>
+       </label>
+       <label className="block"><span className="label">Tổng số phiếu làm căn cứ</span>
+        <input type="number" inputMode="numeric" min={1} max={1000000} step={1} className="field mt-2"
+         value={form.total_ballots} placeholder="Ví dụ: 190" onChange={e=>setField("total_ballots",e.target.value)}/>
+       </label>
+       <div className="rounded-lg border border-[#dbe9f0] bg-white p-3" aria-live="polite">
+        <p className="text-xs font-semibold text-[#6c8799]">Tỷ lệ tự động</p>
+        <p className="mt-2 text-[27px] font-extrabold tabular-nums text-[#176b87]">
+         {formatBallotPercentage(form.votes_received===""?null:Number(form.votes_received),form.total_ballots===""?null:Number(form.total_ballots))}
+        </p>
+       </div>
+      </div>
+      <p className="mt-3 text-[11px] text-[#7a92a1]">Công thức: phiếu đạt / tổng phiếu × 100. Chưa tự xác định trúng cử và chưa công bố cho đại biểu.</p>
+     </fieldset>}
     <div className="flex flex-col-reverse gap-2 border-t border-[#edf1f4] pt-4 sm:flex-row sm:justify-end">
      <button type="button" onClick={reset} className="btn btn-secondary justify-center">Hủy</button>
      <button disabled={busy} type="submit" className="btn btn-primary justify-center">
@@ -398,6 +431,7 @@ export function BchCandidatesClient({
       <th className="!text-center">STT</th><th>Ảnh</th><th>Họ tên</th><th>Năm sinh</th>
       <th>Quê quán</th><th>Dân tộc</th><th>Trình độ</th>
       <th>Năm vào Đoàn</th><th>Chức vụ hiện tại</th>
+       {congressKind==="doan"&&<th>Kết quả kiểm phiếu</th>}
       {canManage&&<th>Thao tác</th>}
      </tr></thead>
      <tbody>{visible.map(item=><tr key={item.id}
@@ -418,6 +452,13 @@ export function BchCandidatesClient({
       <td>{item.birth_year}</td><td>{item.hometown}</td>
       <td>{item.ethnicity}</td><td>{item.education_level}</td>
       <td>{item.union_join_year}</td><td>{item.current_position}</td>
+       {congressKind==="doan"&&<td className="min-w-[145px]">
+        {!ballotReady?<span className="text-xs text-[#9aabb6]">Chờ cập nhật CSDL</span>:ballotPercentage(item.votes_received,item.total_ballots)!==null?
+         <div className="text-xs font-bold tabular-nums text-[#286b83]">
+          {item.votes_received?.toLocaleString("vi-VN")} / {item.total_ballots?.toLocaleString("vi-VN")}
+          <p className="mt-1 text-[16px] font-extrabold text-[#166a86]">{formatBallotPercentage(item.votes_received,item.total_ballots)}</p>
+         </div>:<span className="text-xs text-[#9aabb6]">Chưa nhập</span>}
+       </td>}
       {canManage&&<td><div className="flex flex-wrap gap-1.5">
        <button type="button" title="Đưa lên một vị trí" aria-label={"Chuyển "+item.full_name+" lên"}
         className="btn btn-secondary !min-h-8 !px-2 !text-xs" disabled={!canReorder||sorted[0]?.id===item.id}
@@ -436,7 +477,7 @@ export function BchCandidatesClient({
         className="btn btn-secondary !min-h-8 !px-2 !text-xs" onClick={()=>void remove(item)} disabled={busy}><Trash2 size={15}/>Xóa</button>
       </div></td>}
      </tr>)}
-     {!visible.length&&<tr><td colSpan={canManage?10:9} className="py-10 text-center text-sm text-[#8193a1]">Chưa có nhân sự phù hợp.</td></tr>}
+     {!visible.length&&<tr><td colSpan={(canManage?10:9)+(congressKind==="doan"?1:0)} className="py-10 text-center text-sm text-[#8193a1]">Chưa có nhân sự phù hợp.</td></tr>}
      </tbody>
     </table>
    </div>
@@ -455,7 +496,16 @@ export function BchCandidatesClient({
       <div><dt className="text-[#8397a5]">Năm vào Đoàn</dt><dd className="mt-1 font-semibold text-[#3e5a6c]">{item.union_join_year}</dd></div>
       <div className="col-span-2"><dt className="text-[#8397a5]">Trình độ</dt><dd className="mt-1 font-semibold text-[#3e5a6c]">{item.education_level}</dd></div>
       <div className="col-span-2"><dt className="text-[#8397a5]">Chức vụ hiện tại</dt><dd className="mt-1 font-semibold text-[#3e5a6c]">{item.current_position}</dd></div>
-     </dl>
+       {congressKind==="doan"&&<div className="col-span-2 rounded-lg bg-[#eff6fa] p-3">
+        <dt className="text-[#51788d]">Kết quả kiểm phiếu</dt>
+        <dd className="mt-1 font-bold tabular-nums text-[#206b86]">
+         {!ballotReady?<span className="text-xs text-[#9aabb6]">Chờ cập nhật CSDL</span>:ballotPercentage(item.votes_received,item.total_ballots)!==null?
+          [item.votes_received?.toLocaleString("vi-VN"),item.total_ballots?.toLocaleString("vi-VN")].join(" / ")+" · "+formatBallotPercentage(item.votes_received,item.total_ballots):
+          "Chưa nhập số phiếu"}
+        </dd>
+       </div>
+     }
+      </dl>
      {canManage&&<div className="mt-4 flex flex-wrap gap-2 border-t border-[#e3edf1] pt-3">
        <button type="button" disabled={!canReorder||sorted[0]?.id===item.id}
         className="btn btn-secondary flex-1 justify-center" onClick={()=>moveCandidate(item.id,-1)}>
@@ -473,7 +523,7 @@ export function BchCandidatesClient({
    </div>
   </section>
   <p className="flex items-center gap-2 text-xs leading-6 text-[#8294a1]">
-   <FileSpreadsheet size={16}/><span>File Excel xuất đầy đủ danh sách theo thứ tự, không bị ảnh hưởng bởi bộ lọc tìm kiếm.</span>
+   <FileSpreadsheet size={16}/><span>File Excel xuất danh sách theo thứ tự hiện tại (và kèm kết quả kiểm phiếu khi đã cập nhật V47), không bị ảnh hưởng bởi bộ lọc tìm kiếm.</span>
   </p>
    {photoTarget&&<DelegatePhotoEditor
     title="Ảnh nhân sự giới thiệu BCH"

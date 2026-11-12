@@ -2,10 +2,13 @@ export type BchCandidate={
  id:string;congress_id:string;full_name:string;birth_year:number;hometown:string;
  ethnicity:string;education_level:string;union_join_year:number;current_position:string;
  photo_path:string|null;display_order:number;created_at:string;updated_at:string;
+ votes_received?:number|null;total_ballots?:number|null;
 };
 export type BchCandidateInput=Pick<BchCandidate,
  "full_name"|"birth_year"|"hometown"|"ethnicity"|"education_level"|
- "union_join_year"|"current_position"|"display_order">;
+ "union_join_year"|"current_position"|"display_order"> & {
+ votes_received:number|null;total_ballots:number|null;
+};
 
 type Validation={data:BchCandidateInput|null;error:string|null};
 const textLimit={
@@ -17,6 +20,27 @@ const fieldName:Record<keyof typeof textLimit,string>={
 };
 const clean=(value:unknown)=>typeof value==="string"?value.trim().replace(/\s+/g," "):"";
 const currentYear=()=>new Date().getFullYear();
+
+/** Calculate percentage from raw counts, rounding only for presentation. */
+export function ballotPercentage(votes:number|null|undefined,total:number|null|undefined):number|null{
+ if(votes==null||total==null||!Number.isSafeInteger(votes)||!Number.isSafeInteger(total)||
+  total<=0||votes<0||votes>total)return null;
+ return votes/total*100;
+}
+export function formatBallotPercentage(votes:number|null|undefined,total:number|null|undefined){
+ const percentage=ballotPercentage(votes,total);
+ return percentage===null?"—":percentage.toLocaleString("vi-VN",{minimumFractionDigits:2,maximumFractionDigits:2})+"%";
+}
+
+/** Preserve old BCH editing while an additive tally migration is pending.
+ * A legacy personnel update must not erase an already-recorded tally. */
+export function bchWriteData(data:BchCandidateInput,includeBallots:boolean){
+ if(includeBallots)return data;
+ const {full_name,birth_year,hometown,ethnicity,education_level,
+  union_join_year,current_position,display_order}=data;
+ return {full_name,birth_year,hometown,ethnicity,education_level,
+  union_join_year,current_position,display_order};
+}
 
 /** Never trust form or Excel values; the same rules apply to create and update. */
 export function validateBchInput(body:unknown,year=currentYear()):Validation{
@@ -37,12 +61,28 @@ export function validateBchInput(body:unknown,year=currentYear()):Validation{
   return {data:null,error:"Năm sinh phải hợp lệ và không được lớn hơn năm hiện tại."};
  if(!Number.isInteger(joined)||joined<1931||joined>year||joined<birth)
   return {data:null,error:"Năm vào Đoàn không hợp lệ hoặc trước năm sinh."};
+ const votesRaw=item.votes_received,totalRaw=item.total_ballots;
+ const votesBlank=votesRaw===undefined||votesRaw===null||votesRaw==="";
+ const totalBlank=totalRaw===undefined||totalRaw===null||totalRaw==="";
+ if(votesBlank!==totalBlank)
+  return {data:null,error:"Cần nhập cả số phiếu đạt được và tổng số phiếu, hoặc để trống cả hai."};
+ let votes:number|null=null,total:number|null=null;
+ if(!votesBlank){
+  const pattern=/^(0|[1-9][0-9]*)$/;
+  if(!pattern.test(String(votesRaw))||!pattern.test(String(totalRaw)))
+   return {data:null,error:"Số phiếu phải là số nguyên không âm."};
+  votes=Number(votesRaw);total=Number(totalRaw);
+  if(!Number.isSafeInteger(votes)||!Number.isSafeInteger(total)||
+   total<1||total>1000000||votes>total)
+   return {data:null,error:"Tổng phiếu phải từ 1 đến 1.000.000 và số phiếu đạt không vượt tổng phiếu."};
+ }
  if(!Number.isInteger(order)||order<0||order>10000)
   return {data:null,error:"Thứ tự trình bày phải từ 0 đến 10.000."};
  return {data:{
   full_name:fields.full_name,birth_year:birth,hometown:fields.hometown,
   ethnicity:fields.ethnicity,education_level:fields.education_level,
-  union_join_year:joined,current_position:fields.current_position,display_order:order
+  union_join_year:joined,current_position:fields.current_position,display_order:order,
+  votes_received:votes,total_ballots:total
  },error:null};
 }
 export function sortBchCandidates(items:BchCandidate[]){
