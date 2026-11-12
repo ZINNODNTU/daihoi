@@ -135,19 +135,14 @@ export function DelegateCheckinScanner({kind="doan"}:{kind?:CongressKind}){
  // checkin is intentionally invoked after one decoded result; scan lock prevents duplicates.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[camera,selectedCamera,refreshCameras]);
- return <section id="diem-danh" className="scroll-mt-28 overflow-hidden rounded-[23px] border border-[#d9e7ed] bg-white shadow-[0_12px_40px_rgba(26,64,91,.075)] print:hidden">
-  <div className={"relative overflow-hidden border-b px-5 pb-5 pt-6 sm:px-7 sm:pb-6 "+theme.header+" "+theme.border}>
-   <span aria-hidden="true" className={"absolute inset-x-0 top-0 h-[4px] "+theme.stripe}/>
-   <div className="flex items-start gap-3.5">
-    <span className={"flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] border border-white/90 shadow-sm "+theme.soft+" "+theme.accent}><ScanLine size={25}/></span>
-    <div className="min-w-0">
-     <p className={"text-[10px] font-extrabold uppercase tracking-[.14em] "+theme.eyebrow}>QUÉT MÃ QR CỦA PHIÊN</p>
-     <h2 className="mt-1 text-[clamp(19px,4.3vw,25px)] font-extrabold leading-[1.3] tracking-[-.025em] text-[#203e53]">Sẵn sàng điểm danh</h2>
-     <p className="mt-1.5 max-w-[450px] text-[12px] leading-5 text-[#667e91]">Hướng camera về mã QR được Ban Tổ chức chiếu tại hội trường. Hệ thống tự xác nhận bằng tài khoản của bạn.</p>
-    </div>
-   </div>
+ return <section id="diem-danh" className="scroll-mt-24 overflow-hidden rounded-xl border border-[#d8e5eb] bg-white print:hidden">
+  <div className="border-b border-[#e5edf1] px-4 py-4 sm:px-5">
+   <h2 className="flex items-center gap-2 text-[17px] font-bold text-[#1f4155]">
+    <ScanLine size={20} className={theme.accent}/> Quét mã QR của phiên
+   </h2>
+   <p className="mt-1 text-[12px] leading-5 text-[#607d8e]">Dùng camera điện thoại để quét mã QR tại hội trường. Bạn không cần nhập mã đại biểu.</p>
   </div>
-  <div className="space-y-4 p-4 sm:p-6">
+  <div className="space-y-4 p-4 sm:p-5">
    {result&&<div role="status" aria-live="polite" className="rounded-2xl border border-[#bee5cd] bg-[#eaf8ef] px-4 py-5 text-[#196749]">
     <div className="flex items-start gap-3">
      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-[#249361]"><CheckCircle2 size={25}/></span>
@@ -167,11 +162,7 @@ export function DelegateCheckinScanner({kind="doan"}:{kind?:CongressKind}){
     <div aria-hidden="true" className="pointer-events-none absolute inset-[15%] rounded-[20px] border-[3px] border-white/85 shadow-[0_0_0_100px_rgba(7,24,35,.32)]"/>
     {tracked&&<div aria-hidden="true" className="pointer-events-none absolute rounded-lg border-[3px] border-[#63f4a4] bg-[#63f4a4]/10 shadow-[0_0_22px_#63f4a455]" style={tracked}/>}
     <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#092a3b] to-transparent px-3 pb-4 pt-12 text-center text-[12px] font-bold text-white">Căn mã QR vào giữa khung hình</p>
-   </div>:!result&&<div className={"relative flex min-h-[128px] flex-col items-center justify-center gap-2 overflow-hidden rounded-[16px] border border-dashed px-4 py-5 "+theme.border+" "+theme.tint}>
-    <span className={"flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm "+theme.accent}><ScanLine size={26}/></span>
-    <p className="text-[12px] font-extrabold text-[#4b6c80]">Đưa mã QR của phiên vào vùng quét</p>
-    <p className="text-center text-[11px] leading-5 text-[#8198a7]">Đảm bảo đủ sáng, giữ điện thoại ổn định.</p>
-   </div>}
+   </div>:null}
    <button type="button" disabled={submitting||decodingPhoto} onClick={()=>camera?stopCamera():openCamera()}
     className={"inline-flex min-h-[58px] w-full items-center justify-center gap-3 rounded-[14px] px-4 text-[14px] font-extrabold shadow-[0_8px_18px_rgba(29,64,86,.1)] transition-transform active:scale-[.99] focus-visible:outline-none focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-55 "+(camera?"border border-[#d6e5ed] bg-[#f4f8fa] text-[#345a70]":theme.cta)}>
     {submitting?<LoaderCircle size={21} className="animate-spin"/>:camera?<CameraOff size={22}/>:<Camera size={22}/>}

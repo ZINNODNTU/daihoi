@@ -19,7 +19,7 @@ function activeSession(sessions:PortalSession[]){
   sessions[0];
 }
 
-function DelegatePass({item,priority}:{item:PortalDelegate;priority:boolean}){
+export function DelegatePass({item,priority}:{item:PortalDelegate;priority:boolean}){
  const theme=delegateTheme(item.kind);
  const session=activeSession(item.sessions);
  const seat=session?.seat;
@@ -233,11 +233,18 @@ export function MyDelegateCards({items}:{items:PortalDelegate[]}){
      </div>
     </section>}
     {visible.map((item,index)=><div key={item.id} className="min-w-0">
-    <button type="button" onClick={()=>setViewer(item)}
-     aria-label={"Xem toàn bộ thẻ đại biểu của "+item.fullName}
-     className="mx-auto mb-3 flex min-h-11 w-full max-w-[386px] items-center justify-center gap-2 rounded-xl border border-[#cbdfea] bg-white px-4 text-[12px] font-extrabold text-[#246d91] shadow-sm transition hover:bg-[#eff7fc]">
-     <Maximize2 size={17}/> Xem toàn bộ thẻ vừa màn hình
-    </button>
+    <div className="mx-auto mb-3 flex w-full max-w-[386px] items-stretch gap-2">
+     <button type="button" onClick={()=>setViewer(item)}
+      aria-label={"Xem toàn bộ thẻ vừa màn hình của "+item.fullName}
+      className="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-[#cbdfea] bg-white px-3 text-[12px] font-bold text-[#246d91] hover:bg-[#eff7fc]">
+      <Maximize2 size={17}/> Xem toàn bộ thẻ
+     </button>
+     <Link href={"/print/delegate/"+item.id} target="_blank" rel="noopener noreferrer"
+      aria-label={"Mở trang in thẻ đại biểu của "+item.fullName}
+      className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#cbdfea] bg-white px-3 text-[12px] font-bold text-[#246d91] hover:bg-[#eff7fc]">
+      <Printer size={17}/> In thẻ
+     </Link>
+    </div>
     <DelegatePass item={item} priority={index===0}/>
    </div>)}
   </div>
@@ -247,10 +254,11 @@ export function MyDelegateCards({items}:{items:PortalDelegate[]}){
      <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#3e87a8]">CỔNG ĐẠI BIỂU</p>
      <h2 className="mt-1 text-[23px] font-extrabold tracking-[-.04em] text-[#1d4253]">Tiện ích tham dự</h2>
     </div>
-    <button type="button" onClick={()=>window.print()} aria-label="In thẻ đại biểu"
+    {currentDelegate&&<Link href={"/print/delegate/"+currentDelegate.id} target="_blank" rel="noopener noreferrer"
+     aria-label="In thẻ đại biểu" title="Mở trang in riêng một thẻ"
      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#d7e6e9] bg-white text-[#527889] hover:bg-[#f2f7f7]">
      <Printer size={19}/>
-    </button>
+    </Link>}
    </div>
    <div className="grid gap-2.5 sm:grid-cols-3 lg:grid-cols-1">
     {actions.map(({href,icon:Icon,label,detail},index)=><Link key={href} href={href} prefetch={false}

@@ -39,7 +39,7 @@ test("delegate checkin only displays the selected authorized congress and live s
  assert.match(page,/delegateTheme\(current\.kind\)/);
  assert.match(page,/<BrandMark kind=\{current\.kind\}/);
  assert.match(page,/<DelegateCheckinScanner kind=\{current\.kind\}/);
- assert.match(page,/grid-cols-\[minmax\(0,1fr\)_315px\]/);
+ assert.match(page,/lg:grid-cols-\[minmax\(0,1fr\)_270px\]/);
 });
 
 test("scanner retains secure checkin, tracked camera and accessible fallback after UI redesign",()=>{
@@ -75,7 +75,7 @@ test("delegate pass uses brand-specific pale header, keeps print, barcode and fu
  assert.doesNotMatch(card,/bg-\[#17263f\]|bg-\[#0c405b\]/);
  assert.match(ui,/FullDelegatePassViewer/);
  assert.match(ui,/calculateDelegatePassScale/);
- assert.match(ui,/window\.print\(\)/);
+ assert.match(ui,/href=\{"\/print\/delegate\/"\+item\.id\}/);
  assert.match(ui,/selectedTheme\.cta/);
 });
 

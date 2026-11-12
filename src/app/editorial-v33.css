@@ -523,27 +523,29 @@
 }
 .app-layout .directory-row:hover .directory-row-index{color:#02789e;}
 /* Single selected-congress card is a clear anchor rather than another plain input. */
+/* Congressional context selector: readable on all screen sizes.
+   Do not override its white surface with the legacy navy gradient. */
 .delegate-portal .portal-congress-button{
- position:relative;overflow:hidden;border:1px solid #20526a;
- background:linear-gradient(125deg,#0a334d,#0a4b6b);
- box-shadow:0 13px 30px rgba(11,62,80,.11);
+ position:relative;overflow:hidden;
+ border:1px solid #d2e1e8;
+ background:#ffffff;
+ box-shadow:0 2px 12px rgba(28,65,88,.055);
 }
 .delegate-portal .portal-congress-button::after{
- content:"";position:absolute;right:-45px;top:-83px;pointer-events:none;
- width:200px;height:200px;border:1px solid rgba(239,205,139,.18);border-radius:50%;
- box-shadow:0 0 0 24px rgba(239,205,139,.035);
+ content:none;
 }
 .delegate-portal .portal-congress-button:hover{
- border-color:#327797;background:linear-gradient(125deg,#0b3c5a,#0c5475);
+ border-color:#8cb7ca;
+ background:#f8fbfc;
 }
 .delegate-portal .portal-congress-button .brand-symbol{
- box-shadow:0 5px 13px rgba(0,0,0,.12);
+ box-shadow:0 2px 10px rgba(33,72,98,.09);
 }
 .delegate-portal .portal-congress-button>span:last-child{
  position:relative;z-index:1;
- border:1px solid rgba(255,255,255,.17);
+ border:1px solid #cddfe9;
 }
-.delegate-portal .portal-congress-button:focus-visible{outline-color:#bd9e64;outline-offset:3px;}
+.delegate-portal .portal-congress-button:focus-visible{outline-color:#1c83af;outline-offset:3px;}
 .delegate-portal>header .brand-symbol{
  box-shadow:0 5px 14px rgba(4,78,104,.12);
 }

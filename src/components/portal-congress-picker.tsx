@@ -118,7 +118,7 @@ export function PortalCongressPicker({options,activeId,variant="compact"}:Props)
     className="portal-congress-button group flex min-h-[72px] w-full items-center gap-3 rounded-2xl border border-[#d1e2ed] bg-white px-3.5 py-3 text-left shadow-[0_4px_15px_rgba(27,70,101,.045)] transition hover:border-[#85b8cf] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1786b0] sm:min-h-[76px] sm:px-4">
     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#e9f3f9] text-[#1b799f]">{active?<BrandMark kind={active.kind} className="!h-11 !w-11 !border-0 !bg-transparent !p-0 !shadow-none"/>:<Landmark size={22}/>}</span>
     <span className="min-w-0 flex-1">
-     <span className="mb-1 block text-[10px] font-extrabold uppercase tracking-[.1em] text-[#718fa2]">ĐẠI HỘI ĐANG XEM</span>
+     <span className="mb-1 block text-[10px] font-extrabold uppercase tracking-[.1em] text-[#416478]">ĐẠI HỘI ĐANG XEM</span>
      <span className="block break-words text-[13px] font-extrabold leading-[1.4] text-[#25485f] line-clamp-2 sm:text-[14px]">{active?.name||"Chọn Đại hội để bắt đầu"}</span>
     </span>
     <span className="flex min-h-10 shrink-0 items-center gap-1 rounded-xl bg-[#ecf5fa] px-2.5 text-[12px] font-extrabold text-[#1c729b] sm:px-3">
