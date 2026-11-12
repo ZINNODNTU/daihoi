@@ -173,7 +173,9 @@ export function BchBallotsClient({congressId,congressName,congressCode,
    onTotalSaved={value=>{setTotal(value);void refresh();}}
    onSaved={saved=>{
     setCandidates(previous=>previous.map(item=>item.id===saved.id?{...item,...saved}:item));
-    setNotice("Đã ghi nhận kết quả kiểm phiếu.");
+    setNotice(saved.votes_received==null?"Đã xóa kết quả phiếu của ứng viên.":
+      "Đã lưu "+saved.votes_received.toLocaleString("vi-VN")+" phiếu đạt ("+
+      formatBallotPercentage(saved.votes_received,total)+").");
    }}/>:<section className="overflow-hidden rounded-xl border border-[#dbe8ef] bg-white">
     <div className="border-b border-[#e4edf2] px-4 py-4 sm:px-5">
      <h2 className="text-[16px] font-bold text-[#27506b]">Bảng kết quả kiểm phiếu</h2>
