@@ -41,6 +41,7 @@ test("preview keeps navigation but disables QR capture, printing and logout",()=
  assert.ok(picker.includes("if(previewBasePath)"));
  assert.ok(guard.includes("onClickCapture={navigate}"));
  assert.ok(guard.includes("onSubmitCapture={blockForm}"));
+ assert.ok(guard.includes('url.pathname==="/dashboard/access"'),"Admin must be able to exit read-only preview");
  assert.ok(checkin.includes("currentPortalPreview()?"));
  assert.ok(cards.includes('readOnly=false'));
  assert.ok(cards.includes('{!readOnly&&<Link href={"/print/delegate/"+item.id}'));

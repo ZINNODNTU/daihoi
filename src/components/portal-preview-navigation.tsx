@@ -30,7 +30,9 @@ export function PortalPreviewNavigation({children,basePath,congressId}:{
   if(!raw||raw.startsWith("#"))return;
   let url:URL;
   try{url=new URL(raw,window.location.href);}catch{return;}
-  if(url.origin===window.location.origin&&url.pathname===basePath)return;
+  // The explicit escape back to the RBAC management page is always allowed.
+  if(url.origin===window.location.origin&&
+   (url.pathname===basePath||url.pathname==="/dashboard/access"))return;
   const section=url.origin===window.location.origin?sectionByPath[url.pathname]:undefined;
   if(section){
    event.preventDefault();event.stopPropagation();
