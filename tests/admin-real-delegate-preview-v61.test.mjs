@@ -19,6 +19,8 @@ test("admin portal preview reuses all six actual delegate pages",()=>{
  }
  assert.ok(preview.includes("<DelegateShell "));
  assert.ok(preview.includes("<PortalPreviewNavigation "));
+ assert.ok(preview.indexOf("Thoát xem thử")<preview.indexOf("<PortalPreviewNavigation "),
+  "Escape to RBAC must sit outside intercepted preview navigation");
  assert.ok(preview.includes("setVerifiedPortalPreview(userId,congressId)"));
 });
 

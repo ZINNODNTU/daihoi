@@ -93,7 +93,8 @@ export default async function AccessPreview({params,searchParams}:{
   await writeSystemLog({level:"info",source:"auth",event:"rbac.readonly_preview_opened",
    message:"Quản trị xem giao diện cổng đại biểu thực tế ở chế độ chỉ đọc.",
    actorId:user.id,congressId,context:{operation:"rbac.preview",targetId:userId,view:selectedView}}).catch(()=>{});
-  return <PortalPreviewNavigation basePath={basePath} congressId={congressId}>
+  return <>
+   {/* Keep the escape control outside click interception so Admin can always exit. */}
    <div className="sticky top-0 z-[60] border-b border-amber-200 bg-[#fff5df] px-3 py-2.5 print:hidden sm:px-6">
     <div className="mx-auto flex max-w-[1220px] flex-wrap items-center justify-between gap-2">
      <div className="min-w-0">
@@ -110,6 +111,7 @@ export default async function AccessPreview({params,searchParams}:{
      </Link>
     </div>
    </div>
+   <PortalPreviewNavigation basePath={basePath} congressId={congressId}>
    <DelegateShell name={name} guestOnly={guestOnly} congresses={portalContext.options}
     activeCongressId={congressId} allowedAbilities={portalRights}
     previewBasePath={basePath} previewView={selectedView}>
@@ -123,7 +125,8 @@ export default async function AccessPreview({params,searchParams}:{
       Tài khoản không được cấp quyền xem phân hệ nào tại Đại hội này.
      </div>}
    </DelegateShell>
-  </PortalPreviewNavigation>;
+  </PortalPreviewNavigation>
+  </>;
  }
  const rights:string[]=isStaff?
   [...await getCongressEffectiveAbilities(db,userId,congressId)]:
