@@ -84,7 +84,7 @@ export async function savePortraitObject(options:{
   const changed=!old||!old.equals(bytes);
   if(changed){
    const upload=await storage.upload(path,bytes,{
-    contentType:"image/jpeg",cacheControl:"60",upsert:true
+    contentType:"image/jpeg",cacheControl:"0",upsert:true
    });
    if(upload.error){
     console.error("portrait storage upload",upload.error.name);

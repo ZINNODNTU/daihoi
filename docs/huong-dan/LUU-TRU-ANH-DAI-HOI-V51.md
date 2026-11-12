@@ -12,7 +12,7 @@
 - **Chỉnh ảnh:** browser crop 600 × 800, có thể tách nền bằng MediaPipe trên thiết bị; API kiểm tra MIME, kích thước và tái mã hóa JPEG `sharp` quality 78, loại EXIF, không lưu ảnh tải lên gốc.
 - **Chống trùng:** server so sánh byte JPEG chuẩn hóa với ảnh đã có trước khi ghi. Upload cùng ảnh không thay đổi tệp; mỗi hồ sơ dùng một khóa duy nhất. Ghế, phiên và QR không chịu ảnh hưởng.
 - **Ảnh thu nhỏ:** kích thước 96 và 160 px được sinh khi đọc, **không tạo thêm tệp trên Supabase**. Trình duyệt nhận ảnh qua API riêng có xác thực.
-- **Cache:** `private, no-store` ở HTTP; cache RAM tối đa 16 MiB/160 entry, hết hạn sau 10 giây; có single-flight và invalidation chống cache cũ khi cùng máy chủ thay ảnh.
+- **Cache:** `private, no-store` ở HTTP; `cacheControl: 0` cho khóa Storage có thể bị ghi đè để giảm nguy cơ ảnh cũ trên CDN; cache RAM tối đa 16 MiB/160 entry, hết hạn sau 10 giây; có single-flight và invalidation chống cache cũ khi cùng máy chủ thay ảnh.
 - **Phân quyền:** GET/PUT kiểm tra Auth và vai trò theo Đại hội; đại biểu chỉ sửa ảnh của chính mình; BTC quản lý BCH theo quyền `admin`; thư ký cần tài khoản BTC hợp lệ. Không tin khóa ảnh do client nhập.
 
 ## Vòng đời thay ảnh

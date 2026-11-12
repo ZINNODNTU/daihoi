@@ -39,6 +39,7 @@ function storage(){
   async upload(key,data,opts){
    telemetry.uploads++;
    assert.equal(opts.contentType,"image/jpeg");
+   assert.equal(opts.cacheControl,"0","Mutable private portrait keys must not linger at CDN edge");
    assert.equal(opts.upsert,true);
    if(failUpload)return {error:{name:"UploadError"}};
    store.set(key,Buffer.from(data));return {error:null};
