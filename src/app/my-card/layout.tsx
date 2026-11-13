@@ -23,8 +23,8 @@ export default async function DelegatePortalLayout({children}:{children:React.Re
  if(await isStaffUser(supabase,user.id))redirect("/dashboard");
  const {data:profile}=await supabase.from("profiles").select("full_name").eq("id",user.id).maybeSingle();
  const access=await getPortalCongressContext(user.id).catch(()=>null);
-  const guestOnly=Boolean(access&&!access.delegateCongressIds.length&&access.guestCongressIds.length);
   const selected=access?.options.find(option=>option.id===access.activeCongressId);
+  const guestOnly=Boolean(selected&&!selected.asDelegate||!selected&&access&&!access.delegateCongressIds.length&&access.guestCongressIds.length);
    const allowedAbilities=selected?await getPortalAbilities(user.id,selected.id,
     selected.asDelegate?"delegate":"guest"):null;
    return <DelegateShell name={profile?.full_name||user.email||"Đại biểu"} guestOnly={guestOnly}

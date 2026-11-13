@@ -31,7 +31,7 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
     "/my-card/seats":"portal.seating","/my-card/documents":"portal.documents",
     "/my-card/bch":"portal.bch","/my-card/history":"portal.history"
    };
-   const visibleLinks=(guestOnly?links.filter(link=>["/my-card/documents","/my-card/bch","/account"].includes(link.href)):links)
+   const visibleLinks=(guestOnly?links.filter(link=>["/my-card","/my-card/documents","/my-card/bch","/account"].includes(link.href)):links)
     .filter(link=>!allowedAbilities||!bySection[link.href]||allowedAbilities.includes(bySection[link.href]))
      .filter(link=>!previewBasePath||link.href!=="/account");
  const primaryLinks=guestOnly?visibleLinks.filter(link=>link.href!=="/account"):

@@ -7,14 +7,18 @@ import {getPortalAbilities} from "@/lib/rbac-server";
 export const getPortalCongressAccess=cache(async (userId:string)=>{
  const db=createAdminClient();
  const [delegates,guests]=await Promise.all([
-  db.from("delegates").select("congress_id").eq("auth_user_id",userId)
+  db.from("delegates").select("congress_id,delegate_type").eq("auth_user_id",userId)
    .eq("is_active",true).limit(100),
   db.from("congress_members").select("congress_id").eq("user_id",userId)
    .eq("role","guest").limit(100)
  ]);
  if(delegates.error||guests.error)throw new Error("Không xác minh được Đại hội được phép truy cập.");
- const delegateCandidates=[...new Set((delegates.data||[]).map(row=>row.congress_id))];
-  const guestCandidates=[...new Set((guests.data||[]).map(row=>row.congress_id))];
+ const delegateCandidates=[...new Set((delegates.data||[])
+   .filter(row=>row.delegate_type!=="guest").map(row=>row.congress_id))];
+  const guestCandidates=[...new Set([
+   ...(guests.data||[]).map(row=>row.congress_id),
+   ...(delegates.data||[]).filter(row=>row.delegate_type==="guest").map(row=>row.congress_id)
+  ])].filter(id=>!delegateCandidates.includes(id));
   const [delegateRights,guestRights]=await Promise.all([
    Promise.all(delegateCandidates.map(id=>getPortalAbilities(userId,id,"delegate"))),
    Promise.all(guestCandidates.map(id=>getPortalAbilities(userId,id,"guest")))

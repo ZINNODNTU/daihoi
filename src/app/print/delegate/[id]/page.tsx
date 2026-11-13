@@ -1,6 +1,7 @@
 import {notFound,redirect} from "next/navigation";
 import {getPortalViewerAuth} from "@/lib/auth";
 import {getMyDelegateData} from "@/lib/delegate-page";
+import {hasPortalAbility} from "@/lib/rbac-server";
 import {PrintDelegatePass} from "@/components/print-delegate-pass";
 
 export const dynamic="force-dynamic";
@@ -15,7 +16,7 @@ export default async function DelegatePrintPage({params}:{params:Promise<{id:str
  const {items,error}=await getMyDelegateData();
  if(error)throw new Error("Không tải được hồ sơ thẻ đại biểu để in.");
  const item=items.find(delegate=>delegate.id===id);
- if(!item)notFound();
+ if(!item||!(await hasPortalAbility(user.id,item.congressId,"portal.card")))notFound();
  return <>
   <style media="print">{`
    @page { size: A4 portrait; margin: 10mm; }

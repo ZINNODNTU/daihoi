@@ -71,7 +71,8 @@ export function calculateDelegateQuality(
  delegates:DemographicPerson[],checkins:CheckinIdentity[],onDate:string
 ):QualityStats{
  const attended=new Set(checkins.map(c=>c.delegate_id));
- const people=delegates.filter(d=>attended.has(d.id)).map(person=>({
+ // Guest attendance remains valid, but is excluded from every quality metric.
+ const people=delegates.filter(d=>d.delegate_type!=="guest"&&attended.has(d.id)).map(person=>({
   ...person,age:person.birth_date?calculateAge(person.birth_date,onDate):null
  }));
  const known=people.filter(p=>p.age!==null);

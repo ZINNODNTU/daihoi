@@ -42,7 +42,7 @@ test("Đại biểu được đổi ảnh của chính mình nhưng ảnh ngư�
  assert.match(read("../src/lib/portrait-upload.ts"),/metadata\.width!==600\|\|metadata\.height!==800/);
 });
 
-test("Khách mời chỉ thấy tài liệu công bố và BCH thuộc Đại hội được cấp quyền",()=>{
+test("Khách mời có thẻ và xem BCH, tài liệu đúng Đại hội được cấp quyền",()=>{
  const access=read("../src/lib/portal-congress-access.ts");
  assert.match(access,/\.eq\("auth_user_id",userId\)/);
  assert.match(access,/\.eq\("role","guest"\)/);
@@ -57,10 +57,12 @@ test("Khách mời chỉ thấy tài liệu công bố và BCH thuộc Đại h�
  assert.match(bch,/getPortalCongressContext/);
  assert.match(bch,/\.eq\("congress_id",congressId\)/);
  const candidatePhoto=read("../src/app/api/bch-candidates/[id]/photo/route.ts");
- assert.match(candidatePhoto,/\["delegate","guest"\]/);
+ assert.match(candidatePhoto,/hasPortalAbility\(user\.id,candidate\.congress_id,"portal\.bch"\)/);
  assert.match(candidatePhoto,/if\(write&&!admin\)/);
  const shell=read("../src/components/delegate-shell.tsx");
  assert.match(shell,/guestOnly/);
  assert.match(shell,/\/my-card\/documents/);
  assert.match(shell,/\/my-card\/bch/);
+  assert.match(read("../src/app/my-card/page.tsx"),/allowedAbilities=\{allowedAbilities\}/);
+  assert.match(read("../src/lib/delegate-demographics.ts"),/delegate_type!=="guest"/);
 });

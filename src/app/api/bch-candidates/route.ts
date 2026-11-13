@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {validateBchInput,bchWriteData} from "@/lib/bch-candidates";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {hasPortalAbility} from "@/lib/rbac-server";
 import {writeSystemLog} from "@/lib/system-log";
 
 export const runtime="nodejs";
@@ -20,21 +21,10 @@ async function authorize(congressId:string,write:boolean){
  const canManage=await hasCongressAbility(supabase,user.id,congressId,"bch.write");
  let canView=canManage;
  if(!write&&!canView){
-  const {data,error}=await supabase.from("congress_members")
-   .select("role").eq("congress_id",congressId).eq("user_id",user.id).maybeSingle();
-  if(error)return {error:fail("Không xác minh được phân quyền nhân sự.",500)} as const;
-  // Secretary access additionally requires an active, congress-scoped BTC identity.
-  canView=["delegate","guest"].includes(data?.role||"")||
-   (data?.role==="secretary"&&await hasCongressAbility(supabase,user.id,congressId,"bch.read"));
-   if(!canView){
-    const own=await createAdminClient().from("delegates").select("id")
-     .eq("congress_id",congressId).eq("auth_user_id",user.id)
-     .eq("is_active",true).limit(1);
-    if(own.error)return {error:fail("Không xác minh được hồ sơ đại biểu.",500)} as const;
-    canView=Boolean(own.data?.length);
-   }
- }
- if(write&&!canManage||!write&&!canView)
+   canView=await hasCongressAbility(supabase,user.id,congressId,"bch.read")||
+    await hasPortalAbility(user.id,congressId,"portal.bch");
+  }
+  if(write&&!canManage||!write&&!canView)
   return {error:fail("Không có quyền truy cập danh sách giới thiệu BCH.",403)} as const;
  return {supabase,user,canManage} as const;
 }

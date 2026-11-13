@@ -50,7 +50,7 @@ export default async function DelegateQualityPage({params,searchParams}:{
  const typeBreakdown=quality?[
   {label:"Chính thức",count:quality.people.filter(p=>p.delegate_type==="official").length},
   {label:"Dự khuyết",count:quality.people.filter(p=>p.delegate_type==="alternate").length},
-  {label:"Khách mời",count:quality.people.filter(p=>p.delegate_type==="guest").length}
+
  ]:[];
  const genderBreakdown=quality?[
   {label:"Nam",count:quality.men,color:"#1c79ad"},
@@ -69,7 +69,7 @@ export default async function DelegateQualityPage({params,searchParams}:{
     </p>
     <h1 className="page-title mt-2">Cơ cấu đại biểu tham dự</h1>
     <p className="page-description mt-2">
-     {congressResult.data.name} · Chỉ tính những đại biểu có lượt điểm danh đã được ghi nhận.
+     {congressResult.data.name} · Chỉ tính đại biểu chính thức và dự khuyết đã điểm danh; không tính khách mời.
     </p>
    </div>
    <div className="flex flex-wrap gap-2">
@@ -187,7 +187,7 @@ export default async function DelegateQualityPage({params,searchParams}:{
     </div>
     <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
      <section className="rounded-[18px] border border-[#d8e5ed] bg-white p-5 shadow-sm">
-      <h2 className="text-[16px] font-extrabold text-[#254c65]">Loại đại biểu có mặt</h2>
+      <h2 className="text-[16px] font-extrabold text-[#254c65]">Loại đại biểu được phân tích</h2>
       <div className="mt-4 space-y-3">
        {typeBreakdown.map(group=><div key={group.label} className="flex justify-between gap-2 border-b border-[#e8eff4] pb-3 text-[12px]">
         <span className="font-semibold text-[#5e7c8f]">{group.label}</span>

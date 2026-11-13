@@ -66,7 +66,8 @@ export default async function AccountPage(){
   getPortalCongressContext(user.id).catch(()=>null)
  ]);
  const first=owned.data?.[0];
- const guestOnly=!owned.data?.length&&Boolean(guestMemberships.data?.length);
+ const selected=context?.options.find(c=>c.id===context.activeCongressId);
+  const guestOnly=selected?!selected.asDelegate:!owned.data?.length&&Boolean(guestMemberships.data?.length);
  const personal:EditableDelegate[]=first?[{
   ...first,congressName:"Tất cả Đại hội",
   gender:(first.gender||null) as EditableDelegate["gender"]

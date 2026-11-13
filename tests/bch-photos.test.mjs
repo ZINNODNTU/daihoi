@@ -17,9 +17,9 @@ test("BCH private photo endpoint permits administrators to upload and authorized
  assert.match(api,/export async function GET/);
  assert.match(api,/export async function PUT/);
  assert.match(api,/hasCongressAbility\(supabase,user\.id,candidate\.congress_id,"bch\.write"\)/);
- assert.match(api,/\["delegate","guest"\]\.includes/);
+ assert.match(api,/hasPortalAbility\(user\.id,candidate\.congress_id,"portal\.bch"\)/);
  assert.match(api,/hasCongressAbility\(supabase,user\.id,candidate\.congress_id,"bch.read"\)/);
-  assert.match(api,/\.eq\("auth_user_id",user\.id\)/);
+  assert.doesNotMatch(api,/\["delegate","guest"\]\.includes/);
  assert.match(api,/db\.from\("bch_candidates"\)/);
  assert.match(api,/isAuthorizedBchPhotoKey/);
  assert.match(api,/private, no-store/);

@@ -94,7 +94,7 @@ export function DelegatePass({item,priority}:{item:PortalDelegate;priority:boole
    </div>
    <div className={"mt-4 h-[3px] w-full rounded-full "+theme.stripe} aria-hidden="true"/>
    <p className="mt-3 text-center text-[10px] font-semibold leading-5 tracking-[.04em] text-[#7c91a0]">
-    THẺ DÀNH RIÊNG CHO ĐẠI BIỂU · KHÔNG CHUYỂN NHƯỢNG
+    {item.delegateType==="guest"?"THẺ DÀNH RIÊNG CHO KHÁCH MỜI":"THẺ DÀNH RIÊNG CHO ĐẠI BIỂU"} · KHÔNG CHUYỂN NHƯỢNG
    </p>
   </div>
  </article>;
@@ -193,7 +193,8 @@ const actions=[
  {href:"/my-card/bch",icon:Users,label:"Nhân sự BCH",detail:"Hồ sơ trích ngang"}
 ] as const;
 
-export function MyDelegateCards({items,readOnly=false}:{items:PortalDelegate[];readOnly?:boolean}){
+export function MyDelegateCards({items,readOnly=false,allowedAbilities}:{items:PortalDelegate[];readOnly?:boolean;allowedAbilities?:readonly string[]}){
+ const can=(ability:string)=>!allowedAbilities||allowedAbilities.includes(ability);
  const [viewer,setViewer]=useState<PortalDelegate|null>(null);
   const [selectedId,setSelectedId]=useState(items[0]?.id||"");
   const visible=items.filter(item=>item.id===selectedId);
@@ -213,20 +214,21 @@ export function MyDelegateCards({items,readOnly=false}:{items:PortalDelegate[];r
      </select>
     </label>}
    {currentDelegate&&<section aria-label="Thao tác nhanh đại biểu" className="grid grid-cols-2 gap-2.5 lg:hidden print:hidden">
-     <Link href="/my-card/checkin" prefetch={false} className={"flex min-h-[72px] items-center gap-3 rounded-xl px-3.5 font-semibold shadow-sm transition "+selectedTheme.cta}>
+     {can("portal.checkin")&&<Link href="/my-card/checkin" prefetch={false} className={"flex min-h-[72px] items-center gap-3 rounded-xl px-3.5 font-semibold shadow-sm transition "+selectedTheme.cta}>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/15"><Camera size={21}/></span>
       <span className="min-w-0"><span className="block text-[13px] font-bold">Điểm danh</span><span className="mt-0.5 block text-[11px] text-white/85">Quét QR phiên</span></span>
-     </Link>
-     <Link href={"/my-card/seats"+(currentSession?"?sessionId="+encodeURIComponent(currentSession.id):"")}
+     </Link>}
+     {can("portal.seating")&&<Link href={"/my-card/seats"+(currentSession?"?sessionId="+encodeURIComponent(currentSession.id):"")}
       prefetch={false} className="flex min-h-[72px] items-center gap-3 rounded-xl border border-[#cbdfe9] bg-white px-3.5 text-[#235c77] shadow-sm">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#e9f3f9]"><Armchair size={21}/></span>
       <span className="min-w-0"><span className="block text-[13px] font-bold">Ghế của tôi</span><span className="mt-0.5 block truncate text-[11px] text-[#6d8ea0]">{currentSession?.seat?.code||"Xem sơ đồ"}</span></span>
-     </Link>
+     </Link>}
      <div className="col-span-2 grid grid-cols-3 gap-2 rounded-xl border border-[#dce7eb] bg-white p-2">
       {([{href:"/my-card/documents"+selectedQuery,label:"Tài liệu",icon:BookOpen},
         {href:"/my-card/bch"+selectedQuery,label:"Ứng viên BCH",icon:Users},
         {href:"/my-card/history",label:"Lịch sử",icon:History}] as const)
-       .map(({href,label,icon:Icon})=><Link key={href} href={href} prefetch={false}
+       .filter(({href})=>can(href.includes("/documents")?"portal.documents":href.includes("/bch")?"portal.bch":"portal.history"))
+        .map(({href,label,icon:Icon})=><Link key={href} href={href} prefetch={false}
         className="flex min-h-[64px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg bg-[#f4f8fb] px-1 text-center text-[11px] font-bold leading-[1.35] text-[#365d74]">
         <Icon size={19} strokeWidth={1.8}/><span>{label}</span>
        </Link>)}
@@ -251,7 +253,7 @@ export function MyDelegateCards({items,readOnly=false}:{items:PortalDelegate[];r
   <aside className="min-w-0 space-y-5 print:hidden lg:sticky lg:top-28">
    <div className="flex items-center justify-between gap-3">
     <div>
-     <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#3e87a8]">CỔNG ĐẠI BIỂU</p>
+     <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#3e87a8]">{currentDelegate?.delegateType==="guest"?"CỔNG KHÁCH MỜI":"CỔNG ĐẠI BIỂU"}</p>
      <h2 className="mt-1 text-[23px] font-extrabold tracking-[-.04em] text-[#1d4253]">Tiện ích tham dự</h2>
     </div>
     {currentDelegate&&!readOnly&&<Link href={"/print/delegate/"+currentDelegate.id} target="_blank" rel="noopener noreferrer"
@@ -261,7 +263,7 @@ export function MyDelegateCards({items,readOnly=false}:{items:PortalDelegate[];r
     </Link>}
    </div>
    <div className="grid gap-2.5 sm:grid-cols-3 lg:grid-cols-1">
-    {actions.map(({href,icon:Icon,label,detail},index)=><Link key={href} href={href} prefetch={false}
+    {actions.filter(action=>can(({"/my-card/checkin":"portal.checkin","/my-card/seats":"portal.seating","/my-card/history":"portal.history","/my-card/documents":"portal.documents","/my-card/bch":"portal.bch"} as Record<string,string>)[action.href])).map(({href,icon:Icon,label,detail},index)=><Link key={href} href={href} prefetch={false}
      className={"group flex min-h-[78px] items-center gap-3.5 rounded-[14px] border px-4 py-3.5 transition hover:-translate-y-0.5 hover:shadow-md "+
       (index===0?"border-transparent shadow-[0_12px_28px_rgba(16,113,106,.12)] "+selectedTheme.cta:
        "border-[#d7e4e8] bg-white text-[#284e60] shadow-sm")}>

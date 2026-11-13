@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {getAuth,getPortalViewerAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {hasPortalAbility} from "@/lib/rbac-server";
 import {readPortrait,getPortraitWidth} from "@/lib/portrait-storage";
 import {bchPortraitKey,isAuthorizedBchPhotoKey} from "@/lib/portrait-policy";
 import {preparePortrait,savePortraitObject,PortraitError} from "@/lib/portrait-upload";
@@ -23,19 +24,11 @@ async function authorize(id:string,write:boolean){
  const admin=await hasCongressAbility(supabase,user.id,candidate.congress_id,"bch.write");
  if(write&&!admin)return {error:fail("Chỉ quản trị Đại hội được thay ảnh nhân sự BCH.",403)} as const;
  if(!write&&!admin){
-  // A former secretary without an enabled BTC account must not see BCH photos.
-  const [staff,member,delegate]=await Promise.all([
-   hasCongressAbility(supabase,user.id,candidate.congress_id,"bch.read"),
-   supabase.from("congress_members").select("role").eq("congress_id",candidate.congress_id)
-    .eq("user_id",user.id).maybeSingle(),
-   db.from("delegates").select("id").eq("congress_id",candidate.congress_id)
-    .eq("auth_user_id",user.id).eq("is_active",true).limit(1)
-  ]);
-  const delegateMembership=!member.error&&["delegate","guest"].includes(member.data?.role||"");
-  if(!staff&&(member.error||delegate.error||(!delegateMembership&&!delegate.data?.length)))
-   return {error:fail("Bạn không có quyền xem ảnh nhân sự BCH.",403)} as const;
- }
- return {candidate,supabase} as const;
+   const canSee=await hasCongressAbility(supabase,user.id,candidate.congress_id,"bch.read")||
+    await hasPortalAbility(user.id,candidate.congress_id,"portal.bch");
+   if(!canSee)return {error:fail("Bạn không có quyền xem ảnh nhân sự BCH.",403)} as const;
+  }
+  return {candidate,supabase} as const;
 }
 function expectedPath(congressId:string,candidateId:string){
  return bchPortraitKey(congressId,candidateId);

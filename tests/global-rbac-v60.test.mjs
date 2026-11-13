@@ -90,7 +90,7 @@ test("Shared RBAC policy never grants beyond the base role and rejects invalid c
  const rbac=compiled("src/lib/access-rbac.ts",{"@/lib/congress-permissions":policies});
  assert.equal(rbac.validGroupAbilities("delegate",["portal.access","portal.documents"]),true);
  assert.equal(rbac.validGroupAbilities("delegate",["workspace.view"]),false);
- assert.equal(rbac.validGroupAbilities("guest",["portal.card"]),false);
+ assert.equal(rbac.validGroupAbilities("guest",["portal.card"]),true);
  assert.equal(rbac.validGroupAbilities("checkin",["delegates.write"]),false);
  assert.equal(rbac.validGroupAbilities("checkin",["ballots.read"]),true);
  assert.equal(rbac.validGroupAbilities("checkin",["attendance.scan","attendance.scan"]),false);

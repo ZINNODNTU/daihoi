@@ -39,10 +39,11 @@ export async function hasPortalAbility(userId:string,congressId:string,ability:P
  const [{data:member,error:memberError},{data:delegate,error:delegateError}]=await Promise.all([
   db.from("congress_members").select("role").eq("congress_id",congressId)
    .eq("user_id",userId).maybeSingle(),
-  db.from("delegates").select("id").eq("congress_id",congressId)
-   .eq("auth_user_id",userId).eq("is_active",true).limit(1)
+  db.from("delegates").select("id,delegate_type").eq("congress_id",congressId)
+   .eq("auth_user_id",userId).eq("is_active",true).limit(100)
  ]);
  if(memberError||delegateError)return false;
- const role:ManagedRole|null=delegate?.length?"delegate":member?.role==="guest"?"guest":null;
+ const role:ManagedRole|null=delegate?.some(d=>d.delegate_type!=="guest")?"delegate":
+   delegate?.some(d=>d.delegate_type==="guest")||member?.role==="guest"?"guest":null;
  return role?(await getPortalAbilities(userId,congressId,role)).includes(ability):false;
 }

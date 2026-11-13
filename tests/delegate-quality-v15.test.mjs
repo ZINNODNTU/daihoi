@@ -50,13 +50,14 @@ test("Chỉ phân tích người đã điểm danh; nhiều phiên cùng ngườ
   {delegate_id:"e",session_id:"session1",checked_in_at:"2026-11-08T07:40:00"}
  ];
  const report=calculateDelegateQuality(delegates,checkins,today);
- assert.equal(report.total,4);
+ assert.equal(report.total,3);
  assert.equal(report.men,1);
  assert.equal(report.women,2);
  assert.equal(report.other,0);
- assert.equal(report.missingGender,1);
- assert.equal(report.missingBirthDate,1);
+ assert.equal(report.missingGender,0);
+ assert.equal(report.missingBirthDate,0);
  assert.equal(report.ageKnown,3);
+  assert.ok(!report.people.some(person=>person.delegate_type==="guest"));
  assert.equal(report.maxAge,51);
  assert.equal(report.minAge,21);
  assert.deepEqual(report.oldest.map(x=>x.id),["a"]);

@@ -89,7 +89,7 @@ export default async function AccessPreview({params,searchParams}:{
   const preferred=view==="attendance"?"checkin":view==="seats"?"seating":view;
   const selectedView=available.find(item=>item.id===preferred)?.id||available[0]?.id||"none";
   const basePath="/dashboard/access/preview/"+userId;
-  const guestOnly=!portalContext.delegateCongressIds.length&&Boolean(portalContext.guestCongressIds.length);
+  const guestOnly=!active.asDelegate;
   await writeSystemLog({level:"info",source:"auth",event:"rbac.readonly_preview_opened",
    message:"Quản trị xem giao diện cổng đại biểu thực tế ở chế độ chỉ đọc.",
    actorId:user.id,congressId,context:{operation:"rbac.preview",targetId:userId,view:selectedView}}).catch(()=>{});

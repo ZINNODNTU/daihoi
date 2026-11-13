@@ -36,7 +36,7 @@ test("print target requires authenticated owned delegate and is outside portal s
  assert.match(page,/getMyDelegateData\(\)/);
  assert.match(page,/isUuid\(id\)/);
  assert.match(page,/items\.find\(delegate=>delegate\.id===id\)/);
- assert.match(page,/if\(!item\)notFound\(\)/);
+ assert.match(page,/if\(!item\|\|!\(await hasPortalAbility\(user\.id,item\.congressId,"portal\.card"\)\)\)notFound\(\)/);
  assert.match(page,/PrintDelegatePass item=\{item\}/);
  assert.match(page,/@page \{ size: A4 portrait; margin: 10mm;/);
  assert.doesNotMatch(page,/createAdminClient|\.from\("delegates"\)/);

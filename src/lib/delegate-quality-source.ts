@@ -25,7 +25,7 @@ export async function loadQualitySource(db:Db,congressId:string,sessionId:string
  const checkins:CheckinIdentity[]=[];
  for(let offset=0;offset<=MAX_DELEGATES;offset+=PAGE_SIZE){
   const {data,error}=await db.from("delegates")
-   .select("id,full_name,unit,gender,birth_date,delegate_type")
+   .select("id,full_name,unit,gender,birth_date,delegate_type").neq("delegate_type","guest")
    .eq("congress_id",congressId).order("id",{ascending:true})
    .range(offset,offset+PAGE_SIZE-1);
   if(error){

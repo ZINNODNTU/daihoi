@@ -60,6 +60,7 @@ const common={
   hasCongressAbility:async(_db,_uid,_cid,ability)=>ability.endsWith(".write")?state.manager:state.staff
  },
  "@/lib/supabase/admin":{createAdminClient:()=>db},
+  "@/lib/rbac-server":{hasPortalAbility:async(_uid,_cid,ability)=>ability==="portal.bch"&&state.delegateMember&&state.role==="guest"},
  "@/lib/portrait-storage":{readPortrait:async(path,width)=>{requests.push({path,width});return reading(path,width);},
   getPortraitWidth:value=>value==="96"?96:value==="160"?160:600
  },

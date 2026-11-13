@@ -88,8 +88,8 @@
    assert.match(ui,/union_join_year/);
    assert.match(ui,/current_position/);
    const photo=read("../src/app/api/bch-candidates/[id]/photo/route.ts");
-   assert.match(photo,/\.eq\("auth_user_id",user\.id\)/);
-   assert.match(photo,/\["delegate","guest"\]\.includes/);
+   assert.match(photo,/hasPortalAbility\(user\.id,candidate\.congress_id,"portal\.bch"\)/);
+   assert.doesNotMatch(photo,/\["delegate","guest"\]\.includes/);
  assert.match(photo,/hasCongressAbility\(supabase,user\.id,candidate\.congress_id,"bch.read"\)/);
   });
 
