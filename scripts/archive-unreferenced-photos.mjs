@@ -50,28 +50,38 @@ async function bytes(path){
 const apply=process.argv.includes("--apply");
 const result={legacyMasters:candidates.length,referenced:0,archivable:0,archived:0,failed:0};
 for(const old of candidates){
+ let phase="references";
  try{
   if(await isReferenced(old)){result.referenced++;continue;}
   result.archivable++;
   if(!apply)continue;
   const target="media/archive/unlinked/"+old;
+  phase="read-original";
   const original=await bytes(old);
-  const {data:existing}=await bucket.download(target);
+  phase="inspect-archive";
+  const {data:existing,error:existingError}=await bucket.download(target);
+  if(existingError&&!["404","NotFound","StorageUnknownError"].includes(String(existingError.statusCode||existingError.name)))throw Error("Archive inspection unavailable");
   if(existing){
    const b=Buffer.from(await existing.arrayBuffer());
    if(sha(original)!==sha(b)){result.failed++;continue;}
   }else{
+   phase="copy";
    const {error:copyError}=await bucket.copy(old,target);
    if(copyError){result.failed++;continue;}
   }
+  phase="verify-copy";
   const confirmed=await bytes(target);
   if(sha(original)!==sha(confirmed)||await isReferenced(old)){
    result.failed++;continue;
   }
+  phase="remove-original";
   const {error:removeError}=await bucket.remove([old]);
   if(removeError){result.failed++;continue;}
   result.archived++;
- }catch{result.failed++;}
+ }catch(error){
+  result.failed++;
+  console.warn("archive_failed",phase,error instanceof Error?error.name:"unknown");
+ }
 }
 console.log(JSON.stringify({mode:apply?"archive-verified":"dry-run",...result},null,2));
 if(result.failed)process.exitCode=1;

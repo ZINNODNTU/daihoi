@@ -66,7 +66,11 @@ const inUse=path=>referenced.has(path)||physicalRefs.has(path);
 const unreferencedPrimary=records.filter(r=>!isDerived(r.path)&&knownMaster(r.path)&&!inUse(r.path));
 const missingMasters=[...referenced].filter(path=>!allPaths.has(path)&&
  (!isCanonicalPortraitKey(path)||!allPaths.has(portraitStoragePath(path))));
-const unknownStorageKeys=records.filter(row=>!knownMaster(row.path)&&!isDerived(row.path));
+const archivedUnlinkedPhotos=records.filter(row=>row.path.startsWith("media/archive/unlinked/")&&
+ isCanonicalPortraitKey(row.path.slice("media/archive/unlinked/".length)));
+const archivedPaths=new Set(archivedUnlinkedPhotos.map(item=>item.path));
+const unknownStorageKeys=records.filter(row=>!knownMaster(row.path)&&!isDerived(row.path)&&
+ !archivedPaths.has(row.path));
 const OLD_MS=30*24*60*60*1000;
 const agedOrphans=unreferencedPrimary.filter(row=>{
  const lastChanged=Date.parse(row.updatedAt||"");
@@ -85,6 +89,8 @@ const report={
  oldUnreferencedPrimaryCandidates:agedOrphans.length,
  oldUnreferencedPrimaryMegabytes:mb(bytes(agedOrphans)),
  referencedButMissingPrimary:missingMasters.length,
+ archivedUnlinkedPhotos:archivedUnlinkedPhotos.length,
+ archivedUnlinkedMegabytes:mb(bytes(archivedUnlinkedPhotos)),
  unexpectedStorageKeys:unknownStorageKeys.length,
  referencedPhotoPaths:referenced.size,
  cleanupRequested:process.argv.includes("--remove-derived")

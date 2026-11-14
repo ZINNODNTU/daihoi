@@ -85,6 +85,8 @@ test("Migration utilities do not update DB photo_path or blindly remove orphan i
  assert.match(organize,/if\(cleanup&&legacyBytes\)/);
  assert.doesNotMatch(organize,/\.update\(\{photo_path:/);
  assert.match(audit,/const physicalRefs=new Set/);
+ assert.match(audit,/archivedUnlinkedPhotos/);
+ assert.match(audit,/!archivedPaths.has\(row.path\)/);
  assert.match(audit,/allPaths.has\(portraitStoragePath\(path\)\)/);
  assert.match(archive,/const apply=process.argv.includes\("--apply"\)/);
  assert.match(archive,/if\(await isReferenced\(old\)\)/);

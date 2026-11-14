@@ -55,5 +55,5 @@ Super Admin có mục **Thư viện ảnh Đại hội** tại `/dashboard/media
 ## Xác minh V73
 
 - TypeScript, ESLint, Next.js production build và kiểm thử tất cả; kiểm thử chống path traversal, giữ tương thích khóa cũ, đọc ảnh fallback, di chuyển copy-verify, menu Admin và bảo vệ Super Admin.
-- Đã kiểm tra trạng thái trước migrate tại đúng project: 5 khóa ảnh đang được 7 liên kết hồ sơ tham chiếu; 1 object không có hồ sơ tham chiếu, giữ lại để kiểm tra. Không có thumbnail bản sao.
+- Đã kiểm tra và chuyển đổi trên đúng project: 5 khóa ảnh đang được 7 liên kết hồ sơ tham chiếu đã được sao chép, so sánh SHA-256 và dọn các đường dẫn cũ sau khi deploy. 1 ảnh không còn tham chiếu được chuyển vào `media/archive/unlinked/` với bản sao kiểm chứng; không xóa dữ liệu. Không có thumbnail dư, không ảnh tham chiếu nào bị thiếu.
 - Sau khi deploy nên mở RBAC và Nhật ký từ Admin, kiểm tra menu đầy đủ và chọn Đại hội; vào Thư viện ảnh để xem danh mục và ảnh; cuối cùng kiểm tra ảnh trên trang đại biểu.
