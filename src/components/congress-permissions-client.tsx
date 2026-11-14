@@ -14,7 +14,7 @@ import {
 type Role="admin"|"checkin"|"secretary";
 type Override={ability:AccountPermissionAbility;allowed:boolean};
 type StaffMember={
- userId:string;name:string;email:string;role:Role;createdAt:string;
+ userId:string;name:string;email:string;role:Role;createdAt:string;isPrimary:boolean;
  deniedAbilities:string[];permissionOverrides:Override[];isSelf:boolean;
 };
 type AuditEntry={
@@ -142,7 +142,7 @@ export function CongressPermissionsClient({congressId}:{congressId:string}){
   setSelectedId(userId);setDraft({});setRoleMode(false);setError("");setNotice("");
  };
  const toggle=(ability:AccountPermissionAbility,enabled:boolean)=>{
-  if(!selected||busy||selected.isSelf)return;
+  if(!selected||busy||selected.isSelf||selected.isPrimary)return;
   setDraft(previous=>({
    ...previous,[key(ability)]:enabled,
    ...(ability==="ballots.read"&&!enabled?{"ballots.write":false}:{}),
@@ -157,7 +157,7 @@ export function CongressPermissionsClient({congressId}:{congressId:string}){
   finally{setLoading(false);}
  }
  async function save(){
-  if(!selected||selected.isSelf||busy||changes.length===0)return;
+  if(!selected||selected.isSelf||selected.isPrimary||busy||changes.length===0)return;
   if(changes.some(c=>!c.allowed&&c.ability==="workspace.view")&&
      !window.confirm("Bạn đang thu hồi quyền truy cập không gian Đại hội. Tiếp tục?"))return;
   setBusy(true);setError("");setNotice("");
@@ -177,7 +177,7 @@ export function CongressPermissionsClient({congressId}:{congressId:string}){
   finally{setBusy(false);}
  }
  async function updateRole(){
-  if(!selected||selected.isSelf||busy||roleDraft===selected.role)return;
+  if(!selected||selected.isSelf||selected.isPrimary||busy||roleDraft===selected.role)return;
   if(!window.confirm("Đổi vai trò nền thành "+CONGRESS_ROLE_LABELS[roleDraft]+
    "? Quyền ngoài vai trò sẽ được giới hạn lại, trừ quyền kiểm phiếu được cấp riêng."))return;
   setBusy(true);setError("");setNotice("");
@@ -256,6 +256,7 @@ export function CongressPermissionsClient({congressId}:{congressId:string}){
         <span className="mt-0.5 block truncate text-[10px] text-[#8195a2]">{member.email}</span>
         <span className="mt-1 block text-[10px] font-semibold text-[#41819b]">
          {CONGRESS_ROLE_LABELS[member.role]}
+         {member.isPrimary&&<span className="ml-1 text-[#b27a36]">· Quản trị chính</span>}
          {member.isSelf&&<span className="ml-1 text-[#567e91]">· Tài khoản của bạn</span>}
          {overridden>0&&<span className="ml-1.5 text-[#a06c38]">· {overridden} tùy chỉnh</span>}
         </span>
@@ -280,7 +281,12 @@ export function CongressPermissionsClient({congressId}:{congressId:string}){
         <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#4b849d]">QUYỀN CỦA TÀI KHOẢN</p>
         <h2 className="mt-1.5 text-[22px] font-extrabold text-[#1c4058]">{selected.name}</h2>
         <p className="mt-1 break-all text-[12px] text-[#8095a3]">{selected.email}</p>
-        {selected.isSelf&&<p className="mt-2 rounded-md border border-[#ebd6b5] bg-[#fffaf1] p-2 text-[11px] font-medium text-[#91682c]">Đây là tài khoản đang đăng nhập. Vì an toàn, không thể tự cấp hoặc thu hồi quyền của chính mình. Hãy chọn tài khoản BTC khác.</p>}
+        {selected.isPrimary&&<p className="mt-2 rounded-md border border-[#bfd8e7] bg-[#eff7fa] p-3 text-[11px] leading-5 font-medium text-[#326c84]">
+         Đây là tài khoản quản trị chính được bảo vệ. Bạn có thể phân quyền cho các tài khoản BTC khác tại danh sách bên trái.
+         Quyền nghiệp vụ của tài khoản quản trị chính chỉ được chỉnh bởi một Super Admin hệ thống khác;
+         không thể tự sửa quyền hoặc thu hồi quyền quản trị cốt lõi.
+        </p>}
+        {selected.isSelf&&!selected.isPrimary&&<p className="mt-2 rounded-md border border-[#ebd6b5] bg-[#fffaf1] p-2 text-[11px] font-medium text-[#91682c]">Đây là tài khoản đang đăng nhập. Vì an toàn, không thể tự cấp hoặc thu hồi quyền của chính mình. Hãy chọn tài khoản BTC khác.</p>}
         <p className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#547b8e]">
          <ShieldCheck size={15}/>{granted}/{ACCOUNT_PERMISSION_CAPABILITIES.length} quyền đang bật
         </p>
@@ -295,7 +301,7 @@ export function CongressPermissionsClient({congressId}:{congressId:string}){
         <KeyRound size={18} className="text-[#41809c]"/>
         <span className="text-[12px] text-[#536d80]">Vai trò nền: <strong className="text-[#24506c]">{CONGRESS_ROLE_LABELS[selected.role]}</strong></span>
        </div>
-       {!roleMode?<button type="button" onClick={()=>{setRoleMode(true);setRoleDraft(selected.role);}} disabled={selected.isSelf}
+       {!roleMode?<button type="button" onClick={()=>{setRoleMode(true);setRoleDraft(selected.role);}} disabled={selected.isSelf||selected.isPrimary}
         className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-[#d4e3e9] bg-white px-3 text-[11px] font-bold text-[#347a98]">
         <Settings2 size={15}/> Thay đổi vai trò <ChevronDown size={13}/>
        </button>:<div className="flex flex-wrap gap-2">
@@ -339,7 +345,7 @@ export function CongressPermissionsClient({congressId}:{congressId:string}){
            canCongress(selected.role,ability)?"Theo vai trò":"Không có trong vai trò";
           return <label key={ability} className={"flex items-center gap-3 px-4 py-3 transition "+(
            possible?"cursor-pointer hover:bg-[#fafcfd]":"cursor-not-allowed bg-[#f8fafb] opacity-65")}>
-           <input type="checkbox" checked={checked} disabled={!possible||busy||selected.isSelf}
+           <input type="checkbox" checked={checked} disabled={!possible||busy||selected.isSelf||selected.isPrimary}
             onChange={e=>toggle(ability,e.target.checked)}
             aria-label={label[ability]}
             className="h-[18px] w-[18px] shrink-0 accent-[#197da2]"/>
@@ -366,11 +372,11 @@ export function CongressPermissionsClient({congressId}:{congressId:string}){
        <p className="mt-0.5 text-[10px] text-[#8499a6]">Chỉ quyền của tài khoản đang chọn được thay đổi.</p>
       </div>
       <div className="flex flex-wrap gap-2">
-       <button type="button" onClick={()=>setDraft({})} disabled={busy||changes.length===0||selected.isSelf}
+       <button type="button" onClick={()=>setDraft({})} disabled={busy||changes.length===0||selected.isSelf||selected.isPrimary}
         className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#d5e3ea] bg-white px-3 text-[11px] font-bold text-[#638398] disabled:opacity-50">
         <X size={15}/> Hoàn tác
        </button>
-       <button type="button" onClick={()=>void save()} disabled={busy||changes.length===0||selected.isSelf}
+       <button type="button" onClick={()=>void save()} disabled={busy||changes.length===0||selected.isSelf||selected.isPrimary}
         className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-[#176b91] px-4 text-[12px] font-bold text-white disabled:bg-[#dce7ed] disabled:text-[#9aadb8]">
         {busy?<RefreshCw size={16} className="animate-spin"/>:<Save size={16}/>}
         {busy?"Đang lưu...":"Lưu "+(changes.length||"")+" thay đổi"}

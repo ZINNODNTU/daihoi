@@ -57,7 +57,7 @@ export async function GET(){
    db.from("congresses").select("id,name,kind").order("created_at",{ascending:false}).limit(1000),
    db.from("profiles").select("id,full_name,platform_role").limit(5000),
    db.from("congress_members").select("congress_id,user_id,role").limit(10000),
-   db.from("btc_accounts").select("congress_id,user_id").is("disabled_at",null).limit(5000),
+   db.from("btc_accounts").select("congress_id,user_id,is_primary").is("disabled_at",null).limit(5000),
    db.from("delegates").select("congress_id,auth_user_id").eq("is_active",true).not("auth_user_id","is",null).limit(10000),
    db.from("rbac_groups").select("id,congress_id,role,name,abilities,updated_at").order("name").limit(3000),
    db.from("rbac_account_assignments").select("congress_id,user_id,group_id").limit(10000),
@@ -79,8 +79,9 @@ export async function GET(){
   }
   const profilesById=new Map((profiles.data||[]).map(p=>[p.id,p]));
   const staffSet=new Set((staff.data||[]).map(a=>a.congress_id+":"+a.user_id));
+  const primarySet=new Set((staff.data||[]).filter(a=>a.is_primary).map(a=>a.congress_id+":"+a.user_id));
   const delegateSet=new Set((delegates.data||[]).map(a=>a.congress_id+":"+a.auth_user_id));
-  const grouped=new Map<string,{congressId:string;role:ManagedRole;groupId:string|null;denials:string[];
+  const grouped=new Map<string,{congressId:string;role:ManagedRole;groupId:string|null;isPrimary:boolean;denials:string[];
    permissionOverrides:{ability:string;allowed:boolean}[]}[]>();
   for(const m of members.data||[]){
    const scope=m.congress_id+":"+m.user_id;
@@ -88,7 +89,7 @@ export async function GET(){
    if(["admin","checkin","secretary"].includes(m.role)&&!staffSet.has(scope))continue;
    if(m.role==="delegate"&&!delegateSet.has(scope))continue;
    const a=(grouped.get(m.user_id)||[]);
-   a.push({congressId:m.congress_id,role:m.role,
+   a.push({congressId:m.congress_id,role:m.role,isPrimary:primarySet.has(scope),
     groupId:assignments.data?.find(x=>x.user_id===m.user_id&&x.congress_id===m.congress_id)?.group_id||null,
     denials:(denials.data||[]).filter(d=>d.user_id===m.user_id&&d.congress_id===m.congress_id).map(d=>d.ability),
     permissionOverrides:(overrides.data||[]).filter(d=>d.user_id===m.user_id&&d.congress_id===m.congress_id)

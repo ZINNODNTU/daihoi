@@ -7,7 +7,7 @@ import {ACCOUNT_PERMISSION_CAPABILITIES,canCongress} from "@/lib/congress-permis
 import {baseManagedAbilities,editableGroupAbilities,RBAC_ABILITY_LABELS,RBAC_LABELS,
  type ManagedRole} from "@/lib/access-rbac";
 
-type Membership={congressId:string;role:ManagedRole;groupId:string|null;
+type Membership={congressId:string;role:ManagedRole;groupId:string|null;isPrimary:boolean;
  denials:string[];permissionOverrides:{ability:string;allowed:boolean}[]};
 type Account={userId:string;name:string;email:string;platformRole:string;createdAt:string;
  isSelf:boolean;memberships:Membership[]};
@@ -182,7 +182,13 @@ export function AccessControlClient({initialCongressId=""}:{initialCongressId?:s
        className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#166b8f] px-4 text-[12px] font-bold text-white">
        <Eye size={16}/> Xem giao diện tài khoản</Link>}
      </div>
-     {selected.isSelf&&<p className="mt-4 rounded-lg bg-amber-50 p-3 text-[12px] text-amber-800">Không thể tự sửa quyền tài khoản đang đăng nhập.</p>}
+     {selected.isSelf&&<p className="mt-4 rounded-lg bg-amber-50 p-3 text-[12px] text-amber-800">Không thể tự sửa quyền của chính mình. Hãy dùng một tài khoản Super Admin khác để điều chỉnh.</p>}
+     {membership?.isPrimary&&selected.platformRole!=="super_admin"&&
+      <p className="mt-4 rounded-lg border border-[#cce2ef] bg-[#edf7fb] p-3 text-[12px] leading-6 text-[#2d6885]">
+       <strong>Quản trị chính của Đại hội.</strong> Super Admin được chỉnh quyền nghiệp vụ của tài khoản này.
+       Quyền vào Đại hội, quyền quản lý tài khoản, cấu hình và vai trò quản trị chính luôn được bảo vệ;
+       không thể giới hạn bằng nhóm quyền hoặc tự chỉnh quyền của mình.
+      </p>}
      {selected.platformRole==="super_admin"&&<p className="mt-4 rounded-lg border border-[#dbe8ee] bg-[#f2f7fa] p-3 text-[12px] text-[#3e6e84]">Quản trị hệ thống có quyền toàn cục. Không cấp hoặc thu hồi qua nhóm Đại hội.</p>}
      <div className="mt-4 border-t border-[#e6edf1] pt-4">
       <h3 className="text-[13px] font-bold text-[#2e536a]">Các Đại hội đã tham gia</h3>
@@ -199,7 +205,7 @@ export function AccessControlClient({initialCongressId=""}:{initialCongressId?:s
       <div className="flex items-center gap-2 text-[#2d627c]"><FolderKey size={18}/><h3 className="text-[15px] font-bold">Nhóm quyền tại Đại hội</h3></div>
       <p className="mt-2 text-[12px] leading-6 text-[#788e9b]">Vai trò nền: {RBAC_LABELS[membership.role]}. Nhóm quyền là lớp giới hạn bổ sung, không được cấp quyền vượt vai trò.</p>
       <div className="mt-3 flex flex-wrap gap-2">
-       <select value={membership.groupId||""} disabled={busy||selected.isSelf} className="field min-w-[240px] flex-1"
+       <select value={membership.groupId||""} disabled={busy||selected.isSelf||membership.isPrimary} className="field min-w-[240px] flex-1"
         aria-label="Gán nhóm quyền" onChange={e=>void mutate({action:"assignGroup",userId:selected.userId,
          groupId:e.target.value||null},"Đã cập nhật nhóm quyền của "+selected.name)}>
         <option value="">Mặc định theo vai trò (không có nhóm)</option>
@@ -223,6 +229,7 @@ export function AccessControlClient({initialCongressId=""}:{initialCongressId?:s
        return <label key={ability} className={"flex items-center gap-3 rounded-lg border border-[#e2ebf0] p-3 "+(!groupAllows?"bg-[#f7f8fa]":"bg-white")}>
         <input type="checkbox" className="h-[18px] w-[18px] accent-[#14769a]" checked={personallyEnabled}
          disabled={busy||selected.isSelf||!groupAllows||selected.platformRole==="super_admin"||
+          (membership.isPrimary&&ability==="workspace.view")||
           (staffRole(membership.role)&&!canCongress(membership.role,ability as typeof ACCOUNT_PERMISSION_CAPABILITIES[number])&&
            ability!=="ballots.read"&&ability!=="ballots.write")}
          onChange={e=>void accountToggle(ability,e.target.checked)} aria-label={RBAC_ABILITY_LABELS[ability]||ability}/>

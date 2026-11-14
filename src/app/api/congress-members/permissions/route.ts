@@ -41,8 +41,17 @@ async function target(congressId:string,userId:string,actorId:string){
  if(btcError||memberError)return {error:fail("Không xác minh được tài khoản BTC.",503)} as const;
  if(!btc||!member||!staffRole(member.role))
   return {error:fail("Tài khoản BTC này không hoạt động tại Đại hội.",404)} as const;
- if(btc.is_primary)return {error:fail("Không điều chỉnh quyền riêng của quản trị chính.",409)} as const;
-  return {db,role:member.role} as const;
+ // The primary BTC administrator retains their account identity and core access.
+ // A different Super Admin may edit operational capabilities; congress BTC
+ // managers can still administer other staff but not override the primary.
+ if(btc.is_primary){
+  const {data:actor,error:actorError}=await db.from("profiles")
+   .select("platform_role").eq("id",actorId).maybeSingle();
+  if(actorError)return {error:fail("Không xác minh được quyền quản trị hệ thống.",503)} as const;
+  if(actor?.platform_role!=="super_admin")
+   return {error:fail("Chỉ Super Admin hệ thống được chỉnh quyền nghiệp vụ của quản trị chính. Quản trị Đại hội vẫn có thể phân quyền cho nhân sự BTC khác.",403)} as const;
+ }
+  return {db,role:member.role,isPrimary:Boolean(btc.is_primary)} as const;
 }
 function parseChanges(input:unknown):Change[]|null{
  if(!Array.isArray(input)||input.length<1||input.length>16)return null;
@@ -104,6 +113,10 @@ async function updatePermissions(request:Request,mode:"PATCH"|"PUT"){
   const member=await target(congressId,userId,principal.user.id);
   if("error" in member)return member.error;
   const role=member.role;
+  // Preserve the only primary administrator's access. Privileges
+  // team.manage/settings.manage are never part of the editable ability list.
+  if(member.isPrimary&&changes.some(c=>c.ability==="workspace.view"&&!c.allowed))
+   return fail("Không thể thu hồi quyền truy cập Đại hội của quản trị chính. Các quyền nghiệp vụ khác vẫn có thể chỉnh.",409);
   for(const {ability,allowed} of changes){
    if(!canCustomizeCongressAbility(role,ability))
     return fail("Chức năng "+ability+" không thuộc phạm vi vai trò. Đổi vai trò nền trước.",409);

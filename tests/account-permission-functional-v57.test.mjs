@@ -13,14 +13,15 @@ const js=ts.transpileModule(source,{compilerOptions:{
 const congress="aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa";
 const target="bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb";
 const actor="cccccccc-cccc-4ccc-cccc-cccccccccccc";
-const state={role:"admin",actor,authorized:true,enabled:true,member:true,
+const state={role:"admin",actor,authorized:true,enabled:true,member:true,primary:false,actorPlatformRole:"user",
  overrides:[],calls:[],logs:[],error:null};
 function chain(table){
  const q={
   select(){return q;},eq(){return q;},is(){return q;},
   in(){return q;},order(){return q;},limit(){return q;},
   async maybeSingle(){
-   if(table==="btc_accounts")return {data:state.enabled?{user_id:target}:null,error:state.error};
+   if(table==="btc_accounts")return {data:state.enabled?{user_id:target,is_primary:state.primary}:null,error:state.error};
+   if(table==="profiles")return {data:{platform_role:state.actorPlatformRole},error:state.error};
    if(table==="congress_members")return {data:state.member?{role:state.role}:null,error:state.error};
    throw Error("Unexpected table "+table);
   },
@@ -55,7 +56,7 @@ new Function("require","module","exports",js)(name=>{
 },m,m.exports);
 const {GET,PATCH,PUT}=m.exports;
 const reset=()=>Object.assign(state,{role:"admin",actor,authorized:true,
- enabled:true,member:true,overrides:[],calls:[],logs:[],error:null});
+ enabled:true,member:true,primary:false,actorPlatformRole:"user",overrides:[],calls:[],logs:[],error:null});
 const patch=(payload={},origin="https://test.local")=>PATCH(new Request(
  "https://test.local/api/congress-members/permissions",{
   method:"PATCH",headers:{"Content-Type":"application/json",host:"test.local",origin},
@@ -121,4 +122,44 @@ test("audit history is scoped to the selected BTC account and admin access",asyn
   new URLSearchParams({congressId:congress,userId:target})));
  assert.equal(res.status,200);
  assert.deepEqual((await res.json()).history,[]);
+});
+
+test("Congress admin can manage other BTC staff; primary BTC still cannot edit their own privileges",async()=>{
+ reset();state.role="checkin";state.primary=false;
+ assert.equal((await patch({ability:"attendance.scan",allowed:false})).status,200);
+ state.role="admin";state.primary=true;state.actor=target;state.actorPlatformRole="super_admin";
+ assert.equal((await patch({ability:"bch.write",allowed:false})).status,409);
+ assert.equal(state.calls.length,1);
+});
+
+test("Only a different Super Admin can edit operational permissions of the primary BTC administrator",async()=>{
+ reset();state.primary=true;state.actorPlatformRole="user";
+ const forbidden=await patch({ability:"bch.write",allowed:false});
+ assert.equal(forbidden.status,403);
+ assert.match((await forbidden.json()).error,/Super Admin/);
+ assert.equal(state.calls.length,0);
+ state.actorPlatformRole="super_admin";
+ const updated=await save([{ability:"bch.write",allowed:false},{ability:"attendance.scan",allowed:false}]);
+ assert.equal(updated.status,200);
+ assert.equal(state.calls.length,1);
+ assert.deepEqual(state.calls[0].args.p_changes,[
+  {ability:"bch.write",allowed:false},{ability:"attendance.scan",allowed:false}
+ ]);
+ assert.equal(state.logs.length,1);
+ const history=await GET(new Request("https://test.local/api/congress-members/permissions?"+
+  new URLSearchParams({congressId:congress,userId:target})));
+ assert.equal(history.status,200,"Super Admin can inspect primary BTC account audit log");
+});
+
+test("Primary BTC always retains congress entry and high-risk management abilities",async()=>{
+ reset();state.primary=true;state.actorPlatformRole="super_admin";
+ const locked=await save([{ability:"bch.write",allowed:false},
+  {ability:"workspace.view",allowed:false}]);
+ assert.equal(locked.status,409);
+ assert.equal(state.calls.length,0,"rejected atomically: no partial RPC mutation");
+ const reserved=await patch({ability:"team.manage",allowed:false});
+ assert.equal(reserved.status,400,"critical team permissions are outside editable matrix");
+ assert.equal(state.calls.length,0);
+ const permitted=await patch({ability:"reports.read",allowed:false});
+ assert.equal(permitted.status,200);
 });

@@ -74,6 +74,15 @@ test("Primary BTC provisioning is unique and staff may not promote themselves",(
  assert.match(ui,/member\.isPrimary/);
  assert.match(ui,/hasPrimary/);
  assert.match(read("src/app/api/admin/access/route.ts"),/btcAdmin\?\.is_primary/);
+ const permissions=read("src/app/api/congress-members/permissions/route.ts");
+ const client=read("src/components/access-control-client.tsx");
+ const congressClient=read("src/components/congress-permissions-client.tsx");
+ assert.match(permissions,/actor\?\.platform_role!=="super_admin"/);
+ assert.match(permissions,/member.isPrimary&&changes.some/);
+ assert.match(permissions,/ability==="workspace.view"&&!c.allowed/);
+ assert.match(client,/membership.isPrimary&&ability==="workspace.view"/);
+ assert.match(client,/disabled=\{busy\|\|selected.isSelf\|\|membership.isPrimary\}/);
+ assert.match(congressClient,/selected.isPrimary/);
  assert.match(login,/isStaffUser/);
  assert.match(login,/destination=staff\?"\/dashboard":"\/my-card"/);
 });
