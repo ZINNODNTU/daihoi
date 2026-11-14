@@ -16,7 +16,8 @@ export function GuestAccessEntry({options,initialSlug=""}:{options:GuestCongress
   // Remove the credential from browser history before contacting our server.
   window.history.replaceState(null,"",window.location.pathname+window.location.search);
   if(!initialSlug)return;
-  async function accessLink(){await Promise.resolve();setCode(token);await submitCode(initialSlug,token);}
+  const accessToken=token;
+  async function accessLink(){await Promise.resolve();setCode(accessToken);await submitCode(initialSlug,accessToken);}
   void accessLink();
  // A share link is processed only once per mount.
  // eslint-disable-next-line react-hooks/exhaustive-deps
