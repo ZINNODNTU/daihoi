@@ -3,6 +3,8 @@ import {createAdminClient} from "@/lib/supabase/admin";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
+// Collocate the public read-only BCH feed with Supabase in Mumbai.
+export const preferredRegion="bom1";
 const HEADERS={"Cache-Control":"no-store, max-age=0","X-Content-Type-Options":"nosniff"};
 const SLUG=/^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 function fail(error:string,status:number){

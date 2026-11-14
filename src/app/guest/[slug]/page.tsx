@@ -4,6 +4,8 @@ import {GuestCongressReader} from "@/components/guest-congress-reader";
 import type {DocRow} from "@/lib/types";
 
 export const dynamic="force-dynamic";
+// Keep server-side database reads close to Supabase South Asia (Mumbai).
+export const preferredRegion="bom1";
 
 const SLUG=/^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PUBLIC_CONGRESS="id,slug,name,kind,term,venue,starts_at,ends_at,status";

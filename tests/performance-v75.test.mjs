@@ -146,6 +146,18 @@ test("Guest RSC loads one live public snapshot, exact count, visible documents a
  assert.equal(unavailable.props.role,"alert");
 });
 
+test("V78 public guest routes prefer Mumbai region matching the Supabase database",()=>{
+ for(const path of [
+  "src/app/guest/page.tsx",
+  "src/app/guest/[slug]/page.tsx",
+  "src/app/api/guest/[slug]/bch/route.ts"
+ ]){
+  const source=read(path);
+  assert.match(source,/export const preferredRegion="bom1"/,path);
+  assert.match(source,/export const dynamic="force-dynamic"/,path);
+ }
+});
+
 test("Supabase media pagination counts records via HEAD, queries at most 36 records per view",()=>{
  const page=read("src/app/dashboard/media/page.tsx");
  const component=read("src/components/media-library-client.tsx");

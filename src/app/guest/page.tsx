@@ -2,6 +2,8 @@ import {GuestAccessEntry,type GuestCongress} from "@/components/guest-access-ent
 import {loadAvailableGuestCongresses} from "@/lib/guest-congress-list";
 
 export const dynamic="force-dynamic";
+// Run the public congress directory near the Supabase database in Mumbai.
+export const preferredRegion="bom1";
 export default async function GuestPage(){
  let options:GuestCongress[];
  try{options=await loadAvailableGuestCongresses();}

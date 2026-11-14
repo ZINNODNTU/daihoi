@@ -68,3 +68,14 @@ Bản V77 chuyển trang chi tiết Đại hội từ **ba truy vấn Supabase**
 Đã kiểm chứng truy vấn read-only với dữ liệu production: Đại hội trùng ID, tài liệu hiện công bố bằng nhau (0), số ứng viên BCH bằng nhau (2). Kiểm thử regression mock kiểm tra query chỉ một lần, điều kiện `live`, danh sách tài liệu, số lượng, trường bảo mật, slug không hợp lệ/Đại hội đóng và lỗi database. Không cần migration hay thay đổi RLS.
 
 **Hậu kiểm:** đo latency qua nhiều lần tải, theo dõi Vercel runtime logs cùng khoảng thời gian với k6. Các trang RSC có thể trả HTML cảnh báo với HTTP 200 khi database thất bại, vì vậy test phải kiểm tra nội dung trang ngoài HTTP status. Chạy lại k6 20 VUs trước khi tăng 50–200; tách riêng request tới `/guest/[slug]` và `/api/guest/[slug]/bch`, đo HTTP p95, timeout, lỗi và ngưỡng dừng. Chưa kết luận hệ thống chịu 200 người đồng thời.
+
+## 7. V78 — đặt Vercel Functions đọc dữ liệu khách gần Supabase Mumbai
+
+Sau khi V77 vẫn xuất hiện timeout 12 giây tại 5 VUs, đã xác minh bằng giao diện:
+- Supabase production `pnxdxdagpeyqarucdphk`: Project Settings → General → South Asia (Mumbai).
+- Vercel Request Logs `GET /guest/dhivcntt` ngày 14/11/2026 lúc 23:47:18.33: Edge Singapore (`sin1`), Function Washington D.C. (`iad1`), middleware 7 ms, invocation 629 ms, HTTP 200. Đây chưa được chứng minh là request k6 timeout.
+- K6 smoke sau V77: 22/23 HTTP 200, một timeout tại trang chi tiết; p95 các request ghi nhận 1.502 ms nhưng không phản ánh đủ request timeout.
+
+Thay đổi giới hạn phạm vi tại `/guest`, `/guest/[slug]`, `/api/guest/[slug]/bch`: `export const preferredRegion="bom1"` để thực thi Function gần Supabase. Không đổi vị trí database, không thay RLS/Auth/quyền, không cache kết quả live hoặc thay API ghi.
+
+**Cổng xác minh:** build/lint/tests, GitHub/Vercel deployment thành công, HTTP 200/trang không có alert, quan sát `X-Vercel-Id` hoặc Runtime Logs chuyển từ `iad1` sang `bom1`. Sau đó k6 5 VUs trước, chỉ tăng 20 VUs nếu kết quả đạt ngưỡng; không khẳng định sức tải 200 VUs nếu chưa thử. Phân biệt lỗi mạng (connect/TLS) với thời gian xử lý server (Vercel duration / Supabase); báo cáo k6 threshold riêng theo route và giữ cả lỗi timeout trong thống kê.
