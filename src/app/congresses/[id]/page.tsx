@@ -12,6 +12,9 @@ const areas=[
   {href:"quality",icon:ChartColumnIncreasing,title:"Phân tích chất lượng",description:"Cơ cấu giới tính, độ tuổi và thống kê đại biểu đã tham dự theo từng phiên."},
   {href:"attendance",icon:QrCode,title:"Điểm danh Đại hội",description:"Quét QR, barcode, thủ công và vận hành từng phiên."},
   {href:"seating",icon:Armchair,title:"Sơ đồ chỗ ngồi",description:"Tạo sơ đồ hội trường và phân ghế theo đại biểu."},
+  {href:"bch-candidates",icon:ClipboardList,title:"Nhân sự BCH",description:"Danh sách và hồ sơ nhân sự giới thiệu."},
+  {href:"ballots",icon:ClipboardList,title:"Kiểm phiếu BCH",description:"Nhập và tổng hợp kết quả phiếu bầu theo quyền."},
+  {href:"team",icon:Users,title:"Tài khoản BTC",description:"Quản lý tài khoản, nhân sự và phân quyền Đại hội."},
   {href:"reports",icon:ClipboardList,title:"Báo cáo & thống kê",description:"Tỷ lệ tham dự và tổng hợp kết quả theo phiên."},
   {href:"documents",icon:FileText,title:"Thư viện tài liệu",description:"Lưu trữ văn kiện và tài liệu theo quyền truy cập."}
 ];
@@ -22,28 +25,42 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
   if(!user)notFound();
   const effectiveAbilities=await getCongressEffectiveAbilities(supabase,user.id,id);
   if(!effectiveAbilities.includes("workspace.view"))notFound();
+  const canReadDelegates=effectiveAbilities.includes("delegates.read");
+  const canReadAttendance=effectiveAbilities.includes("attendance.read");
   const areaAccess:Record<string,CongressAbility>={
     delegates:"delegates.read",quality:"quality.read",attendance:"attendance.read",
-    seating:"seating.read",reports:"reports.read",documents:"documents.read"
+    seating:"seating.read",reports:"reports.read",documents:"documents.read",
+    "bch-candidates":"bch.read",ballots:"ballots.read",team:"team.manage"
   };
-  const accessibleAreas=areas.filter(area=>effectiveAbilities.includes(areaAccess[area.href]));
+
   const [{data:congress},{count:delegateCount},{data:sessions},{data:checkins}]=await Promise.all([
     supabase.from("congresses").select("id,name,term,venue,kind,status,slug").eq("id",id).maybeSingle(),
-    supabase.from("delegates").select("id",{count:"exact",head:true}).eq("congress_id",id).eq("is_active",true),
-    supabase.from("attendance_sessions").select("id,name,status,starts_at,ends_at,created_at").eq("congress_id",id).order("created_at",{ascending:false}),
-    supabase.from("checkins").select("id,session_id").eq("congress_id",id)
+    canReadDelegates?
+     supabase.from("delegates").select("id",{count:"exact",head:true}).eq("congress_id",id).eq("is_active",true):
+     Promise.resolve({count:0}),
+    canReadAttendance?
+     supabase.from("attendance_sessions").select("id,name,status,starts_at,ends_at,created_at").eq("congress_id",id).order("created_at",{ascending:false}):
+     Promise.resolve({data:[]}),
+    canReadAttendance?
+     supabase.from("checkins").select("id,session_id").eq("congress_id",id):
+     Promise.resolve({data:[]})
   ]);
   if(!congress)notFound();
+  const accessibleAreas=areas.filter(area=>
+    effectiveAbilities.includes(areaAccess[area.href])&&
+    (area.href!=="ballots"||congress.kind==="doan"));
 
   const current=sessions?.[0];
   const arrived=checkins?.filter(row=>row.session_id===current?.id).length||0;
   const total=delegateCount||0;
   const percent=total?Math.min(100,Math.round(arrived/total*100)):0;
   const stats=[
-    {label:"Hồ sơ đại biểu",value:total,icon:Users,foot:"Đại biểu hoạt động"},
-    {label:"Đã điểm danh",value:arrived,icon:UserRoundCheck,foot:"Phiên gần nhất"},
-    {label:"Chưa điểm danh",value:Math.max(total-arrived,0),icon:CalendarDays,foot:"Phiên gần nhất"},
-    {label:"Phiên làm việc",value:sessions?.length||0,icon:BarChart3,foot:"Tất cả phiên"}
+    ...(canReadDelegates?[{label:"Hồ sơ đại biểu",value:total,icon:Users,foot:"Đại biểu hoạt động"}]:[]),
+    ...(canReadAttendance?[
+      {label:"Đã điểm danh",value:arrived,icon:UserRoundCheck,foot:"Phiên gần nhất"},
+      ...(canReadDelegates?[{label:"Chưa điểm danh",value:Math.max(total-arrived,0),icon:CalendarDays,foot:"Phiên gần nhất"}]:[]),
+      {label:"Phiên làm việc",value:sessions?.length||0,icon:BarChart3,foot:"Tất cả phiên"}
+    ]:[])
   ];
   const state=congress.status==="live"
     ?{text:"Đang diễn ra",className:"badge-green"}
@@ -75,7 +92,7 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
       </div>
     </section>
 
-    <section aria-label="Số liệu Đại hội" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+    {stats.length>0&&<section aria-label="Số liệu Đại hội" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       {stats.map(({label,value,icon:Icon,foot})=><div key={label} className="metric-card">
         <div className="flex items-start justify-between gap-2">
           <span className="metric-label">{label}</span>
@@ -84,15 +101,18 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
         <p className="metric-value">{value.toLocaleString("vi-VN")}</p>
         <p className="metric-foot">{foot}</p>
       </div>)}
-    </section>
+    </section>}
 
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className={"grid gap-5 "+(canReadAttendance?"xl:grid-cols-[minmax(0,1fr)_340px]":"")}>
       <section className="min-w-0">
         <div className="section-header">
           <div><p className="page-kicker">CÔNG CỤ ĐIỀU HÀNH</p><h2 className="section-title mt-2">Truy cập nhanh</h2></div>
           <span className="text-[11px] text-[#8593a6]">Các phân hệ theo quyền truy cập</span>
         </div>
         <div className="workspace-panel overflow-hidden">
+          {!accessibleAreas.length&&<p className="p-6 text-[12px] leading-6 text-[#738b99]">
+           Chưa có phân hệ nghiệp vụ được cấp cho tài khoản này. Liên hệ quản trị Đại hội để được phân quyền.
+          </p>}
           {accessibleAreas.map((area,index)=><Link href={"/congresses/"+id+"/"+area.href} key={area.href} className="action-row group">
             <span className="action-icon"><area.icon size={19} strokeWidth={1.8}/></span>
             <div className="min-w-0 flex-1">
@@ -107,7 +127,7 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
         </div>
       </section>
 
-      <section aria-label="Tiến độ điểm danh phiên gần nhất" className="min-w-0">
+      {canReadAttendance&&<section aria-label="Tiến độ điểm danh phiên gần nhất" className="min-w-0">
         <div className="section-header"><div><p className="page-kicker">THỐNG KÊ PHIÊN</p><h2 className="section-title mt-2">Tình hình tham dự</h2></div></div>
         <div className="workspace-panel overflow-hidden">
           <div className="border-b border-[#e8edf3] px-5 py-4">
@@ -116,24 +136,24 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
           </div>
           <div className="flex flex-col items-center px-5 pb-6 pt-7 text-center">
             <div className="relative flex h-[150px] w-[150px] items-center justify-center rounded-full"
-              style={{background:"conic-gradient(#0084bd "+percent+"%,#e9edf5 "+percent+"% 100%)"}}>
+              style={{background:canReadDelegates?"conic-gradient(#0084bd "+percent+"%,#e9edf5 "+percent+"% 100%)":"#edf5f8"}}>
               <div className="flex h-[121px] w-[121px] flex-col items-center justify-center rounded-full bg-white">
-                <span className="text-[37px] font-bold leading-none tracking-[-.06em] text-[#263957]">{percent}%</span>
-                <span className="mt-2 text-[10px] text-[#8998a9]">ĐÃ ĐIỂM DANH</span>
+                <span className="text-[37px] font-bold leading-none tracking-[-.06em] text-[#263957]">{canReadDelegates?percent+"%":arrived}</span>
+                <span className="mt-2 text-[10px] text-[#8998a9]">{canReadDelegates?"ĐÃ ĐIỂM DANH":"LƯỢT ĐIỂM DANH"}</span>
               </div>
             </div>
             <div className="mt-6 flex w-full items-center justify-between rounded-[8px] bg-[#f5f7fb] px-4 py-3">
               <span className="text-[12px] text-[#697c96]">Đại biểu có mặt</span>
-              <span className="text-[18px] font-bold tabular-nums text-[#293f62]">{arrived}<span className="ml-1 text-[11px] font-normal text-[#91a0b2]">/ {total}</span></span>
+              <span className="text-[18px] font-bold tabular-nums text-[#293f62]">{arrived}{canReadDelegates&&<span className="ml-1 text-[11px] font-normal text-[#91a0b2]">/ {total}</span>}</span>
             </div>
             <p className="mt-4 text-[11px] leading-6 text-[#91a0b0]">Trạng thái điểm danh không đồng nghĩa với việc đại biểu đã ngồi đúng ghế.</p>
             <Link href={"/congresses/"+id+"/attendance"} className={effectiveAbilities.includes("attendance.read")?"btn btn-secondary mt-5 w-full":"hidden"}>Xem chi tiết phiên <ChevronRight size={16}/></Link>
           </div>
         </div>
-      </section>
+      </section>}
     </div>
 
-    <section className="workspace-panel overflow-hidden">
+    {canReadAttendance&&<section className="workspace-panel overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e6ebf2] px-5 py-4 sm:px-6">
         <div><p className="page-kicker">DANH SÁCH PHIÊN</p><h2 className="section-title mt-1">Các phiên điểm danh</h2></div>
         <Link href={"/congresses/"+id+"/attendance"} className={effectiveAbilities.includes("attendance.read")?"inline-flex items-center gap-1 text-[12px] font-semibold text-[#0084bd] hover:underline":"hidden"}>Quản lý phiên <ArrowRight size={16}/></Link>
@@ -158,6 +178,6 @@ export default async function CongressHome({params}:{params:Promise<{id:string}>
           </span>
         </div>)}
       </div>}
-    </section>
+    </section>}
   </div>;
 }

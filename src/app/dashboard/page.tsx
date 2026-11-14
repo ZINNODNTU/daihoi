@@ -5,7 +5,8 @@ import {
   ChevronRight,LayoutGrid,Plus,ShieldCheck,ScrollText,UsersRound
 } from "lucide-react";
 import {createClient} from "@/lib/supabase/server";
-import {isStaffUser} from "@/lib/auth";
+import {isStaffUser,getCongressRole,getCongressEffectiveAbilities} from "@/lib/auth";
+import type {CongressRole} from "@/lib/congress-permissions";
 import {AppShell} from "@/components/app-shell";
 import {CreateCongress} from "@/components/create-congress";
 import {CongressDirectory,type CongressSummary} from "@/components/congress-directory";
@@ -27,13 +28,40 @@ export default async function Dashboard(){
   const {data:{user}}=await supabase.auth.getUser();
   if(!user)redirect("/login");
   if(!(await isStaffUser(supabase,user.id)))redirect("/my-card");
-  const [{data:profile},{data:congresses,error}]=await Promise.all([
-    supabase.from("profiles").select("full_name,platform_role").eq("id",user.id).maybeSingle(),
-    supabase.from("congresses").select("id,name,kind,term,status,slug,venue,created_at").order("created_at",{ascending:false}),
-
-  ]);
-  const items=(congresses??[]) as CongressSummary[];
+  const {data:profile}=await supabase.from("profiles")
+   .select("full_name,platform_role").eq("id",user.id).maybeSingle();
   const canCreate=profile?.platform_role==="super_admin";
+  let role:CongressRole=canCreate?"super_admin":null;
+  let items:CongressSummary[]=[];
+  let directoryError:string|null=null;
+  if(canCreate){
+   const {data,error}=await supabase.from("congresses")
+    .select("id,name,kind,term,status,slug,venue,created_at")
+    .order("created_at",{ascending:false});
+   items=(data??[]) as CongressSummary[];
+   directoryError=error?.message??null;
+  }else{
+   // BTC uses exactly the same Admin dashboard. Only records and actions are
+   // scoped by the verified BTC identity and its effective congress RBAC.
+   const {data:btc,error:btcError}=await supabase.from("btc_accounts")
+    .select("congress_id").eq("user_id",user.id)
+    .is("disabled_at",null).maybeSingle();
+   directoryError=btcError?.message??null;
+   if(btc&&!btcError){
+    const [staffRole,abilities]=await Promise.all([
+     getCongressRole(supabase,user.id,btc.congress_id),
+     getCongressEffectiveAbilities(supabase,user.id,btc.congress_id)
+    ]);
+    role=staffRole;
+    if(staffRole&&abilities.includes("workspace.view")){
+     const {data,error}=await supabase.from("congresses")
+      .select("id,name,kind,term,status,slug,venue,created_at")
+      .eq("id",btc.congress_id);
+     items=(data??[]) as CongressSummary[];
+     directoryError=error?.message??null;
+    }
+   }
+  }
   const canViewSystemLogs=canCreate;
   const live=items.filter(c=>c.status==="live").length;
   const preparing=items.filter(c=>c.status==="preparing").length;
@@ -45,16 +73,16 @@ export default async function Dashboard(){
     {label:"Đã kết thúc",value:completed,icon:Building2,foot:"Đã hoàn tất"}
   ];
 
-  return <AppShell name={profile?.full_name||user.email||""} canViewSystemLogs={canViewSystemLogs}>
+  return <AppShell name={profile?.full_name||user.email||""} accessRole={role} canViewSystemLogs={canViewSystemLogs}>
     <section className="command-hero dashboard-command-hero mb-7 px-5 py-7 sm:px-8 sm:py-9 xl:px-10 xl:py-11" aria-label="Trung tâm điều hành">
       <div className="dashboard-hero-layout">
         <div className="relative z-10 min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <p className="command-label">TRUNG TÂM ĐIỀU HÀNH / DASHBOARD</p>
-            <span className="dashboard-hero-dot"><span/> Hệ thống Đại hội</span>
+            <span className="dashboard-hero-dot"><span/> {canCreate?"Hệ thống Đại hội":"Không gian Ban Tổ chức"}</span>
           </div>
           <h1 className="mt-5 text-[clamp(29px,3.65vw,49px)] font-extrabold leading-[1.2] tracking-[-.05em] text-white">
-            Tất cả Đại hội.<br/>
+            {canCreate?"Tất cả Đại hội.":"Đại hội của bạn."}<br/>
             <span className="text-[#f3d89e]">Trong tầm điều hành.</span>
           </h1>
           <p className="mt-4 max-w-[510px] text-[13px] leading-[1.9] text-[#c5dce4]">
@@ -93,8 +121,8 @@ export default async function Dashboard(){
       </div>
     </section>
 
-    {error&&<div className="mb-5 rounded-[9px] border border-red-200 bg-red-50 p-4 text-[13px] leading-6 text-red-700" role="alert">
-      Không tải được danh sách Đại hội: {error.message}. Vui lòng kiểm tra cơ sở dữ liệu và quyền truy cập.
+    {directoryError&&<div className="mb-5 rounded-[9px] border border-red-200 bg-red-50 p-4 text-[13px] leading-6 text-red-700" role="alert">
+      Không tải được danh sách Đại hội: {directoryError}. Vui lòng kiểm tra cơ sở dữ liệu và quyền truy cập.
     </div>}
 
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
