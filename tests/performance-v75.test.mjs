@@ -146,6 +146,12 @@ test("Guest RSC loads one live public snapshot, exact count, visible documents a
  assert.equal(unavailable.props.role,"alert");
 });
 
+test("V78 Vercel project pins a single Mumbai compute region for all server functions",()=>{
+ const config=JSON.parse(read("vercel.json"));
+ assert.deepEqual(config.regions,["bom1"]);
+ assert.equal(config.functions,undefined);
+});
+
 test("V78 public guest routes prefer Mumbai region matching the Supabase database",()=>{
  for(const path of [
   "src/app/guest/page.tsx",

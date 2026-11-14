@@ -79,3 +79,9 @@ Sau khi V77 vẫn xuất hiện timeout 12 giây tại 5 VUs, đã xác minh b�
 Thay đổi giới hạn phạm vi tại `/guest`, `/guest/[slug]`, `/api/guest/[slug]/bch`: `export const preferredRegion="bom1"` để thực thi Function gần Supabase. Không đổi vị trí database, không thay RLS/Auth/quyền, không cache kết quả live hoặc thay API ghi.
 
 **Cổng xác minh:** build/lint/tests, GitHub/Vercel deployment thành công, HTTP 200/trang không có alert, quan sát `X-Vercel-Id` hoặc Runtime Logs chuyển từ `iad1` sang `bom1`. Sau đó k6 5 VUs trước, chỉ tăng 20 VUs nếu kết quả đạt ngưỡng; không khẳng định sức tải 200 VUs nếu chưa thử. Phân biệt lỗi mạng (connect/TLS) với thời gian xử lý server (Vercel duration / Supabase); báo cáo k6 threshold riêng theo route và giữ cả lỗi timeout trong thống kê.
+
+### Điều chỉnh cấu hình vùng Vercel ở cấp project
+
+Sau khi deploy thành công `5b69266`, header `X-Vercel-Id` của ba tuyến khách vẫn ghi `::iad1::`, dù `preferredRegion="bom1"` có trong route. Do đó việc chọn vùng chỉ ở mức Next.js route **không đạt kiểm chứng thực tế**.
+
+Bổ sung `vercel.json` tại gốc với `"regions":["bom1"]` (một vùng duy nhất trên Vercel Hobby), theo tài liệu cấu hình Vercel. Cấu hình ở cấp project áp dụng cho **toàn bộ Vercel Functions**, không chỉ tuyến khách; cần kiểm thử hồi quy các API bảo mật/điểm danh và có thể rollback bằng Git nếu ảnh hưởng. Không di chuyển Supabase hay đổi môi trường/secret. Chỉ chấp nhận bản tối ưu khi production `X-Vercel-Id` hoặc Vercel Request Logs xác nhận `bom1` và smoke test đủ điều kiện; **không mặc nhiên cho rằng push thành công nghĩa là vùng mới đã được áp dụng**.
