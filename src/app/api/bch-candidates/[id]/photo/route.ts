@@ -2,7 +2,7 @@ import {NextResponse} from "next/server";
 import {getAuth,getPortalViewerAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {hasPortalAbility} from "@/lib/rbac-server";
-import {hasGuestCongressAccess} from "@/lib/guest-congress-access";
+import {hasPublicCongressAccess} from "@/lib/public-congress-access";
 import {readPortrait,getPortraitWidth} from "@/lib/portrait-storage";
 import {bchPortraitKey,isAuthorizedBchPhotoKey} from "@/lib/portrait-policy";
 import {preparePortrait,savePortraitObject,PortraitError} from "@/lib/portrait-upload";
@@ -22,8 +22,8 @@ async function authorize(id:string,write:boolean){
   .select("id,congress_id,photo_path,updated_at").eq("id",id).maybeSingle();
  if(error||!candidate)return {error:fail("Không tìm thấy nhân sự BCH.",404)} as const;
  if(!user){
-  if(write||!(await hasGuestCongressAccess(candidate.congress_id)))
-   return {error:fail("Vui lòng đăng nhập hoặc nhập mã khách Đại hội.",401)} as const;
+  if(write||!(await hasPublicCongressAccess(candidate.congress_id)))
+   return {error:fail("Vui lòng đăng nhập hoặc chọn một Đại hội đang diễn ra.",401)} as const;
   return {candidate,supabase} as const;
  }
  const admin=await hasCongressAbility(supabase,user.id,candidate.congress_id,"bch.write");
@@ -31,7 +31,7 @@ async function authorize(id:string,write:boolean){
  if(!write&&!admin){
   const canSee=await hasCongressAbility(supabase,user.id,candidate.congress_id,"bch.read")||
    await hasPortalAbility(user.id,candidate.congress_id,"portal.bch")||
-   await hasGuestCongressAccess(candidate.congress_id);
+   await hasPublicCongressAccess(candidate.congress_id);
   if(!canSee)return {error:fail("Bạn không có quyền xem ảnh nhân sự BCH.",403)} as const;
  }
  return {candidate,supabase} as const;

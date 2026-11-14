@@ -1,4 +1,6 @@
-# Chế độ khách và đại biểu khách mời (V66)
+# Chế độ khách và đại biểu khách mời (V66 — đã thay thế)
+
+> **LỊCH SỬ:** Hướng dẫn mã khách V66 đã được thay bằng [Chế độ khách công khai V67](CHE-DO-KHACH-CONG-KHAI-V67.md). Hiện không còn nhập hoặc cấp mã truy cập khách. Nội dung bên dưới chỉ dùng để tra cứu cơ chế cũ.
 
 ## Hai hình thức truy cập tách biệt
 

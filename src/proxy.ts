@@ -5,7 +5,7 @@ export async function proxy(request: NextRequest) {
   // This keeps the first-visit surge from consuming unnecessary auth requests.
   const path=request.nextUrl.pathname;
   if(path==="/"||path==="/login"||path==="/preview"||path==="/api/auth/login"||
-    path==="/guest"||path.startsWith("/guest/")||path==="/api/guest/access")
+    path==="/guest"||path.startsWith("/guest/"))
     return NextResponse.next({request});
   const key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !key) {

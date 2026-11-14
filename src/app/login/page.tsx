@@ -117,7 +117,7 @@ export default function Login(){
         </form>
         <div className="mt-7 flex items-start gap-2.5 border-t border-[#e1e6ee] pt-5 text-[12px] leading-6 text-[#8794a6]">
           <ShieldCheck size={17} className="mt-0.5 shrink-0 text-[#637a9c]"/>
-          <p>Truy cập được kiểm soát theo tài khoản và quyền Đại hội. Không có tài khoản? <Link href="/guest" className="font-bold text-[#187da5] underline">Vào chế độ khách bằng mã Đại hội</Link>.</p>
+          <p>Truy cập được kiểm soát theo tài khoản và quyền Đại hội. Không có tài khoản? <Link href="/guest" className="font-bold text-[#187da5] underline">Xem các Đại hội đang diễn ra (không cần đăng nhập)</Link>.</p>
         </div>
       </div>
     </section>

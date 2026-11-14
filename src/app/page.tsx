@@ -38,7 +38,7 @@ export default function Home(){
      <a href="#chuc-nang" className="hidden text-[12px] font-semibold text-[#546f7e] transition-colors hover:text-[#035d86] sm:block">Giải pháp</a>
      <a href="#quy-trinh" className="hidden text-[12px] font-semibold text-[#546f7e] transition-colors hover:text-[#035d86] md:block">Quy trình</a>
      <Link href="/preview" className="hidden text-[12px] font-semibold text-[#546f7e] transition-colors hover:text-[#035d86] lg:block">Trải nghiệm</Link>
-     <Link href="/guest" className="hidden text-[12px] font-semibold text-[#3f748d] hover:text-[#007fae] sm:block">Chế độ khách</Link>
+     <Link href="/guest" className="hidden text-[12px] font-semibold text-[#3f748d] hover:text-[#007fae] sm:block">Xem với tư cách khách</Link>
       <Link href="/login" className="landing-nav-action">Đăng nhập <ArrowUpRight size={16} aria-hidden="true"/></Link>
     </nav>
    </div>
@@ -53,7 +53,7 @@ export default function Home(){
      <p className="landing-lead">Từ chuẩn bị đại biểu đến vận hành hội trường — mọi quy trình được kết nối trong một không gian chỉn chu, hiện đại và đáng tin cậy.</p>
      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
       <Link href="/login" className="landing-cta-primary">Vào không gian điều hành <ArrowRight size={18} aria-hidden="true"/></Link>
-      <Link href="/preview" className="landing-cta-secondary">Khám phá giao diện <ChevronRight size={18} aria-hidden="true"/></Link>
+      <Link href="/guest" className="landing-cta-secondary">Xem với tư cách khách <ChevronRight size={18} aria-hidden="true"/></Link>
      </div>
      <div className="landing-assurance">
       <span className="landing-assurance-mark"><ShieldCheck size={16} aria-hidden="true"/></span>

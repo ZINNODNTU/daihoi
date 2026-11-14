@@ -7,7 +7,8 @@
 ## Cập nhật tài khoản và chế độ khách (14/11/2026)
 
 - [Tài khoản quản trị chính BTC V65](huong-dan/TAI-KHOAN-BTC-CHINH-V65.md): một tài khoản quản trị cho mỗi Đại hội, một cổng đăng nhập, RBAC nhân sự BTC.
-- [Chế độ khách xem Đại hội và đại biểu khách mời V66](huong-dan/CHE-DO-KHACH-DAI-HOI-V66.md): mã truy cập khách, tài liệu, BCH, sơ đồ ghế và điểm danh có phân quyền.
+- [Chế độ khách công khai V67](huong-dan/CHE-DO-KHACH-CONG-KHAI-V67.md): chỉ xem Đại hội đang diễn ra, không cần đăng nhập hoặc mã; phân biệt với đại biểu khách mời có quyền ghế/điểm danh.
+- [Cơ chế khách dùng mã V66 (lịch sử)](huong-dan/CHE-DO-KHACH-DAI-HOI-V66.md): chỉ để tra cứu phiên bản cũ, không áp dụng cho giao diện hiện hành.
 
 ## Đọc theo nhu cầu
 

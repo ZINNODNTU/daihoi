@@ -3,7 +3,7 @@ import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {googleDriveFileUrl,googleDrivePreviewUrl} from "@/lib/drive-links";
 import {writeSystemLog} from "@/lib/system-log";
-import {hasGuestCongressAccess} from "@/lib/guest-congress-access";
+import {hasPublicCongressAccess} from "@/lib/public-congress-access";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -21,8 +21,8 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
  const staff=user?await hasCongressAbility(supabase,user.id,doc.congress_id,"documents.read"):false;
  if(!staff){
   if(!doc.delegate_visible)return fail(403,"Tài liệu chưa được công bố.");
-  if(!(await hasGuestCongressAccess(doc.congress_id))){
-   if(!user)return fail(401,"Vui lòng đăng nhập hoặc nhập mã khách Đại hội.");
+  if(!(await hasPublicCongressAccess(doc.congress_id))){
+   if(!user)return fail(401,"Vui lòng đăng nhập hoặc chọn một Đại hội đang diễn ra.");
    const {data:own,error:ownerError}=await db.from("delegates").select("id")
     .eq("congress_id",doc.congress_id).eq("auth_user_id",user.id)
     .eq("is_active",true).limit(1);
