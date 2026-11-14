@@ -161,6 +161,13 @@ export async function POST(req:Request){
    if(target?.platform_role==="super_admin")return fail("Không thể giới hạn quyền super admin bằng nhóm Đại hội.",403);
    const role=await memberRole(db,congressId,userId);
    if(!role)return fail("Tài khoản không có tư cách tham dự hợp lệ tại Đại hội này.",404);
+   if(role==="admin"){
+    const {data:btcAdmin,error:btcAdminError}=await db.from("btc_accounts")
+     .select("is_primary").eq("congress_id",congressId).eq("user_id",userId)
+     .is("disabled_at",null).maybeSingle();
+    if(btcAdminError)return fail("Không xác minh được tài khoản quản trị chính.",503);
+    if(btcAdmin?.is_primary)return fail("Không được giới hạn quyền tài khoản quản trị chính.",409);
+   }
    if(action==="assignGroup"){
     const groupId=input?.groupId;
     if(groupId!==null&&(typeof groupId!=="string"||!UUID.test(groupId)))

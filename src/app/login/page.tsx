@@ -81,16 +81,16 @@ export default function Login(){
         <div className="mb-9">
           <p className="page-kicker">ĐĂNG NHẬP HỆ THỐNG</p>
           <h2 className="mt-5 text-[35px] font-bold leading-[1.14] tracking-[-.055em] text-[#1c2b41] sm:text-[41px]">Chào mừng<br/>trở lại.</h2>
-          <p className="mt-4 max-w-[400px] text-[14px] leading-7 text-[#758398]">Sử dụng tài khoản đã được Ban Tổ chức cấp quyền để truy cập không gian làm việc.</p>
+          <p className="mt-4 max-w-[400px] text-[14px] leading-7 text-[#758398]">Một cổng đăng nhập chung cho quản trị hệ thống, quản trị Đại hội, nhân sự BTC và đại biểu. Quyền truy cập được xác định tự động theo tài khoản.</p>
         </div>
 
         <form onSubmit={submit} className="space-y-5 rounded-[13px] border border-[#e0e6ef] bg-white p-5 shadow-[0_12px_34px_rgba(18,32,56,.045)] sm:p-8">
           <label className="block">
-            <span className="label !mb-2">Địa chỉ email</span>
+            <span className="label !mb-2">Tên đăng nhập / email tài khoản</span>
             <span className="relative block">
               <Mail size={17} className="pointer-events-none absolute left-3.5 top-[14px] text-[#93a0b1]"/>
-              <input className="field pl-11!" type="email" inputMode="email" required autoComplete="username"
-                value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@donvi.edu.vn"/>
+              <input className="field pl-11!" type="text" inputMode="email" required autoComplete="username"
+                value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email hoặc mã đăng nhập được cấp"/>
             </span>
           </label>
           <label className="block">

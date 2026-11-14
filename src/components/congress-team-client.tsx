@@ -5,7 +5,7 @@ import Link from "next/link";
 import {BadgeCheck,Check,ClipboardCopy,Eye,EyeOff,KeyRound,LockKeyhole,RefreshCw,ShieldAlert,ShieldCheck,Trash2,UserPlus,UsersRound} from "lucide-react";
 
 type Role="admin"|"checkin"|"secretary";
-type Member={userId:string;email:string;name:string;role:Role;createdAt:string};
+type Member={userId:string;email:string;name:string;role:Role;createdAt:string;isPrimary:boolean;isSelf?:boolean};
 type Issued={name:string;email:string;password:string;kind:"created"|"reset"};
 const roles:{value:Role;label:string;description:string}[]=[
  {value:"admin",label:"Quản trị Đại hội",description:"Quản lý hồ sơ đại biểu, phiên điểm danh, sơ đồ ghế, nhân sự BCH, tài liệu, phân quyền BTC và nhật ký hệ thống."},
@@ -16,7 +16,7 @@ const label=(role:Role)=>roles.find(r=>r.value===role)?.label||role;
 export function CongressTeamClient({congressId}:{congressId:string}){
  const [members,setMembers]=useState<Member[]>([]);
  const [name,setName]=useState("");
- const [role,setRole]=useState<Role>("admin");
+ const [role,setRole]=useState<Role>("checkin");
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
  const [issued,setIssued]=useState<Issued|null>(null);
@@ -57,13 +57,13 @@ export function CongressTeamClient({congressId}:{congressId:string}){
    const response=await fetch("/api/congress-members",{
     method:"POST",credentials:"same-origin",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({congressId,fullName:name.trim(),role})
+    body:JSON.stringify({congressId,fullName:name.trim(),role:hasPrimary?role:"admin"})
    });
    const data=await response.json();
    if(!response.ok)throw new Error(data.error||"Không tạo được tài khoản BTC.");
    setIssued({kind:"created",name:data.account.name,email:data.account.email,password:data.initialPassword});
    setShowPassword(false);setCopied(false);
-   setName("");setMessage("Đã tạo tài khoản BTC riêng cho Đại hội. Sao chép thông tin đăng nhập ngay bên dưới.");
+   setName("");setMessage("Đã cấp tài khoản riêng. Sao chép thông tin đăng nhập và sử dụng cổng /login.");
    await load();
   }catch(e){setError(e instanceof Error?e.message:"Không tạo được tài khoản BTC.");}
   finally{setBusy(false);}
@@ -101,7 +101,9 @@ export function CongressTeamClient({congressId}:{congressId:string}){
   finally{setBusy(false);}
  }
 
- const info=roles.find(item=>item.value===role);
+ const hasPrimary=members.some(item=>item.isPrimary);
+  const selectedRole:Role=hasPrimary?role:"admin";
+  const info=roles.find(item=>item.value===selectedRole);
  async function copyCredentials(){
   if(!issued)return;
   try{
@@ -119,7 +121,7 @@ export function CongressTeamClient({congressId}:{congressId:string}){
     <p className="text-[11px] font-extrabold uppercase tracking-[.17em] text-[#0b81af]">Quản trị Đại hội / Phân quyền nội bộ</p>
     <h1 className="page-title mt-2">Tài khoản Ban Tổ chức</h1>
     <p className="helper mt-2 max-w-3xl">
-     Tài khoản BTC được cấp mới và chỉ có hiệu lực cho <strong>Đại hội hiện tại</strong>.
+     Mỗi Đại hội chỉ có <strong>một tài khoản quản trị chính</strong>. Nhân sự BTC khác được cấp quyền theo nhóm.
      Không sử dụng chung tài khoản đại biểu hoặc tài khoản BTC của Đại hội khác.
     </p>
    </div>
@@ -132,7 +134,7 @@ export function CongressTeamClient({congressId}:{congressId:string}){
   <div className="flex items-start gap-3 rounded-xl border border-[#bfdbea] bg-[#edf7fc] px-4 py-4 text-[12px] leading-6 text-[#285770]">
    <ShieldCheck className="mt-0.5 shrink-0 text-[#0787af]" size={20}/>
    <p><strong>Tách biệt quyền truy cập:</strong> Tài khoản đại biểu chỉ có cổng đại biểu.
-    BTC sử dụng tài khoản nội bộ riêng, quản trị theo Đại hội và vai trò.
+    BTC sử dụng tài khoản riêng theo Đại hội và vai trò, nhưng cùng đăng nhập tại <a className="font-bold underline" href="/login">/login</a>.
     Quản trị viên hệ thống có quyền điều hành toàn nền tảng nhưng không nằm trong danh sách BTC của từng Đại hội.</p>
   </div>
   {error&&<p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-800">{error}</p>}
@@ -167,8 +169,8 @@ export function CongressTeamClient({congressId}:{congressId:string}){
 
   <section className="overflow-hidden rounded-2xl border border-[#dde7ed] bg-white shadow-[0_8px_30px_rgba(18,40,70,.035)]">
    <div className="border-b border-[#edf1f4] px-5 py-5 sm:px-6">
-    <div className="flex items-center gap-2 text-[16px] font-extrabold text-[#1e435a]"><UserPlus size={20} className="text-[#0e83ac]"/> Cấp tài khoản BTC mới</div>
-    <p className="mt-2 text-[12px] leading-6 text-[#728b9e]">Hệ thống tự tạo mã đăng nhập duy nhất theo Đại hội và mật khẩu mạnh; không yêu cầu email cá nhân hoặc mời qua email.</p>
+    <div className="flex items-center gap-2 text-[16px] font-extrabold text-[#1e435a]"><UserPlus size={20} className="text-[#0e83ac]"/> {hasPrimary?"Cấp tài khoản nhân sự BTC":"Cấp tài khoản quản trị chính"}</div>
+    <p className="mt-2 text-[12px] leading-6 text-[#728b9e]">{hasPrimary?"Cấp tài khoản BTC với quyền hạn giới hạn theo Đại hội. Quản trị chính đã tồn tại nên không thể tạo thêm tài khoản quản trị.":"Đại hội chưa có tài khoản quản trị. Hãy cấp tài khoản chính trước khi phân quyền nhân sự BTC."} Mọi tài khoản dùng chung cổng đăng nhập /login.</p>
    </div>
    <form onSubmit={event=>{event.preventDefault();void createAccount();}} className="grid items-end gap-4 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_250px_auto]">
     <label className="block min-w-0">
@@ -178,12 +180,12 @@ export function CongressTeamClient({congressId}:{congressId:string}){
     </label>
     <label className="block">
      <span className="text-[12px] font-bold text-[#355773]">Vai trò trong Đại hội</span>
-     <select className="field mt-2 w-full" value={role} onChange={e=>setRole(e.target.value as Role)}>
-      {roles.map(r=><option key={r.value} value={r.value}>{r.label}</option>)}
+     <select className="field mt-2 w-full" value={selectedRole} disabled={!hasPrimary} onChange={e=>setRole(e.target.value as Role)}>
+      {roles.filter(r=>hasPrimary?r.value!=="admin":r.value==="admin").map(r=><option key={r.value} value={r.value}>{r.label}</option>)}
      </select>
     </label>
     <button disabled={busy||name.trim().length<2} className="btn btn-primary !min-h-[44px] justify-center" type="submit">
-     <UserPlus size={17}/> {busy?"Đang xử lý...":"Tạo tài khoản BTC"}
+     <UserPlus size={17}/> {busy?"Đang xử lý...":hasPrimary?"Tạo tài khoản BTC":"Tạo quản trị chính"}
     </button>
     <div className="lg:col-span-3 flex gap-2 rounded-lg border border-[#e4edf3] bg-[#f7fafc] px-3 py-3 text-[11px] leading-6 text-[#54738a]">
      <LockKeyhole size={16} className="mt-1 shrink-0 text-[#1383a4]"/>
@@ -198,28 +200,29 @@ export function CongressTeamClient({congressId}:{congressId:string}){
     <span className="rounded-full bg-[#edf6fa] px-3 py-1.5 text-[10px] font-bold text-[#467c98]">Tài khoản riêng · chỉ Đại hội này</span>
    </div>
    {loading?<p className="px-6 py-10 text-[12px] text-[#8798a5]">Đang tải...</p>:
-    members.length===0?<div className="px-6 py-12 text-center"><ShieldCheck className="mx-auto text-[#9ab6c5]" size={28}/><p className="mt-3 text-[13px] font-semibold text-[#59788d]">Chưa có tài khoản BTC riêng.</p><p className="mt-1 text-[11px] text-[#809bab]">Hãy cấp tài khoản bằng biểu mẫu phía trên.</p></div>:
+    members.length===0?<div className="px-6 py-12 text-center"><ShieldCheck className="mx-auto text-[#9ab6c5]" size={28}/><p className="mt-3 text-[13px] font-semibold text-[#59788d]">Chưa có tài khoản BTC.</p><p className="mt-1 text-[11px] text-[#809bab]">Hãy cấp tài khoản bằng biểu mẫu phía trên.</p></div>:
     <div className="divide-y divide-[#ebf0f3]">
-     {members.map((member,index)=><div className="flex flex-col justify-between gap-4 px-5 py-4 sm:px-6 xl:flex-row xl:items-center" key={member.userId}>
+     {[...members].sort((a,b)=>Number(b.isPrimary)-Number(a.isPrimary)).map((member,index)=><div className="flex flex-col justify-between gap-4 px-5 py-4 sm:px-6 xl:flex-row xl:items-center" key={member.userId}>
       <div className="flex min-w-0 items-center gap-3">
        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e8f4f9] text-[13px] font-extrabold text-[#287b9f]">{String(index+1).padStart(2,"0")}</span>
        <div className="min-w-0">
-        <p className="break-words text-[13px] font-extrabold text-[#25465a]">{member.name}</p>
+        <p className="break-words text-[13px] font-extrabold text-[#25465a]">{member.name} {member.isPrimary&&<span className="ml-2 rounded-md bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700">QUẢN TRỊ CHÍNH</span>}</p>
         <p className="mt-1 break-all font-mono text-[11px] text-[#6d8799]">{member.email}</p>
        </div>
       </div>
       <div className="flex w-full flex-wrap items-center gap-2 xl:w-auto">
        <ShieldCheck size={16} className="hidden text-[#2994a9] sm:block"/>
-       <select className="field min-w-0 flex-1 text-[12px] sm:min-w-[210px] xl:flex-none" value={member.role}
+       {member.isPrimary?<span className="min-w-[210px] rounded-lg border border-blue-200 bg-blue-50 px-3 py-3 text-[12px] font-bold text-blue-800">Quản trị Đại hội · cố định</span>:
+        <select className="field min-w-0 flex-1 text-[12px] sm:min-w-[210px] xl:flex-none" value={member.role}
         aria-label={"Vai trò BTC của "+member.name} disabled={busy}
         onChange={e=>void action("PATCH",member,e.target.value as Role)}>
-        {roles.map(r=><option key={r.value} value={r.value}>{r.label}</option>)}
-       </select>
+        {roles.filter(r=>r.value!=="admin").map(r=><option key={r.value} value={r.value}>{r.label}</option>)}
+       </select>}
        <button type="button" className="btn btn-secondary !min-h-10 !px-3" disabled={busy}
         title={"Đặt lại mật khẩu "+member.name} aria-label={"Đặt lại mật khẩu "+member.name}
         onClick={()=>void action("RESET",member)}><KeyRound size={16}/><span className="text-[11px]">Cấp lại</span></button>
        <button type="button" className="btn btn-secondary !min-h-10 !border-rose-200 !px-3 !text-rose-700 hover:!bg-rose-50"
-        aria-label={"Thu hồi tài khoản BTC "+member.name} disabled={busy}
+        aria-label={"Thu hồi tài khoản BTC "+member.name} disabled={busy||member.isPrimary}
         onClick={()=>void action("DELETE",member)}><Trash2 size={16}/><span className="text-[11px]">Thu hồi</span></button>
       </div>
      </div>)}

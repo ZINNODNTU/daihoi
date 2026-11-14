@@ -33,7 +33,7 @@ async function target(congressId:string,userId:string,actorId:string){
  if(actorId===userId)return {error:fail("Không được thay đổi quyền của chính mình.",409)} as const;
  const db=createAdminClient();
  const [{data:btc,error:btcError},{data:member,error:memberError}]=await Promise.all([
-  db.from("btc_accounts").select("user_id").eq("congress_id",congressId)
+  db.from("btc_accounts").select("user_id,is_primary").eq("congress_id",congressId)
    .eq("user_id",userId).is("disabled_at",null).maybeSingle(),
   db.from("congress_members").select("role").eq("congress_id",congressId)
    .eq("user_id",userId).maybeSingle()
@@ -41,7 +41,8 @@ async function target(congressId:string,userId:string,actorId:string){
  if(btcError||memberError)return {error:fail("Không xác minh được tài khoản BTC.",503)} as const;
  if(!btc||!member||!staffRole(member.role))
   return {error:fail("Tài khoản BTC này không hoạt động tại Đại hội.",404)} as const;
- return {db,role:member.role} as const;
+ if(btc.is_primary)return {error:fail("Không điều chỉnh quyền riêng của quản trị chính.",409)} as const;
+  return {db,role:member.role} as const;
 }
 function parseChanges(input:unknown):Change[]|null{
  if(!Array.isArray(input)||input.length<1||input.length>16)return null;

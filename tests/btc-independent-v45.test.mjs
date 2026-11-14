@@ -61,6 +61,8 @@ function compile(path,mocks){
   if(name==="next/server")return {NextResponse:{json:(data,options={})=>
    new Response(JSON.stringify(data),{status:options.status||200,headers:options.headers})}};
   if(name==="node:crypto")return {randomBytes:(bytes)=>({toString:()=>bytes===7?"d".repeat(14):"S".repeat(28)})};
+   if(name==="server-only")return {};
+   if(name==="@/lib/btc-accounts"&&!(name in mocks))return {provisionBtcAccount:async()=>{throw Error("missing BTC provisioning stub")}};
   if(name in mocks)return mocks[name];
   throw Error("Unexpected import "+name);
  },testModule,testModule.exports);
@@ -81,10 +83,13 @@ test("BTC API creates fresh Auth identity instead of reusing existing delegate o
   }},
   from:table=>({
    insert(input){ops.push([table,"insert",input]);return Promise.resolve({error:null});},
+    select(){return this;},limit(){return Promise.resolve({data:[],error:null});},
    delete(){return this;},eq(){return this;}
   })
  };
- const route=compile("src/app/api/congress-members/route.ts",{
+ const helper=compile("src/lib/btc-accounts.ts",{"@/lib/supabase/admin":{createAdminClient:()=>db}}).provisionBtcAccount;
+  const route=compile("src/app/api/congress-members/route.ts",{
+   "@/lib/btc-accounts":{provisionBtcAccount:helper},
   "@/lib/auth":{getAuth:async()=>({user:{id:superadmin},supabase:{}}),hasCongressAbility:async()=>true},
   "@/lib/supabase/admin":{createAdminClient:()=>db},
   "@/lib/system-log":{writeSystemLog:async data=>{logs.push(data);return "req";}}
@@ -101,7 +106,7 @@ test("BTC API creates fresh Auth identity instead of reusing existing delegate o
  assert.ok(!ops.some(x=>x[0]==="delegates"));
  assert.ok(ops.some(x=>x[0]==="btc_accounts"));
  assert.ok(ops.some(x=>x[0]==="congress_members"));
- assert.equal(logs[0].event,"btc.account_created");
+ assert.equal(logs[0].event,"btc.primary_created");
 });
 
 test("No BTC creation by delegate, no unconstrained user/email reuse or client-supplied password",async()=>{

@@ -1,4 +1,4 @@
-import {randomBytes} from "node:crypto";
+import {provisionBtcAccount} from "@/lib/btc-accounts";
 import {NextResponse} from "next/server";
 import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
@@ -15,7 +15,6 @@ const validOrigin=(req:Request)=>{
  try{const origin=req.headers.get("origin");return !origin||new URL(origin).host===req.headers.get("host");}
  catch{return false;}
 };
-const password=()=>randomBytes(21).toString("base64url")+"!A7";
 async function authorize(congressId:string){
  const {supabase,user}=await getAuth();
  if(!user)return {error:fail("Vui lòng đăng nhập.",401)} as const;
@@ -41,7 +40,7 @@ export async function GET(request:Request){
   if("error" in session)return session.error;
   const db=createAdminClient();
   const [{data:accounts,error}, {data:roles,error:roleError}, {data:restrictions,error:restrictionsError}]=await Promise.all([
-   db.from("btc_accounts").select("user_id,login_email,full_name,created_at")
+   db.from("btc_accounts").select("user_id,login_email,full_name,created_at,is_primary")
     .eq("congress_id",congressId).is("disabled_at",null)
     .order("created_at",{ascending:false}).limit(300),
    db.from("congress_members").select("user_id,role")
@@ -54,7 +53,7 @@ export async function GET(request:Request){
   return NextResponse.json({
    members:(accounts||[]).filter(a=>byUser.has(a.user_id)).map(a=>({
     userId:a.user_id,email:a.login_email,name:a.full_name,
-    role:byUser.get(a.user_id),createdAt:a.created_at,
+    role:byUser.get(a.user_id),createdAt:a.created_at,isPrimary:a.is_primary,
     isSelf:a.user_id===session.user.id,
     deniedAbilities:(restrictions||[]).filter(item=>item.user_id===a.user_id&&item.allowed===false).map(item=>item.ability),
     permissionOverrides:(restrictions||[]).filter(item=>item.user_id===a.user_id).map(item=>({ability:item.ability,allowed:item.allowed}))
@@ -63,7 +62,6 @@ export async function GET(request:Request){
  }catch{return fail("Không thể tải danh sách tài khoản BTC.",503);}
 }
 export async function POST(req:Request){
- let createdId="";
  try{
   if(!validOrigin(req))return fail("Nguồn yêu cầu không hợp lệ.",403);
   const body=await req.json().catch(()=>null);
@@ -76,40 +74,26 @@ export async function POST(req:Request){
   const session=await authorize(congressId);
   if("error" in session)return session.error;
   const db=createAdminClient();
-  const loginEmail="btc-"+congressId.slice(0,8)+"-"+randomBytes(7).toString("hex")+"@staff.daihoi.invalid";
-  const initialPassword=password();
-  const {data,error}=await db.auth.admin.createUser({
-   email:loginEmail,password:initialPassword,email_confirm:true,
-   user_metadata:{full_name:fullName},
-   app_metadata:{account_kind:"btc",btc_congress_id:congressId}
-  });
-  if(error||!data.user)return fail("Không thể tạo tài khoản BTC. Hãy thử lại.",503);
-  createdId=data.user.id;
-  const {error:accountError}=await db.from("btc_accounts").insert({
-   user_id:createdId,congress_id:congressId,login_email:loginEmail,
-   full_name:fullName,created_by:session.user.id
-  });
-  if(accountError)throw new Error("ACCOUNT_INSERT_FAILED");
-  const {error:memberError}=await db.from("congress_members").insert({
-   congress_id:congressId,user_id:createdId,role
-  });
-  if(memberError)throw new Error("MEMBER_INSERT_FAILED");
-  await audit(congressId,session.user.id,"btc.account_created",createdId,role);
-  return NextResponse.json({ok:true,account:{
-   userId:createdId,name:fullName,email:loginEmail,role
-  },initialPassword},{status:201,headers:HEADERS});
- }catch{
-  if(createdId){
-   try{
-    const db=createAdminClient();
-    await db.from("congress_members").delete().eq("user_id",createdId);
-    await db.from("btc_accounts").delete().eq("user_id",createdId);
-    await db.auth.admin.deleteUser(createdId);
-   }catch{/* Failed provisioning cannot grant privileges without a membership. */}
+  const {data:current,error:readError}=await db.from("btc_accounts")
+   .select("user_id").eq("congress_id",congressId).eq("is_primary",true).limit(1);
+  if(readError)return fail("Chưa cập nhật migration V65 hoặc không đọc được tài khoản quản trị.",503);
+  if(role==="admin"&&current?.length)
+   return fail("Đại hội đã có tài khoản quản trị chính. Chỉ cấp thêm tài khoản BTC theo nhóm quyền.",409);
+  if(role!=="admin"&&!current?.length)
+   return fail("Cần cấp tài khoản quản trị chính cho Đại hội trước khi cấp quyền nhân sự BTC.",409);
+  try{
+   const {account,initialPassword}=await provisionBtcAccount({
+    db,congressId,fullName,role,actorId:session.user.id
+   });
+   await audit(congressId,session.user.id,role==="admin"?"btc.primary_created":"btc.account_created",account.userId,role);
+   return NextResponse.json({ok:true,account,initialPassword},{status:201,headers:HEADERS});
+  }catch(error){
+   console.error("BTC provisioning failed",error instanceof Error?error.message:"unknown");
+   return fail("Không thể cấp tài khoản. Kiểm tra migration V65, hoặc tài khoản quản trị chính đã tồn tại.",503);
   }
-  return fail("Không thể hoàn tất cấp tài khoản BTC. Kiểm tra migration V45 và thử lại.",503);
- }
+ }catch{return fail("Không thể hoàn tất cấp tài khoản BTC.",503);}
 }
+
 export async function PATCH(req:Request){
  try{
   if(!validOrigin(req))return fail("Nguồn yêu cầu không hợp lệ.",403);
@@ -120,10 +104,12 @@ export async function PATCH(req:Request){
   const session=await authorize(congressId);
   if("error" in session)return session.error;
   if(session.user.id===userId)return fail("Không tự thay đổi quyền của mình.",409);
+   if(role==="admin")return fail("Chỉ có một tài khoản quản trị chính. Hãy cấp quyền theo nhóm BTC.",409);
   const db=createAdminClient();
-  const {data:account}=await db.from("btc_accounts").select("user_id")
+  const {data:account}=await db.from("btc_accounts").select("user_id,is_primary")
    .eq("congress_id",congressId).eq("user_id",userId).is("disabled_at",null).maybeSingle();
   if(!account)return fail("Tài khoản BTC không thuộc Đại hội này.",404);
+   if(account.is_primary)return fail("Tài khoản quản trị chính được bảo vệ, không thể đổi vai trò.",409);
   const {data,error}=await db.from("congress_members").update({role})
    .eq("congress_id",congressId).eq("user_id",userId).select("user_id").maybeSingle();
   if(error||!data)return fail("Không thay đổi được vai trò BTC.",409);
@@ -142,9 +128,10 @@ export async function DELETE(req:Request){
   if("error" in session)return session.error;
   if(session.user.id===userId)return fail("Không thể tự thu hồi tài khoản của mình.",409);
   const db=createAdminClient();
-  const {data:account}=await db.from("btc_accounts").select("user_id")
+  const {data:account}=await db.from("btc_accounts").select("user_id,is_primary")
    .eq("congress_id",congressId).eq("user_id",userId).is("disabled_at",null).maybeSingle();
   if(!account)return fail("Tài khoản BTC không thuộc Đại hội này.",404);
+   if(account.is_primary)return fail("Không thể thu hồi tài khoản quản trị chính. Liên hệ quản trị hệ thống.",409);
   // First revoke membership: all privileged APIs and RLS lose access immediately.
   const {error:revoked}=await db.from("congress_members").delete()
    .eq("congress_id",congressId).eq("user_id",userId);
