@@ -1,5 +1,6 @@
 import {redirect} from "next/navigation";
 import {DelegateShell} from "@/components/delegate-shell";
+import {ActingSessionNotice} from "@/components/acting-session-notice";
 import {getPortalViewerAuth,isStaffUser} from "@/lib/auth";
 import {getPortalCongressContext} from "@/lib/active-congress";
 import {getPortalAbilities} from "@/lib/rbac-server";
@@ -27,6 +28,6 @@ export default async function DelegatePortalLayout({children}:{children:React.Re
   const guestOnly=Boolean(selected&&!selected.asDelegate||!selected&&access&&!access.delegateCongressIds.length&&access.guestCongressIds.length);
    const allowedAbilities=selected?await getPortalAbilities(user.id,selected.id,
     selected.asDelegate?"delegate":"guest"):null;
-   return <DelegateShell name={profile?.full_name||user.email||"Đại biểu"} guestOnly={guestOnly}
-    congresses={access?.options||[]} activeCongressId={access?.activeCongressId||null} allowedAbilities={allowedAbilities}>{children}</DelegateShell>;
+   return <><ActingSessionNotice/><DelegateShell name={profile?.full_name||user.email||"Đại biểu"} guestOnly={guestOnly}
+    congresses={access?.options||[]} activeCongressId={access?.activeCongressId||null} allowedAbilities={allowedAbilities}>{children}</DelegateShell></>;
 }

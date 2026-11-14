@@ -2,6 +2,8 @@ import "server-only";
 import {randomUUID} from "node:crypto";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {redactLogText} from "@/lib/system-log-redaction";
+import {cookies} from "next/headers";
+import {readActingSession} from "@/lib/impersonation";
 
 export type SystemLogLevel="critical"|"error"|"warning"|"info";
 export type SystemLogSource="auth"|"attendance"|"documents"|"seating"|"frontend"|"api";
@@ -23,7 +25,8 @@ export type SystemLogInput={
 const CONTEXT_KEYS=new Set([
  "operation","errorName","dbCode","httpMethod","endpoint","component",
  "reason","sessionId","filename","line","column","attempt","service",
- "targetId","changedCount","ability","allowed","hasResult","candidateId","affectedCandidates"
+ "targetId","changedCount","ability","allowed","hasResult","candidateId","affectedCandidates",
+ "actingAdminId","actingTargetId"
 ]);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -40,6 +43,14 @@ function cleanContext(context?:Record<string,ContextValue>){
 
 export async function writeSystemLog(input:SystemLogInput):Promise<string>{
  const requestId=input.requestId&&UUID.test(input.requestId)?input.requestId:randomUUID();
+ const context=cleanContext(input.context);
+ try{
+  const acting=readActingSession(await cookies());
+  if(acting&&acting.expiresAt>Date.now()/1000&&acting.targetId===input.actorId){
+   context.actingAdminId=acting.adminId;
+   context.actingTargetId=acting.targetId;
+  }
+ }catch{/* System events may originate outside an HTTP request. */}
  const payload={
   level:input.level,
   source:input.source,
@@ -51,7 +62,7 @@ export async function writeSystemLog(input:SystemLogInput):Promise<string>{
   status_code:input.statusCode&&input.statusCode>=100&&input.statusCode<=599?input.statusCode:null,
   duration_ms:input.durationMs!==undefined&&Number.isInteger(input.durationMs)
    ?Math.max(0,Math.min(input.durationMs,3600000)):null,
-  context:cleanContext(input.context),
+  context,
   release:/^[a-f0-9]{7,40}$/i.test(process.env.VERCEL_GIT_COMMIT_SHA||"")
    ?process.env.VERCEL_GIT_COMMIT_SHA!.slice(0,12):"local",
   environment:["production","preview","development"].includes(process.env.VERCEL_ENV||"")

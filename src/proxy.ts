@@ -1,9 +1,33 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import {IMPERSONATION_COOKIE,IMPERSONATION_TRACE_COOKIE,readActingSession} from "@/lib/impersonation";
 export async function proxy(request: NextRequest) {
     // Public pages and the login handler do not need an extra JWT verification.
   // This keeps the first-visit surge from consuming unnecessary auth requests.
   const path=request.nextUrl.pathname;
+  const actingCookie=request.cookies.has(IMPERSONATION_COOKIE+"_n");
+  const actingTrace=request.cookies.has(IMPERSONATION_TRACE_COOKIE);
+  // A real acting session is allowed to execute normal RLS-protected writes.
+  // When it expires, stop ALL API mutations and require Admin recovery.
+  if((actingCookie||actingTrace)&&path!=="/acting/expired"&&
+   path!=="/api/admin/impersonation/stop"&&path!=="/api/auth/logout"&&
+   path!=="/login"&&path!=="/api/auth/login"){
+   const acting=readActingSession(request.cookies);
+   if(!acting||acting.expiresAt<=Math.floor(Date.now()/1000)){
+    if(path.startsWith("/api/"))
+     return NextResponse.json({error:"Phiên đóng vai đã hết hạn. Thoát đóng vai để tiếp tục."},
+      {status:401,headers:{"Cache-Control":"no-store"}});
+    return NextResponse.redirect(new URL("/acting/expired",request.url));
+   }
+   // Password, credential and identity changes are not part of delegated
+   // congress work. Everything else executes with the target's real JWT.
+   if(path==="/account"||path.startsWith("/api/admin/impersonation/start")){
+    if(path.startsWith("/api/"))
+     return NextResponse.json({error:"Không được đổi danh tính trong phiên đóng vai."},
+      {status:403,headers:{"Cache-Control":"no-store"}});
+    return NextResponse.redirect(new URL("/dashboard",request.url));
+   }
+  }
   if(path==="/"||path==="/login"||path==="/preview"||path==="/api/auth/login"||
     path==="/guest"||path.startsWith("/guest/"))
     return NextResponse.next({request});

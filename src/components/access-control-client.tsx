@@ -2,7 +2,8 @@
 import {useCallback,useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import {usePathname,useRouter,useSearchParams} from "next/navigation";
-import {ArrowLeft,Check,Eye,FolderKey,LockKeyhole,Plus,RefreshCw,Save,Search,ShieldCheck,Trash2,Users} from "lucide-react";
+import {ImpersonateAccountButton} from "@/components/impersonate-account-button";
+import {ArrowLeft,Check,FolderKey,LockKeyhole,Plus,RefreshCw,Save,Search,ShieldCheck,Trash2,Users} from "lucide-react";
 import {ACCOUNT_PERMISSION_CAPABILITIES,canCongress} from "@/lib/congress-permissions";
 import {baseManagedAbilities,editableGroupAbilities,RBAC_ABILITY_LABELS,RBAC_LABELS,
  type ManagedRole} from "@/lib/access-rbac";
@@ -106,7 +107,7 @@ export function AccessControlClient({initialCongressId=""}:{initialCongressId?:s
      <h1 className="mt-2 text-[clamp(24px,3vw,36px)] font-extrabold tracking-tight text-[#1c4058]">Quản lý RBAC toàn hệ thống</h1>
      <p className="mt-2 max-w-[850px] text-[12px] leading-6 text-[#627c8d]">
       Quản lý toàn bộ tài khoản, nhóm quyền và quyền riêng của từng Đại hội. Vai trò nền là giới hạn tối đa,
-      nhóm quyền chỉ thu hẹp quyền, tuyệt đối không làm tăng thẩm quyền. Xem thử tài khoản ở chế độ chỉ đọc, không đổi phiên đăng nhập.
+      nhóm quyền chỉ thu hẹp quyền, tuyệt đối không làm tăng thẩm quyền. Đóng vai tài khoản với phiên đăng nhập thật theo RBAC. Mọi thao tác có hiệu lực và lưu dấu Super Admin thực hiện.
      </p>
     </div>
     <button type="button" onClick={()=>{setLoading(true);void load().catch(e=>setError(String(e))).finally(()=>setLoading(false));}}
@@ -178,9 +179,8 @@ export function AccessControlClient({initialCongressId=""}:{initialCongressId?:s
        <p className="mt-1 break-all text-[12px] text-[#708a99]">{selected.email}</p>
        <p className="mt-2 text-[11px] text-[#627c8b]">ID: <code>{selected.userId}</code></p>
       </div>
-      {membership&&<Link href={"/dashboard/access/preview/"+selected.userId+"?congressId="+congressId}
-       className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#166b8f] px-4 text-[12px] font-bold text-white">
-       <Eye size={16}/> Xem giao diện tài khoản</Link>}
+      {membership&&!selected.isSelf&&selected.platformRole!=="super_admin"&&
+       <ImpersonateAccountButton userId={selected.userId} congressId={congressId} name={selected.name}/>}
      </div>
      {selected.isSelf&&<p className="mt-4 rounded-lg bg-amber-50 p-3 text-[12px] text-amber-800">Không thể tự sửa quyền của chính mình. Hãy dùng một tài khoản Super Admin khác để điều chỉnh.</p>}
      {membership?.isPrimary&&selected.platformRole!=="super_admin"&&
@@ -292,6 +292,6 @@ export function AccessControlClient({initialCongressId=""}:{initialCongressId?:s
    </section>
   </div>}
   <p className="flex items-center gap-2 text-[11px] leading-5 text-[#7a8d9a]"><Users size={15}/>
-   Chế độ xem thử là bản dựng server chỉ đọc; không cấp session, token hay khả năng thực hiện thay người dùng.</p>
+   Chế độ đóng vai sử dụng phiên Supabase của tài khoản đích. Thao tác ghi có hiệu lực theo RBAC và được ghi nhật ký người khởi tạo.</p>
  </div>;
 }

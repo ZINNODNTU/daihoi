@@ -3,6 +3,7 @@ import {createServerClient} from "@supabase/ssr";
 import {toSupabaseAuthEmail} from "@/lib/login-identity";
 import {isStaffUser} from "@/lib/auth";
 import {writeSystemLog} from "@/lib/system-log";
+import {clearActingCookies} from "@/lib/impersonation";
 
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
@@ -76,6 +77,8 @@ export async function POST(request:NextRequest){
   const destination=staff?"/dashboard":"/my-card";
   const data=NextResponse.json({ok:true,destination},{headers});
   reply.cookies.getAll().forEach(cookie=>data.cookies.set(cookie));
+  // Fresh explicit login terminates the previous acting context.
+  clearActingCookies(data.cookies);
   return data;
  }catch{
   await writeSystemLog({level:"error",source:"auth",event:"auth.login_service_failed",

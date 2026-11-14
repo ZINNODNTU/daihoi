@@ -8,6 +8,7 @@ import {createClient} from "@/lib/supabase/server";
 import {isStaffUser,getCongressRole,getCongressEffectiveAbilities} from "@/lib/auth";
 import type {CongressRole} from "@/lib/congress-permissions";
 import {AppShell} from "@/components/app-shell";
+import {ActingSessionNotice} from "@/components/acting-session-notice";
 import {CreateCongress} from "@/components/create-congress";
 import {CongressDirectory,type CongressSummary} from "@/components/congress-directory";
 
@@ -73,7 +74,7 @@ export default async function Dashboard(){
     {label:"Đã kết thúc",value:completed,icon:Building2,foot:"Đã hoàn tất"}
   ];
 
-  return <AppShell name={profile?.full_name||user.email||""} accessRole={role} canViewSystemLogs={canViewSystemLogs}>
+  return <><ActingSessionNotice/><AppShell name={profile?.full_name||user.email||""} accessRole={role} canViewSystemLogs={canViewSystemLogs}>
     <section className="command-hero dashboard-command-hero mb-7 px-5 py-7 sm:px-8 sm:py-9 xl:px-10 xl:py-11" aria-label="Trung tâm điều hành">
       <div className="dashboard-hero-layout">
         <div className="relative z-10 min-w-0">
@@ -153,5 +154,5 @@ export default async function Dashboard(){
     </div>
 
     {canCreate&&<section id="tao-dai-hoi" className="mt-10 scroll-mt-24"><CreateCongress/></section>}
-  </AppShell>;
+  </AppShell></>;
 }

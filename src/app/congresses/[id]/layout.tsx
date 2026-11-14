@@ -1,6 +1,7 @@
 import {redirect,notFound} from "next/navigation";
 import {createClient} from "@/lib/supabase/server";
 import {AppShell} from "@/components/app-shell";
+import {ActingSessionNotice} from "@/components/acting-session-notice";
 import {getCongressRole,getCongressEffectiveAbilities} from "@/lib/auth";
 
 
@@ -23,10 +24,10 @@ export default async function CongressLayout({children,params}:{
  ]);
  if(congressResult.error||!congressResult.data)notFound();
  const congress=congressResult.data;
- return <AppShell name={profileResult.data?.full_name||user.email||""}
+ return <><ActingSessionNotice/><AppShell name={profileResult.data?.full_name||user.email||""}
   congressId={id} congressName={congress.name} congressKind={congress.kind}
   accessRole={accessRole} effectiveAbilities={[...effectiveAbilities]} canManage={effectiveAbilities.includes("settings.manage")}
   canViewBch={effectiveAbilities.includes("bch.read")}
   canCheckin={effectiveAbilities.includes("attendance.scan")}
-  canViewSystemLogs={accessRole==="super_admin"}>{children}</AppShell>;
+  canViewSystemLogs={accessRole==="super_admin"}>{children}</AppShell></>;
 }

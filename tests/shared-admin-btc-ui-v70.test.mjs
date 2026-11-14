@@ -58,6 +58,7 @@ function loadDashboard({admin=false,rights=["workspace.view"],btcEnabled=true}={
    getCongressEffectiveAbilities:async()=>{observed.push(["getAbilities"]);return rights;}
   },
   "@/components/app-shell":{AppShell:"AppShell"},
+  "@/components/acting-session-notice":{ActingSessionNotice:"ActingSessionNotice"},
   "@/components/create-congress":{CreateCongress:"CreateCongress"},
   "@/components/congress-directory":{CongressDirectory:"CongressDirectory"}
  };
@@ -79,12 +80,13 @@ function find(node,type,result=[]){
 test("BTC and Super Admin render exactly the same AppShell and dashboard components",async()=>{
  const admin=loadDashboard({admin:true}),staff=loadDashboard({rights:["workspace.view","attendance.read"]});
  const [adminUI,staffUI]=await Promise.all([admin.Dashboard(),staff.Dashboard()]);
- assert.equal(adminUI.type,"AppShell");
- assert.equal(staffUI.type,"AppShell");
- assert.equal(adminUI.props.canViewSystemLogs,true);
- assert.equal(staffUI.props.canViewSystemLogs,false);
- assert.equal(adminUI.props.accessRole,"super_admin");
- assert.equal(staffUI.props.accessRole,"checkin");
+ const adminShell=find(adminUI,"AppShell")[0],staffShell=find(staffUI,"AppShell")[0];
+ assert.ok(adminShell);
+ assert.ok(staffShell);
+ assert.equal(adminShell.props.canViewSystemLogs,true);
+ assert.equal(staffShell.props.canViewSystemLogs,false);
+ assert.equal(adminShell.props.accessRole,"super_admin");
+ assert.equal(staffShell.props.accessRole,"checkin");
  assert.equal(find(adminUI,"CongressDirectory").length,1);
  assert.equal(find(staffUI,"CongressDirectory").length,1);
  assert.equal(find(adminUI,"CreateCongress").length,1);
@@ -102,7 +104,7 @@ test("BTC and Super Admin render exactly the same AppShell and dashboard compone
 test("Revoking BTC workspace.view removes the congress but keeps the same UI shell",async()=>{
  const staff=loadDashboard({admin:false,rights:[]});
  const ui=await staff.Dashboard();
- assert.equal(ui.type,"AppShell");
+ assert.equal(find(ui,"AppShell").length,1);
  assert.deepEqual(find(ui,"CongressDirectory")[0].props.items,[]);
  assert.equal(staff.observed.some(row=>row[1]==="congresses"),false);
 });

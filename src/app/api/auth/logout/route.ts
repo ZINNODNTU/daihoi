@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {createServerClient} from "@supabase/ssr";
+import {clearActingCookies} from "@/lib/impersonation";
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
 
@@ -34,6 +35,7 @@ export async function POST(request:NextRequest){
  try{
   const {error}=await client.auth.signOut();
   if(error)return NextResponse.json({error:"Không thể đăng xuất. Hãy thử lại."},{status:503});
+  clearActingCookies(response.cookies);
   response.cookies.delete("daihoi_active_congress");
    response.cookies.delete("daihoi_guest_view");
    return response;
