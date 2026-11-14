@@ -8,6 +8,7 @@
 
 - [Tài khoản quản trị chính BTC V65](huong-dan/TAI-KHOAN-BTC-CHINH-V65.md): một tài khoản quản trị cho mỗi Đại hội, một cổng đăng nhập, RBAC nhân sự BTC.
 - [Đóng vai tài khoản thực V72](huong-dan/DONG-VAI-TAI-KHOAN-V72.md): Super Admin đóng vai tài khoản BTC/đại biểu với phiên Auth thực, thao tác theo RBAC, lưu nhật ký và khôi phục phiên quản trị an toàn.
+- [Thư viện ảnh & thanh bên Admin V73](huong-dan/THU-VIEN-ANH-VA-THANH-BEN-ADMIN-V73.md): một cây media trong Storage, giữ tương thích ảnh cũ, danh mục ảnh theo Đại hội và menu quản trị thống nhất.
 - [Chế độ khách công khai V67](huong-dan/CHE-DO-KHACH-CONG-KHAI-V67.md): chỉ xem Đại hội đang diễn ra, không cần đăng nhập hoặc mã; phân biệt với đại biểu khách mời có quyền ghế/điểm danh.
 - [Cơ chế khách dùng mã V66 (lịch sử)](huong-dan/CHE-DO-KHACH-DAI-HOI-V66.md): chỉ để tra cứu phiên bản cũ, không áp dụng cho giao diện hiện hành.
 

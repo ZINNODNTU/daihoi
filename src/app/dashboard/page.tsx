@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import {createClient} from "@/lib/supabase/server";
 import {isStaffUser,getCongressRole,getCongressEffectiveAbilities} from "@/lib/auth";
-import type {CongressRole} from "@/lib/congress-permissions";
+import type {CongressRole,CongressAbility} from "@/lib/congress-permissions";
 import {AppShell} from "@/components/app-shell";
 import {ActingSessionNotice} from "@/components/acting-session-notice";
 import {CreateCongress} from "@/components/create-congress";
@@ -33,6 +33,7 @@ export default async function Dashboard(){
    .select("full_name,platform_role").eq("id",user.id).maybeSingle();
   const canCreate=profile?.platform_role==="super_admin";
   let role:CongressRole=canCreate?"super_admin":null;
+  let scopedAbilities:CongressAbility[]|undefined;
   let items:CongressSummary[]=[];
   let directoryError:string|null=null;
   if(canCreate){
@@ -54,6 +55,7 @@ export default async function Dashboard(){
      getCongressEffectiveAbilities(supabase,user.id,btc.congress_id)
     ]);
     role=staffRole;
+    scopedAbilities=[...abilities];
     if(staffRole&&abilities.includes("workspace.view")){
      const {data,error}=await supabase.from("congresses")
       .select("id,name,kind,term,status,slug,venue,created_at")
@@ -63,6 +65,9 @@ export default async function Dashboard(){
     }
    }
   }
+  // A single AppShell layout for Dashboard, congress management, RBAC and
+  // system logs; the active congress supplies the full navigation tree.
+  const sidebarCongress=items.find(c=>c.status==="live")||items[0];
   const canViewSystemLogs=canCreate;
   const live=items.filter(c=>c.status==="live").length;
   const preparing=items.filter(c=>c.status==="preparing").length;
@@ -74,7 +79,10 @@ export default async function Dashboard(){
     {label:"Đã kết thúc",value:completed,icon:Building2,foot:"Đã hoàn tất"}
   ];
 
-  return <><ActingSessionNotice/><AppShell name={profile?.full_name||user.email||""} accessRole={role} canViewSystemLogs={canViewSystemLogs}>
+  return <><ActingSessionNotice/><AppShell name={profile?.full_name||user.email||""}
+    accessRole={role} canViewSystemLogs={canViewSystemLogs}
+    congressId={sidebarCongress?.id} congressName={sidebarCongress?.name}
+    congressKind={sidebarCongress?.kind} effectiveAbilities={scopedAbilities}>
     <section className="command-hero dashboard-command-hero mb-7 px-5 py-7 sm:px-8 sm:py-9 xl:px-10 xl:py-11" aria-label="Trung tâm điều hành">
       <div className="dashboard-hero-layout">
         <div className="relative z-10 min-w-0">

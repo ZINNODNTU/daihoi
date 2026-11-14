@@ -5,7 +5,7 @@ import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {
  Armchair,ArrowRight,BarChart3,ChartColumnIncreasing,ChevronDown,ChevronRight,
- CircleUserRound,ClipboardCheck,ClipboardList,FileText,LayoutGrid,LogOut,Menu,
+ CircleUserRound,ClipboardCheck,ClipboardList,FileText,Images,LayoutGrid,LogOut,Menu,
  PanelLeftClose,PanelLeftOpen,QrCode,ScrollText,Search,Settings2,ShieldCheck,
  UserRoundCog,Users,X
 } from "lucide-react";
@@ -37,8 +37,9 @@ export function AppShell({children,name,congressId,congressName,
  const closeRef=useRef<HTMLButtonElement>(null);
  const triggerRef=useRef<HTMLButtonElement>(null);
  const overview:NavItem={name:congressId?"Tất cả Đại hội":"Tổng quan hệ thống",href:"/dashboard",icon:LayoutGrid};
- const logs:NavItem={name:"Nhật ký hệ thống",href:"/dashboard/system-logs",icon:ScrollText};
+ const logs:NavItem={name:"Nhật ký hệ thống",href:"/dashboard/system-logs"+(congressId?"?congressId="+encodeURIComponent(congressId):""),icon:ScrollText};
  const globalAccess:NavItem={name:"RBAC · Toàn bộ tài khoản",href:"/dashboard/access"+(congressId?"?congressId="+encodeURIComponent(congressId):""),icon:ShieldCheck};
+ const media:NavItem={name:"Thư viện ảnh Đại hội",href:"/dashboard/media"+(congressId?"?congressId="+encodeURIComponent(congressId):""),icon:Images};
  const myAccount:NavItem={name:"Tài khoản & bảo mật",href:"/account",icon:CircleUserRound};
  const base=congressId?"/congresses/"+congressId:"";
  const canUse=(ability:CongressAbility)=>effectiveAbilities?effectiveAbilities.includes(ability):canCongress(accessRole,ability);
@@ -84,9 +85,9 @@ export function AppShell({children,name,congressId,congressName,
    ].filter((item):item is NavItem=>Boolean(item))},
    {id:"congress-admin",title:"Quản trị Đại hội",items:adminItems}
   ]:[]),
-  ...(canViewSystemLogs?[{id:"system-admin",title:"Quản trị hệ thống",items:[globalAccess,logs]}]:[])
+  ...(canViewSystemLogs?[{id:"system-admin",title:"Quản trị hệ thống",items:[globalAccess,media,logs]}]:[])
  ].filter(group=>group.items.length>0);
- const items=[overview,...congressItems,...adminItems,...(canViewSystemLogs?[globalAccess,logs]:[]),myAccount];
+ const items=[overview,...congressItems,...adminItems,...(canViewSystemLogs?[globalAccess,media,logs]:[]),myAccount];
  const active=findAdminNavActive(previewRoute||path,items,overview);
  const mobileItems=congressId?congressItems.filter(item=>[
   base,base+"/attendance",base+"/delegates",base+"/ballots",base+"/bch-candidates",
@@ -181,7 +182,7 @@ export function AppShell({children,name,congressId,congressName,
    className={"nav-item admin-nav-link "+(current?"nav-item-active":"")}>
    <Icon size={18} strokeWidth={current?2.1:1.75} aria-hidden="true"/>
    <span className="admin-nav-text min-w-0 flex-1 truncate">{item.name}</span>
-   {item.href==="/dashboard/system-logs"&&unresolvedLogs>0&&
+   {item.href.startsWith("/dashboard/system-logs")&&unresolvedLogs>0&&
     <span className="admin-nav-counter" title="Sự cố cần xử lý trong 24 giờ">
      {unresolvedLogs>99?"99+":unresolvedLogs}
     </span>}

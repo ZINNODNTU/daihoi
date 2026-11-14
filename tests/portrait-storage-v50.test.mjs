@@ -39,6 +39,11 @@ function admin(){
  };
 }
 const source=read("src/lib/portrait-storage.ts");
+const policySource=read("src/lib/portrait-policy.ts");
+const policyJs=ts.transpileModule(policySource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const policyModule={exports:{}};
+new Function("require","module","exports",policyJs)(()=>{throw Error("Unexpected policy dependency");},policyModule,policyModule.exports);
+const policy=policyModule.exports;
 const js=ts.transpileModule(source,{compilerOptions:{
  module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true
 }}).outputText;
@@ -47,13 +52,14 @@ new Function("require","module","exports",js)(name=>{
  if(name==="server-only")return {};
  if(name==="sharp")return sharp;
  if(name==="@/lib/supabase/admin")return {createAdminClient:admin};
+ if(name==="@/lib/portrait-policy")return policy;
  throw Error("unexpected import "+name);
 },moduleBox,moduleBox.exports);
 const portraits=moduleBox.exports;
 const base="a1111111-aaaa-4111-8111-111111111111/d1111111-dddd-4111-8111-111111111111.jpg";
 
 test("One private original powers all three image sizes with a single Storage download",async()=>{
- store.set(base,JPEG);
+ store.set(policy.portraitStoragePath(base),JPEG);
  const images=await Promise.all([96,160,600,96].map(w=>portraits.readPortrait(base,w)));
  assert.equal(counts.download,1,"reuse base from singleflight cache");
  assert.deepEqual(await Promise.all(images.slice(0,3).map(v=>sharp(v).metadata().then(m=>[m.width,m.height]))),

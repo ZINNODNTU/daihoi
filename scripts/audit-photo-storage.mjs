@@ -11,6 +11,7 @@
  */
 import nextEnv from "@next/env";
 import {createClient} from "@supabase/supabase-js";
+import {isCanonicalPortraitKey,isPhysicalPortraitPath,portraitStoragePath} from "../src/lib/portrait-policy.ts";
 nextEnv.loadEnvConfig(process.cwd());
 const URL="https://pnxdxdagpeyqarucdphk.supabase.co";
 if(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()!==URL)
@@ -43,7 +44,7 @@ while(dirs.length){
 const allPaths=new Set(records.map(r=>r.path));
 const isDerived=path=>/-(96|160)\.jpg$/i.test(path);
 const master=path=>path.replace(/-(96|160)\.jpg$/i,".jpg");
-const knownMaster=path=>/^(?:people\/[0-9a-f-]{36}|[0-9a-f-]{36}\/(?:bch\/)?[0-9a-f-]{36})\.jpg$/i.test(path);
+const knownMaster=path=>isCanonicalPortraitKey(path)||isPhysicalPortraitPath(path);
 const derived=records.filter(r=>isDerived(r.path));
 const safeDerived=derived.filter(r=>knownMaster(master(r.path))&&allPaths.has(master(r.path)));
 const unknownDerived=derived.filter(r=>!safeDerived.some(s=>s.path===r.path));
@@ -60,8 +61,11 @@ async function references(table){
 }
 const [delegateRefs,bchRefs]=await Promise.all([references("delegates"),references("bch_candidates")]);
 const referenced=new Set([...delegateRefs,...bchRefs]);
-const unreferencedPrimary=records.filter(r=>!isDerived(r.path)&&knownMaster(r.path)&&!referenced.has(r.path));
-const missingMasters=[...referenced].filter(path=>!allPaths.has(path));
+const physicalRefs=new Set([...referenced].filter(isCanonicalPortraitKey).map(portraitStoragePath));
+const inUse=path=>referenced.has(path)||physicalRefs.has(path);
+const unreferencedPrimary=records.filter(r=>!isDerived(r.path)&&knownMaster(r.path)&&!inUse(r.path));
+const missingMasters=[...referenced].filter(path=>!allPaths.has(path)&&
+ (!isCanonicalPortraitKey(path)||!allPaths.has(portraitStoragePath(path))));
 const unknownStorageKeys=records.filter(row=>!knownMaster(row.path)&&!isDerived(row.path));
 const OLD_MS=30*24*60*60*1000;
 const agedOrphans=unreferencedPrimary.filter(row=>{

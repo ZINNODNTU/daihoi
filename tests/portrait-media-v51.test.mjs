@@ -36,6 +36,10 @@ function storage(){
    if(!bytes)return {data:null,error:{statusCode:"404",name:"NotFound"}};
    return {data:{arrayBuffer:async()=>Uint8Array.from(bytes).buffer},error:null};
   },
+  async remove(paths){
+   for(const key of paths)store.delete(key);
+   return {error:null};
+  },
   async upload(key,data,opts){
    telemetry.uploads++;
    assert.equal(opts.contentType,"image/jpeg");
@@ -54,7 +58,7 @@ const uploading=evaluate("src/lib/portrait-upload.ts",{
   PORTRAIT_BUCKET:"delegate-photos",
   invalidatePortrait:()=>{telemetry.invalidations++;},
   removeDerivedPortraits:async()=>{telemetry.derived++;},
-  removeUnreferencedPortrait:async key=>{store.delete(key);telemetry.cleanup++;}
+  removeUnreferencedPortrait:async key=>{store.delete(key);store.delete(policy.portraitStoragePath(key));telemetry.cleanup++;}
  }
 });
 const pixels=Buffer.alloc(600*800*3);
@@ -74,6 +78,11 @@ test("Canonical portrait paths remain stable and congress-scoped (migration-free
   congress+"/"+candidate+".jpg",congress,delegate,null),false);
  assert.equal(policy.isAuthorizedBchPhotoKey(policy.bchPortraitKey(congress,candidate),congress,candidate),true);
  assert.equal(policy.isCanonicalPortraitKey("people/../../secrets.jpg"),false);
+ assert.equal(policy.portraitStoragePath(path),
+  "media/congresses/"+congress+"/delegates/"+delegate+".jpg");
+ assert.equal(policy.portraitStoragePath(policy.bchPortraitKey(congress,candidate)),
+  "media/congresses/"+congress+"/bch/"+candidate+".jpg");
+ assert.equal(policy.portraitStoragePath(policy.sharedPortraitKey(user)),"media/people/"+user+".jpg");
  assert.throws(()=>policy.sharedPortraitKey("../secret"));
 });
 

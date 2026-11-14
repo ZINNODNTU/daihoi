@@ -24,7 +24,7 @@ test("Global RBAC keeps congress sidebar and breadcrumbs when navigated from a c
  assert.match(page,/searchParams:Promise<\{congressId\?:string\|string\[\]\}>/);
  assert.match(page,/if\(requestedId!==undefined&&\(typeof requestedId!=="string"\|\|!UUID.test\(requestedId\)\)\)/);
  assert.match(page,/if\(error\|\|!data\)notFound\(\)/);
- assert.match(page,/congressId=\{congress\?\.id\} congressName=\{congress\?\.name\} congressKind=\{congress\?\.kind\}/);
+ assert.match(page,/congressId=\{sidebar\?\.id\} congressName=\{sidebar\?\.name\} congressKind=\{sidebar\?\.kind\}/);
  assert.match(page,/accessRole="super_admin"/);
  assert.match(page,/<AccessControlClient key=\{congress\?\.id\|\|"global"\} initialCongressId=\{congress\?\.id\}/);
  assert.match(shell,/href:"\/dashboard\/access"\+\(congressId\?"\?congressId="/);

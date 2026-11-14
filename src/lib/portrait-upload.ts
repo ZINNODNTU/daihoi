@@ -3,10 +3,10 @@ import {createHash} from "node:crypto";
 import sharp from "sharp";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {
- PORTRAIT_BUCKET,invalidatePortrait,removeDerivedPortraits,
+ PORTRAIT_BUCKET,derivedPortraitPaths,invalidatePortrait,removeDerivedPortraits,
  removeUnreferencedPortrait
 } from "@/lib/portrait-storage";
-import {isCanonicalPortraitKey} from "@/lib/portrait-policy";
+import {isCanonicalPortraitKey,portraitStoragePath} from "@/lib/portrait-policy";
 
 const MAX_UPLOAD=2*1024*1024;
 const MAX_PIXELS=5_000_000;
@@ -51,9 +51,9 @@ export async function preparePortrait(file:File){
  }
 }
 function notFound(error:unknown){
- const e=error as {status?:number;statusCode?:string;error?:string;message?:string};
+ const e=error as {status?:number;statusCode?:string;error?:string;message?:string;name?:string};
  return e&&(
-  e.status===404||e.statusCode==="404"||e.error==="NoSuchKey"||
+  e.status===404||e.statusCode==="404"||e.name==="NotFound"||e.error==="NoSuchKey"||
   e.error==="not_found"||e.message==="Object not found"
  );
 }
@@ -77,13 +77,20 @@ export async function savePortraitObject(options:{
   throw new PortraitError("Dung lượng ảnh không hợp lệ.",400);
  return locked(path,async()=>{
   const storage=createAdminClient().storage.from(PORTRAIT_BUCKET);
-  const existing=await storage.download(path);
+  const physical=portraitStoragePath(path);
+  const existing=await storage.download(physical);
   if(existing.error&&!notFound(existing.error))
    throw new PortraitError("Không kiểm tra được ảnh trong Storage.",502);
-  const old=existing.data?Buffer.from(await existing.data.arrayBuffer()):null;
+  const current=existing.data?Buffer.from(await existing.data.arrayBuffer()):null;
+  const legacy=current?null:await storage.download(path);
+  if(legacy?.error&&!notFound(legacy.error))
+   throw new PortraitError("Không kiểm tra được ảnh lưu trước đây.",502);
+  const old=current||(legacy?.data?Buffer.from(await legacy.data.arrayBuffer()):null);
   const changed=!old||!old.equals(bytes);
-  if(changed){
-   const upload=await storage.upload(path,bytes,{
+  // Only one physical master under media/, with a compatibility read for
+  // existing flat UUID folders. Even identical legacy images get reorganized.
+  if(changed||!current){
+   const upload=await storage.upload(physical,bytes,{
     contentType:"image/jpeg",cacheControl:"0",upsert:true
    });
    if(upload.error){
@@ -93,17 +100,37 @@ export async function savePortraitObject(options:{
   }
   try{await commit(changed);}
   catch(error){
-   // If the master did not exist prior to this request, it cannot safely be
-   // referenced by this failed operation. Confirm DB references before removal.
-   if(!old){
-    try{await removeUnreferencedPortrait(path,"");}
-    catch(cleanupError){console.error("portrait recovery",cleanupError instanceof Error?cleanupError.name:"unknown");}
+   // Preserve the prior master if linking failed. Never purge an existing
+   // legacy portrait while the related database update is unfinished.
+   if(!current){
+    try{
+     if(legacy?.data){
+      // Preserve the old referenced file if the database transaction failed.
+      await storage.remove([physical]);
+     }else{
+      // This may be retained if another row now references the logical key.
+      await removeUnreferencedPortrait(path,"");
+     }
+    }catch(cleanupError){
+     console.error("portrait recovery",cleanupError instanceof Error?cleanupError.name:"unknown");
+    }
+   }else if(changed){
+    const recovered=await storage.upload(physical,current,{
+     contentType:"image/jpeg",cacheControl:"0",upsert:true
+    });
+    if(recovered.error)console.error("portrait rollback unavailable",recovered.error.name);
    }
    throw error;
   }
-  if(changed){
+  if(changed||!current){
    invalidatePortrait(path);
    await removeDerivedPortraits(path);
+  }
+  // Legacy image is redundant once its media/ replacement is successfully
+  // committed. Never delete the legacy path before the new object is ready.
+  if(legacy?.data){
+   const {error:cleanError}=await storage.remove([path,...derivedPortraitPaths(path)]);
+   if(cleanError)console.warn("legacy portrait cleanup unavailable",cleanError.name);
   }
   return {changed,sha256:digest,size:bytes.length};
  });

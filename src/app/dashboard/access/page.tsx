@@ -3,6 +3,7 @@ import {Suspense} from "react";
 import {getAuth} from "@/lib/auth";
 import {AppShell} from "@/components/app-shell";
 import {AccessControlClient} from "@/components/access-control-client";
+import {resolveAdminSidebarCongress} from "@/lib/admin-sidebar-context";
 
 export const dynamic="force-dynamic";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -25,9 +26,10 @@ export default async function AdminAccessPage({searchParams}:{
   if(error||!data)notFound();
   congress=data;
  }
+ const sidebar=congress||await resolveAdminSidebarCongress(supabase);
  return <AppShell name={profile.full_name||user.email||"Quản trị"}
   canViewSystemLogs accessRole="super_admin"
-  congressId={congress?.id} congressName={congress?.name} congressKind={congress?.kind}>
+  congressId={sidebar?.id} congressName={sidebar?.name} congressKind={sidebar?.kind}>
   <Suspense fallback={<div className="p-8 text-sm">Đang mở quản lý RBAC...</div>}>
    <AccessControlClient key={congress?.id||"global"} initialCongressId={congress?.id}/>
   </Suspense>

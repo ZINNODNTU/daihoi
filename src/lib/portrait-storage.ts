@@ -1,6 +1,7 @@
 import "server-only";
 import sharp from "sharp";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {isCanonicalPortraitKey,portraitStoragePath} from "@/lib/portrait-policy";
 
 export const PORTRAIT_BUCKET="delegate-photos";
 export type PortraitWidth=96|160|600;
@@ -21,6 +22,12 @@ const cache=new Map<string,{bytes:Buffer;expires:number}>();
 const inflight=new Map<string,Promise<Buffer|null>>();
 let cachedBytes=0;
 const revisions=new Map<string,number>();
+function isMissingObject(error:{status?:number;statusCode?:string;error?:string;message?:string;name?:string}):boolean{
+ if(error.name==="NotFound")return true;
+ return error.status===404||error.statusCode==="404"||error.error==="NoSuchKey"||
+  error.error==="not_found"||error.message==="Object not found"||
+  error.message==="The resource was not found";
+}
 
 export function invalidatePortrait(path:string){
  revisions.set(path,(revisions.get(path)||0)+1);
@@ -59,8 +66,19 @@ export async function readPortrait(path:string,width:PortraitWidth):Promise<Buff
  const promise=(async()=>{
   let source:Buffer;
   if(width===600){
-   const {data,error}=await createAdminClient().storage.from(PORTRAIT_BUCKET).download(path);
-   if(error||!data)return null;
+   if(!isCanonicalPortraitKey(path))return null;
+   const storage=createAdminClient().storage.from(PORTRAIT_BUCKET);
+   const physical=portraitStoragePath(path);
+   // New assets use one media root; existing photos continue to load until
+   // the optional copy-first migration has been verified.
+   const result=await storage.download(physical);
+   let data=result.data;
+   if(!data){
+    if(result.error&&!isMissingObject(result.error))return null;
+    const legacy=await storage.download(path);
+    if(legacy.error||!legacy.data)return null;
+    data=legacy.data;
+   }
    source=Buffer.from(await data.arrayBuffer());
   }else{
    const original=await readPortrait(path,600);
@@ -83,9 +101,10 @@ export async function readPortrait(path:string,width:PortraitWidth):Promise<Buff
 
 /** Remove only reproducible legacy thumbnails. No primary photo is removed. */
 export async function removeDerivedPortraits(path:string){
- if(!/\.jpg$/i.test(path))return;
+ if(!isCanonicalPortraitKey(path))return;
+ const variants=[...derivedPortraitPaths(path),...derivedPortraitPaths(portraitStoragePath(path))];
  const {error}=await createAdminClient().storage.from(PORTRAIT_BUCKET)
-  .remove(derivedPortraitPaths(path));
+  .remove(variants);
  if(error)console.warn("portrait variant cleanup",error.name);
 }
 
@@ -94,8 +113,7 @@ export async function removeDerivedPortraits(path:string){
  * Caller MUST have already verified authorization and committed the new path.
  */
 export async function removeUnreferencedPortrait(path:string,newPath:string){
- if(!path||path===newPath||
-  !/^(?:people\/[0-9a-f-]{36}|[0-9a-f-]{36}\/(?:bch\/)?[0-9a-f-]{36})\.jpg$/i.test(path))
+ if(!path||path===newPath||!isCanonicalPortraitKey(path))
   return;
  const db=createAdminClient();
  const [delegate,bch]=await Promise.all([
@@ -103,6 +121,9 @@ export async function removeUnreferencedPortrait(path:string,newPath:string){
   db.from("bch_candidates").select("id",{head:true,count:"exact"}).eq("photo_path",path)
  ]);
  if(delegate.error||bch.error||delegate.count!==0||bch.count!==0)return;
- const {error}=await db.storage.from(PORTRAIT_BUCKET).remove([path,...derivedPortraitPaths(path)]);
+ const physical=portraitStoragePath(path);
+ const {error}=await db.storage.from(PORTRAIT_BUCKET).remove([
+  path,physical,...derivedPortraitPaths(path),...derivedPortraitPaths(physical)
+ ]);
  if(error)console.warn("unused portrait cleanup",error.name);
 }

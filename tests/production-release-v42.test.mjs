@@ -25,7 +25,7 @@ test("Admin dashboard visibly links to system logs only for scoped privileged ac
  const logs=read("src/app/dashboard/system-logs/page.tsx");
  const bch=read("src/components/bch-candidates-client.tsx");
  assert.match(dashboard,/canViewSystemLogs\s*&&\s*<Link href="\/dashboard\/system-logs"/);
- assert.match(shell,/canViewSystemLogs\?\[\{id:"system-admin",title:"Quản trị hệ thống",items:\[globalAccess,logs\]\}\]/);
+ assert.match(shell,/canViewSystemLogs\?\[\{id:"system-admin",title:"Quản trị hệ thống",items:\[globalAccess,media,logs\]\}\]/);
  assert.match(logs,/if\(!access.allowed\)redirect\("\/dashboard"\)/);
  assert.match(bch,/draggable=\{canReorder\}/);
  assert.match(bch,/dropCandidate\(item.id\)/);
