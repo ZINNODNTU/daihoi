@@ -80,14 +80,72 @@ test("V75 public BCH endpoint is read-only, validates live congress, and exclude
 test("Guest main page only transfers BCH count, loading full profiles on click",()=>{
  const page=read("src/app/guest/[slug]/page.tsx");
  const component=read("src/components/guest-congress-reader.tsx");
- assert.match(page,/select\("id",\{head:true,count:"exact"\}\)/);
- assert.doesNotMatch(page,/select\("id,congress_id,full_name,birth_year/);
+ assert.match(page,/bch_candidates\(count\)/);
+ assert.match(page,/documents\(\$\{PUBLIC_DOCUMENT\}\)/);
+ assert.match(page,/\.eq\("documents\.delegate_visible",true\)/);
+ assert.match(page,/\.eq\("status","live"\)/);
+ assert.match(page,/\.limit\(500,\{referencedTable:"documents"\}\)/);
+ assert.match(page,/\.abortSignal\(AbortSignal\.timeout\(9000\)\)/);
+ assert.doesNotMatch(page,/from\("documents"\)|from\("bch_candidates"\)/);
+ assert.doesNotMatch(page,/votes_received|total_ballots/);
  assert.match(component,/fetch\("\/api\/guest\/"/);
  assert.match(component,/credentials:"omit",cache:"no-store"/);
  assert.match(component,/controller\.abort\(\)/);
  assert.match(component,/if\(tab!=="bch"/);
  assert.match(component,/loadError\?/);
 });
+test("Guest RSC loads one live public snapshot, exact count, visible documents and denies closed congress",async()=>{
+ const calls=[];
+ let mode="live";
+ const publicDocument={id:"f1",file_name:"Đề án",delegate_visible:true,display_order:0};
+ const query={
+  select(fields){calls.push(["select",fields]);return this},
+  eq(field,value){calls.push(["eq",field,value]);return this},
+  order(field,options){calls.push(["order",field,options]);return this},
+  limit(n,options){calls.push(["limit",n,options]);return this},
+  abortSignal(signal){calls.push(["signal",signal]);return this},
+  async maybeSingle(){
+   if(mode==="failed")return {error:{code:"XX000"},data:null};
+   if(mode==="closed")return {error:null,data:null};
+   return {error:null,data:{
+    id,slug,name:"Đại hội",kind:"doan",term:null,venue:null,
+    starts_at:null,ends_at:null,status:"live",
+    documents:[publicDocument],
+    bch_candidates:[{count:2}]
+   }};
+  }
+ };
+ const page=compile("src/app/guest/[slug]/page.tsx",{
+  "next/navigation":{notFound:()=>{throw new Error("NEXT_NOT_FOUND")}},
+  "@/lib/supabase/admin":{createAdminClient:()=>({
+   from(table){calls.push(["from",table]);return query}
+  })},
+  "@/components/guest-congress-reader":{GuestCongressReader:"guestReader"},
+  "react/jsx-runtime":{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})}
+ });
+ const run=(s=slug)=>page.default({params:Promise.resolve({slug:s})});
+ const rendered=await run();
+ assert.equal(rendered.type,"guestReader");
+ assert.equal(rendered.props.candidateCount,2);
+ assert.deepEqual(rendered.props.docs,[publicDocument]);
+ assert.equal(rendered.props.congress.id,id);
+ assert.equal(rendered.props.congress.bch_candidates,undefined);
+ assert.equal(rendered.props.congress.documents,undefined);
+ assert.deepEqual(calls.filter(x=>x[0]==="from"),[["from","congresses"]]);
+ assert.ok(calls.some(x=>x[0]==="select"&&x[1].includes("bch_candidates(count)")&&x[1].includes("documents(")));
+ assert.ok(calls.some(x=>x[0]==="eq"&&x[1]==="documents.delegate_visible"&&x[2]===true));
+ assert.ok(calls.some(x=>x[0]==="eq"&&x[1]==="status"&&x[2]==="live"));
+ assert.deepEqual(calls.find(x=>x[0]==="limit"),["limit",500,{referencedTable:"documents"}]);
+ assert.ok(calls.some(x=>x[0]==="signal"&&x[1] instanceof AbortSignal));
+ await assert.rejects(()=>run("bad.slug"),/NEXT_NOT_FOUND/);
+ mode="closed";
+ await assert.rejects(()=>run(),/NEXT_NOT_FOUND/);
+ mode="failed";
+ const unavailable=await run();
+ assert.equal(unavailable.type,"main");
+ assert.equal(unavailable.props.role,"alert");
+});
+
 test("Supabase media pagination counts records via HEAD, queries at most 36 records per view",()=>{
  const page=read("src/app/dashboard/media/page.tsx");
  const component=read("src/components/media-library-client.tsx");

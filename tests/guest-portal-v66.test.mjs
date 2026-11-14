@@ -168,7 +168,7 @@ test("Public guest UI has no code entry and APIs remain read-only",()=>{
  assert.match(entry,/href=\{"\/guest\/"/);
  assert.match(list,/\.eq\("status","live"\)/);
  assert.match(guest,/\.eq\("status","live"\)/);
- assert.match(guest,/\.eq\("delegate_visible",true\)/);
+ assert.match(guest,/\.eq\("documents\.delegate_visible",true\)/);
  assert.match(docs,/hasPublicCongressAccess\(doc.congress_id\)/);
  assert.match(images,/hasPublicCongressAccess\(candidate.congress_id\)/);
  assert.match(read("src/app/api/attendance/self-checkin/route.ts"),/if\(!user\)return fail/);

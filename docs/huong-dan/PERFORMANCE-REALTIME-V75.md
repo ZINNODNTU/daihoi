@@ -54,3 +54,17 @@ Truy vấn cũ gọi `congresses` rồi `bch_candidates` tuần tự. Truy vấn
 **Đo kiểm chứng truy vấn thật (mẫu đơn, không phải benchmark):** truy vấn `congresses` 1.196 ms; `bch_candidates` 454 ms; truy vấn gộp 234 ms. Cả hai phương án đều trả đúng 2 ứng viên có cùng ID/thứ tự. Số đo có thể bị ảnh hưởng bởi cold start, DNS và cache kết nối nên không dùng để cam kết phần trăm cải thiện.
 
 **Kiểm chứng release:** build, lint, unit tests; trên production kiểm tra HTTP 200, `Server-Timing`, danh sách BCH đúng, Đại hội đóng 404 và không rò rỉ trường `votes_received`/`total_ballots`. Sau đó chạy lại k6 smoke ở 5 VUs rồi mới tăng theo 20 → 50 → 100 → 200 VUs có giám sát logs và ngưỡng dừng; không tải thử các API ghi production. Nếu p95 vẫn cao, đối chiếu vùng chạy Vercel Function và vùng Supabase trước khi đổi hạ tầng.
+
+## 6. V77 — giảm tải render trang khách /guest/[slug] (14/11/2026)
+
+K6 trên máy ADMIN ở giai đoạn nâng 20 VUs ghi 38 requests, 37 HTTP 200, 1 request timeout 12 giây tại `GET /guest/dhivcntt`. p95 của các request đo được là 2.265 ms; chỉ với 38 mẫu chưa kết luận nguyên nhân chính thức hoặc sức tải tối đa.
+
+Bản V77 chuyển trang chi tiết Đại hội từ **ba truy vấn Supabase** (congress → documents + BCH count) thành **một truy vấn PostgREST embedded**:
+- `congresses`: vẫn bắt buộc `slug` hợp lệ và `status=live` ở mỗi request, không cache chung.
+- `documents`: vẫn chỉ các tài liệu `delegate_visible=true`, giữ thứ tự `display_order`, `created_at DESC` và giới hạn 500 mục.
+- `bch_candidates(count)`: dùng phép đếm aggregate chính xác tại database, không truyền hồ sơ ứng viên, số phiếu hoặc dữ liệu riêng tư trong props ban đầu.
+- Giới hạn thời gian chờ upstream 9 giây, cảnh báo `[guest-page]` khi truy vấn vượt 2,5 giây; lỗi Supabase không tiết lộ chi tiết kết nối cho khách.
+
+Đã kiểm chứng truy vấn read-only với dữ liệu production: Đại hội trùng ID, tài liệu hiện công bố bằng nhau (0), số ứng viên BCH bằng nhau (2). Kiểm thử regression mock kiểm tra query chỉ một lần, điều kiện `live`, danh sách tài liệu, số lượng, trường bảo mật, slug không hợp lệ/Đại hội đóng và lỗi database. Không cần migration hay thay đổi RLS.
+
+**Hậu kiểm:** đo latency qua nhiều lần tải, theo dõi Vercel runtime logs cùng khoảng thời gian với k6. Các trang RSC có thể trả HTML cảnh báo với HTTP 200 khi database thất bại, vì vậy test phải kiểm tra nội dung trang ngoài HTTP status. Chạy lại k6 20 VUs trước khi tăng 50–200; tách riêng request tới `/guest/[slug]` và `/api/guest/[slug]/bch`, đo HTTP p95, timeout, lỗi và ngưỡng dừng. Chưa kết luận hệ thống chịu 200 người đồng thời.

@@ -12,7 +12,7 @@ test("Guest document view defers BCH swipe library until selecting BCH tab",()=>
  assert.match(src,/activeDocuments\?[\s\S]*<DelegateDocumentsList/);
  assert.match(src,/candidates\?\.length\?<DelegateBchCarousel/);
  assert.match(src,/\/api\/guest\/.*\/bch/);
- assert.match(read("src/app/guest/[slug]/page.tsx"),/head:true,count:"exact"/);
+ assert.match(read("src/app/guest/[slug]/page.tsx"),/bch_candidates\(count\)/);
  assert.match(read("src/components/delegate-bch-carousel.tsx"),
   /import \{SwipeableCards\} from "@daformat\/react-swipeable-cards"/);
 });

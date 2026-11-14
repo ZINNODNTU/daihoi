@@ -34,7 +34,7 @@ test("Remove verbose guest access disclaimer without changing access rights",()=
  assert.match(detail,/DelegateBchCarousel/);
  assert.match(detail,/Ứng viên Ban Chấp hành/);
  assert.match(source("src/app/guest/[slug]/page.tsx"),/\.eq\("status","live"\)/);
- assert.match(source("src/app/guest/[slug]/page.tsx"),/\.eq\("delegate_visible",true\)/);
+ assert.match(source("src/app/guest/[slug]/page.tsx"),/\.eq\("documents\.delegate_visible",true\)/);
  assert.match(source("src/app/api/documents/[id]/route.ts"),/hasPublicCongressAccess/);
  assert.match(source("src/app/api/bch-candidates/[id]/photo/route.ts"),/hasPublicCongressAccess/);
 });
