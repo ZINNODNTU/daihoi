@@ -91,8 +91,12 @@ test("Loại Đại hội điều khiển logo ở quản trị, thẻ, màn hì
  assert.match(card,/congressBranding\[item\.kind\]\.src/);
 });
 
-test("Màn chiếu làm mới sơ đồ định kỳ thay vì giữ dữ liệu ghế cũ 2 phút",()=>{
+test("Màn chiếu đối soát ghế theo Realtime và chu kỳ dự phòng, không giữ dữ liệu cũ 2 phút",()=>{
  const live=read("../src/components/use-attendance-live.ts");
- assert.match(live,/\},10000\);/);
- assert.doesNotMatch(live,/\},120000\);/);
+ assert.match(live,/FULL_FALLBACK_MS=10000/);
+ assert.match(live,/FULL_REALTIME_MS=30000/);
+ assert.match(live,/scheduleStructureRefresh/);
+ assert.match(live,/seat_assignments/);
+ assert.match(live,/visibilitychange/);
+ assert.doesNotMatch(live,/120000/);
 });

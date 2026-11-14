@@ -6,6 +6,9 @@ import type {LiveCheckin,LiveDashboardData} from "@/lib/attendance-live";
 
 type Connection="connecting"|"realtime"|"fallback";
 const WELCOME_MS=6200;
+const FULL_REALTIME_MS=30000;
+const FULL_FALLBACK_MS=10000;
+const STRUCTURE_DEBOUNCE_MS=700;
 const SORT_NEWEST=(a:LiveCheckin,b:LiveCheckin)=>
  b.checked_in_at.localeCompare(a.checked_in_at)||b.id.localeCompare(a.id);
 
@@ -25,8 +28,12 @@ export function useAttendanceLive(congressId:string,sessionId:string){
  useEffect(()=>{
   let active=true;
   let syncBusy=false;
+  let fullBusy=false;
   let realtimeReady=false;
   let lastPoll=0;
+  let lastFull=0;
+  let structuralTimer:ReturnType<typeof setTimeout>|null=null;
+  let structuralPending=false;
   let welcomeTimer:ReturnType<typeof setTimeout>|null=null;
   let cursor="";
   let snapshot:LiveDashboardData|null=null;
@@ -79,14 +86,18 @@ export function useAttendanceLive(congressId:string,sessionId:string){
    nextWelcome();
   }
   async function full(initial=false){
-   if(!active||!sessionId)return;
-   const response=await fetch("/api/attendance/live?"+base.toString(),{
-    cache:"no-store",credentials:"same-origin"
-   });
-   const body=await response.json();
-   if(!response.ok)throw new Error(body.error||"Không đồng bộ được bảng điểm danh.");
-   if(!active)return;
-   const next=body as LiveDashboardData;
+   if(!active||!sessionId||fullBusy)return;
+   fullBusy=true;
+   // Also throttle failed fetches: never retry full snapshots every 2 seconds.
+   lastFull=Date.now();
+   try{
+    const response=await fetch("/api/attendance/live?"+base.toString(),{
+     cache:"no-store",credentials:"same-origin"
+    });
+    const body=await response.json();
+    if(!response.ok)throw new Error(body.error||"Không đồng bộ được bảng điểm danh.");
+    if(!active)return;
+    const next=body as LiveDashboardData;
    if(initial||!snapshot){
     snapshot=next;
     seen.clear();
@@ -106,7 +117,25 @@ export function useAttendanceLive(congressId:string,sessionId:string){
     snapshot={...next,checkins:[...combined.values()].sort(SORT_NEWEST).slice(0,1000)};
     setData(snapshot);
    }
-   setError("");
+    setError("");
+    lastFull=Date.now();
+   }finally{
+    fullBusy=false;
+    if(active&&structuralPending){
+     structuralPending=false;
+     scheduleStructureRefresh();
+    }
+   }
+  }
+  function scheduleStructureRefresh(){
+   if(!active)return;
+   if(fullBusy){structuralPending=true;return;}
+   if(structuralTimer)clearTimeout(structuralTimer);
+   structuralTimer=setTimeout(()=>{
+    structuralTimer=null;
+    if(active&&document.visibilityState!=="hidden")
+     void full().catch(e=>{if(active)setError(e instanceof Error?e.message:"Không đồng bộ được sơ đồ.");});
+   },STRUCTURE_DEBOUNCE_MS);
   }
   async function updates(){
    if(!active||!snapshot||!sessionId||syncBusy||document.visibilityState==="hidden")return;
@@ -137,7 +166,7 @@ export function useAttendanceLive(congressId:string,sessionId:string){
     await full(true);
     if(!active)return;
     const client=createClient();
-    channel=client.channel("attendance-checkins:"+congressId+":"+sessionId)
+    let liveChannel=client.channel("attendance-checkins:"+congressId+":"+sessionId)
      .on("postgres_changes",{
       event:"INSERT",schema:"public",table:"checkins",
       filter:"session_id=eq."+sessionId
@@ -145,8 +174,20 @@ export function useAttendanceLive(congressId:string,sessionId:string){
       const row=payload.new as LiveCheckin & {congress_id?:string};
       if(row.congress_id!==congressId||!row.id||!row.delegate_id||!row.checked_in_at)return;
       accept([row]);
-     })
-     .subscribe(status=>{
+     });
+    // Structural edits trigger an immediate coalesced refresh if those
+    // tables are published to Realtime; polling remains the fallback.
+    if(realtimeConfigured){
+     for(const table of ["seats","seat_assignments","seating_layouts"] as const){
+      liveChannel=liveChannel.on("postgres_changes",{
+       event:"*",schema:"public",table,filter:"congress_id=eq."+congressId
+      },()=>scheduleStructureRefresh());
+     }
+     liveChannel=liveChannel.on("postgres_changes",{
+      event:"UPDATE",schema:"public",table:"attendance_sessions",filter:"id=eq."+sessionId
+     },()=>scheduleStructureRefresh());
+    }
+    channel=liveChannel.subscribe(status=>{
       if(!active)return;
       if(status==="SUBSCRIBED"){
        realtimeReady=realtimeConfigured;setConnection(realtimeConfigured?"realtime":"fallback");
@@ -168,13 +209,23 @@ export function useAttendanceLive(congressId:string,sessionId:string){
    if(!realtimeReady||Date.now()-lastPoll>=15000)void updates();
   },3000);
   const snapshotTimer=setInterval(()=>{
-   if(active&&document.visibilityState!=="hidden"&&snapshot)
-    void full().catch(e=>setError(e instanceof Error?e.message:"Không tải được sơ đồ mới."));
-  },10000);
+   if(!active||document.visibilityState==="hidden")return;
+   if(!snapshot){
+    if(Date.now()-lastFull>=FULL_FALLBACK_MS)
+     void full(true).catch(e=>{if(active)setError(e instanceof Error?e.message:"Chưa tải được điểm danh.");});
+    return;
+   }
+   // Realtime covers arrivals and published layout edits; a slower full
+   // reconciliation still bounds staleness when a publication is missing.
+   const interval=realtimeReady?FULL_REALTIME_MS:FULL_FALLBACK_MS;
+   if(Date.now()-lastFull>=interval)
+    void full().catch(e=>{if(active)setError(e instanceof Error?e.message:"Không tải được sơ đồ mới.");});
+  },2000);
   const visible=()=>{
    if(document.visibilityState==="visible"){
     nextWelcome(); // Do not skip greetings while projector tab was hidden.
     void updates();
+    void full(!snapshot).catch(e=>{if(active)setError(e instanceof Error?e.message:"Không đồng bộ được sơ đồ.");});
     if(!realtimeReady)setConnection("fallback");
    }
   };
@@ -183,6 +234,7 @@ export function useAttendanceLive(congressId:string,sessionId:string){
    active=false;
    clearInterval(timer);clearInterval(snapshotTimer);
    if(welcomeTimer)clearTimeout(welcomeTimer);
+   if(structuralTimer)clearTimeout(structuralTimer);
    document.removeEventListener("visibilitychange",visible);
    if(channel)void createClient().removeChannel(channel);
   };

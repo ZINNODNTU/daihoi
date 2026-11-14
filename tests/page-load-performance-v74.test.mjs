@@ -10,21 +10,25 @@ test("Guest document view defers BCH swipe library until selecting BCH tab",()=>
  assert.doesNotMatch(src,/^import \{DelegateBchCarousel\} from/m);
  assert.match(src,/const \[tab,setTab\]=useState<GuestTab>\("documents"\)/);
  assert.match(src,/activeDocuments\?[\s\S]*<DelegateDocumentsList/);
- assert.match(src,/candidates\.length\?<DelegateBchCarousel/);
+ assert.match(src,/candidates\?\.length\?<DelegateBchCarousel/);
+ assert.match(src,/\/api\/guest\/.*\/bch/);
+ assert.match(read("src/app/guest/[slug]/page.tsx"),/head:true,count:"exact"/);
  assert.match(read("src/components/delegate-bch-carousel.tsx"),
   /import \{SwipeableCards\} from "@daformat\/react-swipeable-cards"/);
 });
 
-test("Admin media library initially renders only 36 lazy-loaded images, without changing filtering",()=>{
+test("Media library fetches paginated Supabase rows instead of client-side hiding",()=>{
  const src=read("src/components/media-library-client.tsx");
- assert.match(src,/useState\(36\)/);
- assert.match(src,/const visible=filtered\.slice\(0,visibleCount\)/);
- assert.match(src,/visible\.map\(item=>/);
- assert.doesNotMatch(src,/\{filtered\.map\(item=>/);
+ const route=read("src/app/dashboard/media/page.tsx");
+ assert.match(route,/PAGE_SIZE=36/);
+ assert.match(route,/MIXED_SIZE=18/);
+ assert.match(route,/\.range\(from,to\)/);
+ assert.match(route,/head:true/);
+ assert.doesNotMatch(route,/\.limit\(1000\)/);
+ assert.match(src,/items\.map\(item=>/);
  assert.match(src,/loading="lazy" decoding="async"/);
- assert.match(src,/setVisibleCount\(n=>n\+36\)/);
- assert.match(src,/setFilter\(tab\.id\);setVisibleCount\(36\)/);
- assert.match(src,/setSearch\(e\.target\.value\);setVisibleCount\(36\)/);
+ assert.match(src,/role="search"/);
+ assert.match(src,/pageCount>1/);
 });
 
 test("Protected layouts share React-request cached Supabase auth and RBAC without persistent user caching",()=>{

@@ -5,20 +5,31 @@ import {getAuth} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {resolveAdminSidebarCongress} from "@/lib/admin-sidebar-context";
 import {AppShell} from "@/components/app-shell";
-import {MediaLibraryClient,type MediaEntry} from "@/components/media-library-client";
+import {MediaLibraryClient,type MediaEntry,type MediaCounts,type MediaFilter} from "@/components/media-library-client";
 
 export const dynamic="force-dynamic";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PAGE_SIZE=36;
+const MIXED_SIZE=18;
+const FILTERS=new Set(["all","delegate","bch","missing"]);
+const cleanSearch=(value:unknown)=>typeof value==="string"?
+ value.trim().replace(/[^\p{L}\p{N}\s-]/gu,"").replace(/\s+/g," ").slice(0,64):"";
+
 export default async function MediaLibraryPage({searchParams}:{
- searchParams:Promise<{congressId?:string}>
+ searchParams:Promise<{congressId?:string;filter?:string;q?:string;page?:string}>
 }){
  const {supabase,user}=await getAuth();
  if(!user)redirect("/login");
  const {data:profile}=await supabase.from("profiles").select("platform_role,full_name")
   .eq("id",user.id).maybeSingle();
  if(profile?.platform_role!=="super_admin")redirect("/dashboard");
- const {congressId}=await searchParams;
- if(congressId&&(!UUID.test(congressId)||typeof congressId!=="string"))notFound();
+ const params=await searchParams;
+ const congressId=params.congressId;
+ if(congressId&&(typeof congressId!=="string"||!UUID.test(congressId)))notFound();
+ const filter:MediaFilter=FILTERS.has(params.filter||"")?params.filter as MediaFilter:"all";
+ const query=cleanSearch(params.q);
+ const requestedPage=typeof params.page==="string"&&/^[1-9]\d{0,3}$/.test(params.page)?
+  Number(params.page):1;
  const db=createAdminClient();
  const [{data:congresses,error:congressError},sidebar]=await Promise.all([
   db.from("congresses").select("id,name,kind,status")
@@ -28,23 +39,85 @@ export default async function MediaLibraryPage({searchParams}:{
  if(congressError)throw new Error("Không thể đọc danh sách Đại hội.");
  if(congressId&&!sidebar)notFound();
  const items:MediaEntry[]=[];
+ let summary:MediaCounts={total:0,linked:0,missing:0,delegates:0,candidates:0};
+ let totalMatches=0,pageCount=1,page=1;
  if(sidebar){
-  const [{data:delegates,error:delegatesError},{data:people,error:peopleError}]=await Promise.all([
-   db.from("delegates").select("id,full_name,unit,photo_path,auth_user_id")
-    .eq("congress_id",sidebar.id).eq("is_active",true)
-    .order("full_name").limit(1000),
-   db.from("bch_candidates").select("id,full_name,current_position,photo_path")
-    .eq("congress_id",sidebar.id).order("full_name").limit(1000)
+  const congress=sidebar.id;
+  // Query only record counts (HEAD), not full rows, for totals.
+  const countDelegateRows=(missing:boolean,term:string)=>{
+   let q=db.from("delegates").select("id",{count:"exact",head:true})
+    .eq("congress_id",congress).eq("is_active",true);
+   if(missing)q=q.is("photo_path",null);
+   if(term)q=q.or("full_name.ilike.*"+term+"*,unit.ilike.*"+term+"*");
+   return q;
+  };
+  const bchCountQuery=(missing:boolean,term:string)=>{
+   let q=db.from("bch_candidates").select("id",{count:"exact",head:true})
+    .eq("congress_id",congress);
+   if(missing)q=q.is("photo_path",null);
+   if(term)q=q.or("full_name.ilike.*"+term+"*,current_position.ilike.*"+term+"*");
+   return q;
+  };
+  const delegatePage=(missing:boolean,term:string,from:number,to:number)=>{
+   let q=db.from("delegates").select("id,full_name,unit,photo_path")
+    .eq("congress_id",congress).eq("is_active",true);
+   if(missing)q=q.is("photo_path",null);
+   if(term)q=q.or("full_name.ilike.*"+term+"*,unit.ilike.*"+term+"*");
+   return q.order("full_name").order("id").range(from,to);
+  };
+  const bchPage=(missing:boolean,term:string,from:number,to:number)=>{
+   let q=db.from("bch_candidates").select("id,full_name,current_position,photo_path")
+    .eq("congress_id",congress);
+   if(missing)q=q.is("photo_path",null);
+   if(term)q=q.or("full_name.ilike.*"+term+"*,current_position.ilike.*"+term+"*");
+   return q.order("full_name").order("id").range(from,to);
+  };
+  const [totalDelegates,missingDelegates,totalBch,missingBch]=await Promise.all([
+   countDelegateRows(false,""),countDelegateRows(true,""),
+   bchCountQuery(false,""),bchCountQuery(true,"")
   ]);
-  if(delegatesError||peopleError)throw new Error("Không thể đọc thông tin ảnh Đại hội.");
-  for(const item of delegates||[]){
-   items.push({id:item.id,kind:"delegate",name:item.full_name,
-    detail:item.unit||"",linked:Boolean(item.photo_path),
-    source:item.photo_path?.startsWith("people/")?"shared":"congress"});
+  if(totalDelegates.error||missingDelegates.error||totalBch.error||missingBch.error)
+   throw new Error("Không thể tổng hợp thư viện ảnh.");
+  const delegateCount=totalDelegates.count||0,bchCount=totalBch.count||0;
+  const missingCount=(missingDelegates.count||0)+(missingBch.count||0);
+  summary={total:delegateCount+bchCount,
+   linked:delegateCount+bchCount-missingCount,missing:missingCount,
+   delegates:delegateCount,candidates:bchCount};
+  const absent=filter==="missing";
+  // Counts and pages use the SAME search/absence conditions. Avoid loading
+  // hundreds of people merely to filter them in browser JavaScript.
+  const [delegateMatches,bchMatches]=await Promise.all([
+   filter==="bch"?Promise.resolve({count:0,error:null}):
+    !query?(absent?missingDelegates:totalDelegates):countDelegateRows(absent,query),
+   filter==="delegate"?Promise.resolve({count:0,error:null}):
+    !query?(absent?missingBch:totalBch):bchCountQuery(absent,query)
+  ]);
+  if(delegateMatches.error||bchMatches.error)
+   throw new Error("Không thể tìm kiếm hồ sơ ảnh.");
+  const dCount=delegateMatches.count||0,bCount=bchMatches.count||0;
+  totalMatches=dCount+bCount;
+  const mixed=filter==="all"||filter==="missing";
+  const batch=mixed?MIXED_SIZE:PAGE_SIZE;
+  pageCount=Math.max(1,mixed?
+   Math.max(Math.ceil(dCount/batch),Math.ceil(bCount/batch)):
+   Math.ceil(totalMatches/batch));
+  page=Math.min(requestedPage,pageCount);
+  const from=(page-1)*batch,to=from+batch-1;
+  const [delegateRows,bchRows]=await Promise.all([
+   dCount?delegatePage(absent,query,from,to):
+    Promise.resolve({data:[],error:null}),
+   bCount?bchPage(absent,query,from,to):
+    Promise.resolve({data:[],error:null})
+  ]);
+  if(delegateRows.error||bchRows.error)throw new Error("Không thể đọc trang thư viện ảnh.");
+  for(const entry of delegateRows.data||[]){
+   items.push({id:entry.id,kind:"delegate",name:entry.full_name,
+    detail:entry.unit||"",linked:Boolean(entry.photo_path),
+    source:entry.photo_path?.startsWith("people/")?"shared":"congress"});
   }
-  for(const item of people||[]){
-   items.push({id:item.id,kind:"bch",name:item.full_name,
-    detail:item.current_position||"",linked:Boolean(item.photo_path),source:"congress"});
+  for(const entry of bchRows.data||[]){
+   items.push({id:entry.id,kind:"bch",name:entry.full_name,
+    detail:entry.current_position||"",linked:Boolean(entry.photo_path),source:"congress"});
   }
  }
  return <AppShell name={profile.full_name||user.email||"Quản trị"}
@@ -78,15 +151,14 @@ export default async function MediaLibraryPage({searchParams}:{
     <p className="min-w-0 font-mono">media/people/</p>
    </div>
    <p className="mt-3 text-[11px] leading-6 text-[#788e9d]">
-    Các đường dẫn cũ vẫn được đọc tương thích; ảnh mới tự lưu về cấu trúc trên.
-    Thư mục hiển thị là đường dẫn Storage thực, còn dữ liệu hồ sơ giữ nguyên.
+    Ảnh được phân nhóm trong Storage và đọc qua API có kiểm tra quyền.
    </p>
   </section>
   <section className="workspace-panel mb-5 px-5 py-4">
    <div className="flex flex-wrap items-center gap-3">
     <span className="shrink-0 text-[12px] font-bold text-[#415f74]">Chọn Đại hội</span>
     <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-     {(congresses||[]).map(c=><Link key={c.id} href={"/dashboard/media?congressId="+c.id}
+     {(congresses||[]).map(c=><Link key={c.id} prefetch={false} href={"/dashboard/media?congressId="+c.id}
       className={"inline-flex min-h-10 max-w-full items-center gap-2 rounded-lg border px-3 py-2 text-[11px] font-bold "+
        (sidebar?.id===c.id?"border-[#9ecbdc] bg-[#e5f2f8] text-[#1f6b8d]":"border-[#e0e9ef] bg-white text-[#658294]")}>
       <span className="max-w-[270px] truncate">{c.name}</span>
@@ -95,7 +167,9 @@ export default async function MediaLibraryPage({searchParams}:{
     </div>
    </div>
   </section>
-  {sidebar?<MediaLibraryClient items={items}/>:
+  {sidebar?<MediaLibraryClient items={items} summary={summary}
+   filter={filter} query={query} congressId={sidebar.id}
+   page={page} pageCount={pageCount} totalMatches={totalMatches}/>:
    <div className="workspace-panel p-9 text-center text-[13px] text-[#69899c]">
     Chưa có Đại hội để quản lý thư viện ảnh.
    </div>}

@@ -1,5 +1,5 @@
 "use client";
-import {useId,useState} from "react";
+import {useEffect,useId,useState} from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {ArrowLeft,ArrowRight,BookOpen,CalendarDays,FileText,MapPin,UsersRound} from "lucide-react";
@@ -23,9 +23,37 @@ type PublicCongress={
  term:string|null;venue:string|null;starts_at?:string|null
 };
 
-export function GuestCongressReader({congress,docs,candidates}:{congress:PublicCongress;
- docs:DocRow[];candidates:(BchCandidate&{congressName:string})[]}){
+export function GuestCongressReader({congress,docs,candidateCount,slug}:{
+ congress:PublicCongress;docs:DocRow[];candidateCount:number;slug:string
+}){
  const [tab,setTab]=useState<GuestTab>("documents");
+ const [candidates,setCandidates]=useState<(BchCandidate&{congressName:string})[]|null>(null);
+ const [loading,setLoading]=useState(false);
+ const [loadError,setLoadError]=useState("");
+ const [retry,setRetry]=useState(0);
+ useEffect(()=>{
+  if(tab!=="bch"||candidateCount===0||candidates!==null)return;
+  const controller=new AbortController();
+  async function load(){
+   setLoading(true);setLoadError("");
+   try{
+    const response=await fetch("/api/guest/"+encodeURIComponent(slug)+"/bch",{
+     signal:controller.signal,credentials:"omit",cache:"no-store"
+    });
+    if(!response.ok)throw new Error(response.status===404?
+     "Đại hội không còn ở trạng thái đang diễn ra.":"Không tải được danh sách BCH. Vui lòng thử lại.");
+    const json=await response.json();
+    if(!Array.isArray(json.candidates))throw new Error("Dữ liệu nhân sự không hợp lệ.");
+    if(!controller.signal.aborted)setCandidates(json.candidates);
+   }catch(error){
+    if(!controller.signal.aborted)setLoadError(error instanceof Error?error.message:"Không tải được nhân sự.");
+   }finally{
+    if(!controller.signal.aborted)setLoading(false);
+   }
+  }
+  void load();
+  return ()=>controller.abort();
+ },[tab,slug,candidateCount,candidates,retry]);
  const tabsId=useId();
  const panelId=tabsId+"-panel";
  const activeDocuments=tab==="documents";
@@ -63,7 +91,7 @@ export function GuestCongressReader({congress,docs,candidates}:{congress:PublicC
      </div>
      <div className="guest-detail-summary-row">
       <span><UsersRound size={19} aria-hidden="true"/> Ứng viên BCH</span>
-      <strong>{String(candidates.length).padStart(2,"0")}</strong>
+      <strong>{String(candidateCount).padStart(2,"0")}</strong>
      </div>
      <span className="guest-detail-summary-footer">THÔNG TIN ĐƯỢC CẬP NHẬT TỪ BTC</span>
     </aside>
@@ -95,7 +123,7 @@ export function GuestCongressReader({congress,docs,candidates}:{congress:PublicC
      data-tab="bch" className={"guest-detail-tab "+(!activeDocuments?"is-active":"")}>
      <span className="guest-detail-tab-icon"><UsersRound size={20} aria-hidden="true"/></span>
      <span><strong>Nhân sự BCH</strong><small>Hồ sơ trích ngang</small></span>
-     <span className="guest-detail-tab-count">{candidates.length}</span>
+     <span className="guest-detail-tab-count">{candidateCount}</span>
     </button>
    </div>
 
@@ -106,11 +134,21 @@ export function GuestCongressReader({congress,docs,candidates}:{congress:PublicC
       <p className="guest-section-kicker">{activeDocuments?"THƯ VIỆN ĐẠI HỘI":"NHÂN SỰ GIỚI THIỆU"}</p>
       <h3>{activeDocuments?"Kho tài liệu":"Ứng viên Ban Chấp hành"}</h3>
      </div>
-     <span className="guest-detail-panel-counter">{activeDocuments?docs.length:candidates.length} {activeDocuments?"tài liệu":"ứng viên"}</span>
+     <span className="guest-detail-panel-counter">{activeDocuments?docs.length:candidateCount} {activeDocuments?"tài liệu":"ứng viên"}</span>
     </div>
     {activeDocuments?
      <DelegateDocumentsList docs={docs} congresses={[{id:congress.id,name:congress.name}]} initialCongressId={congress.id}/>:
-     candidates.length?<DelegateBchCarousel items={candidates} initialCongressId={congress.id}/>:
+     loadError?<div role="alert" className="guest-detail-panel-empty">
+      <UsersRound size={28} aria-hidden="true"/>
+      <strong>{loadError}</strong>
+      <button type="button" onClick={()=>setRetry(n=>n+1)}
+       className="mt-3 min-h-11 rounded-lg border border-[#9fbfcd] bg-white px-4 text-sm font-bold text-[#226f91]">
+       Thử tải lại
+      </button>
+     </div>:
+     loading||candidates===null&&candidateCount>0?
+      <div role="status" className="guest-detail-panel-empty">Đang tải danh sách nhân sự BCH…</div>:
+     candidates?.length?<DelegateBchCarousel items={candidates} initialCongressId={congress.id}/>:
      <div className="guest-detail-panel-empty"><UsersRound size={28} aria-hidden="true"/>
       <strong>Danh sách nhân sự đang cập nhật</strong>
       <p>Thông tin sẽ được hiển thị khi Ban Tổ chức công bố.</p>
