@@ -4,7 +4,7 @@ import {
   Activity,ArrowRight,Building2,CalendarDays,
   ChevronRight,LayoutGrid,Plus,ShieldCheck,ScrollText,UsersRound
 } from "lucide-react";
-import {createClient} from "@/lib/supabase/server";
+import {getAuth} from "@/lib/auth";
 import {isStaffUser,getCongressRole,getCongressEffectiveAbilities} from "@/lib/auth";
 import type {CongressRole,CongressAbility} from "@/lib/congress-permissions";
 import {AppShell} from "@/components/app-shell";
@@ -25,8 +25,7 @@ export default async function Dashboard(){
     </main>;
   }
 
-  const supabase=await createClient();
-  const {data:{user}}=await supabase.auth.getUser();
+  const {supabase,user}=await getAuth();
   if(!user)redirect("/login");
   if(!(await isStaffUser(supabase,user.id)))redirect("/my-card");
   const {data:profile}=await supabase.from("profiles")

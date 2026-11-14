@@ -52,7 +52,7 @@ export async function isStaffUser(supabase:Db,userId:string){
  * never authorizes BTC access: it must match an enabled independent BTC account.
  * The global super_admin exception is stored only in profiles, not user_metadata.
  */
-export async function getCongressRole(supabase:Db,userId:string,congressId:string):Promise<CongressRole>{
+export const getCongressRole=cache(async (supabase:Db,userId:string,congressId:string):Promise<CongressRole>=>{
  const profile=await supabase.from("profiles").select("platform_role")
   .eq("id",userId).maybeSingle();
  if(profile.error)return null;
@@ -67,14 +67,14 @@ export async function getCongressRole(supabase:Db,userId:string,congressId:strin
  if(btc.data?.congress_id!==congressId)return null;
  const role=membership.data?.role;
  return role==="admin"||role==="checkin"||role==="secretary"?role:null;
-}
+});
 /** Server-resolved account rights: verified role + user-specific denied actions.
  * The account restriction table is read-only to clients and RLS self-scoped.
  * Super administrators cannot be restricted through a BTC account.
  */
-export async function getCongressEffectiveAbilities(
+export const getCongressEffectiveAbilities=cache(async (
  supabase:Db,userId:string,congressId:string
-):Promise<readonly CongressAbility[]>{
+):Promise<readonly CongressAbility[]>=>{
  const role=await getCongressRole(supabase,userId,congressId);
  if(!role)return [];
  if(role==="super_admin")return roleAbilities(role);
@@ -106,7 +106,7 @@ export async function getCongressEffectiveAbilities(
   }
   if(!effective.has("ballots.read"))effective.delete("ballots.write");
   return [...effective];
-}
+});
 export async function hasCongressAbility(
  supabase:Db,userId:string,congressId:string,ability:CongressAbility
 ){

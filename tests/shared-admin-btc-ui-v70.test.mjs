@@ -53,6 +53,7 @@ function loadDashboard({admin=false,rights=["workspace.view"],btcEnabled=true}={
   "lucide-react":{},
   "@/lib/supabase/server":{createClient:async()=>supabase},
   "@/lib/auth":{
+   getAuth:async()=>({supabase,user:{id,email:"btc@invalid.local"}}),
    isStaffUser:async()=>true,
    getCongressRole:async()=>{observed.push(["getRole"]);return "checkin";},
    getCongressEffectiveAbilities:async()=>{observed.push(["getAbilities"]);return rights;}

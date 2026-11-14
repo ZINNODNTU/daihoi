@@ -1,11 +1,19 @@
 "use client";
 import {useId,useState} from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {ArrowLeft,ArrowRight,BookOpen,CalendarDays,FileText,MapPin,UsersRound} from "lucide-react";
 import {BrandMark,congressBranding} from "@/components/brand-mark";
 import {GuestSiteHeader} from "@/components/guest-site-header";
 import {DelegateDocumentsList} from "@/components/delegate-documents-list";
-import {DelegateBchCarousel} from "@/components/delegate-bch-carousel";
+// BCH swipe cards are optional. Keep the swipe library out of the
+// initial JavaScript for guests who only read published documents.
+const DelegateBchCarousel=dynamic(
+ ()=>import("@/components/delegate-bch-carousel").then(mod=>mod.DelegateBchCarousel),
+ {loading:()=> <div role="status" className="rounded-xl border border-[#dae6ee] bg-white p-6 text-sm text-[#567d92]">
+  Đang tải danh sách nhân sự BCH…
+ </div>}
+);
 import type {DocRow} from "@/lib/types";
 import type {BchCandidate} from "@/lib/bch-candidates";
 

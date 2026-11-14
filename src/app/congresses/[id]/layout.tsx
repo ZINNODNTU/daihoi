@@ -1,5 +1,5 @@
 import {redirect,notFound} from "next/navigation";
-import {createClient} from "@/lib/supabase/server";
+import {getAuth} from "@/lib/auth";
 import {AppShell} from "@/components/app-shell";
 import {ActingSessionNotice} from "@/components/acting-session-notice";
 import {getCongressRole,getCongressEffectiveAbilities} from "@/lib/auth";
@@ -10,9 +10,8 @@ export default async function CongressLayout({children,params}:{
  children:React.ReactNode;params:Promise<{id:string}>;
 }){
  const {id}=await params;
- const supabase=await createClient();
- const {data:{user},error:authError}=await supabase.auth.getUser();
- if(authError||!user)redirect("/login");
+ const {supabase,user}=await getAuth();
+ if(!user)redirect("/login");
  // Resolve only verified roles; a revoked or missing BTC account is not staff.
  const [accessRole,effectiveAbilities]=await Promise.all([
   getCongressRole(supabase,user.id,id),getCongressEffectiveAbilities(supabase,user.id,id)
