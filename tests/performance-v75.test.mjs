@@ -26,21 +26,22 @@ const reply={
  })
 };
 test("V75 public BCH endpoint is read-only, validates live congress, and excludes ballot totals",async()=>{
- let status="live",failed=false;
+ let status="live",failed=false,empty=false;
  const observed=[];
  const db={from(table){
   observed.push(["from",table]);
   const query={
    select(fields){observed.push(["select",fields]);return this},
    eq(name,value){observed.push(["eq",name,value]);return this},
-   order(){return this},
-   limit:async()=>failed?{error:{code:"XX000"}}:{data:[{
-    id,congress_id:id,full_name:"Ứng viên",birth_year:2002,
-    current_position:"Đoàn viên",votes_received:100,
-    total_ballots:110,photo_path:null
-   }],error:null},
-   maybeSingle:async()=>status==="live"?
-    {data:{id,name:"Đại hội"},error:null}:
+   order(field,options){observed.push(["order",field,options]);return this},
+   limit(n,options){observed.push(["limit",n,options]);return this},
+   abortSignal(signal){observed.push(["abortSignal",signal]);return this},
+   maybeSingle:async()=>failed?{data:null,error:{code:"XX000"}}:status==="live"?
+    {data:{id,name:"Đại hội",bch_candidates:empty?[]:[{
+     id,congress_id:id,full_name:"Ứng viên",birth_year:2002,
+     current_position:"Đoàn viên",votes_received:100,
+     total_ballots:110,photo_path:null
+    }]},error:null}:
     {data:null,error:null}
   };
   return query;
@@ -61,8 +62,16 @@ test("V75 public BCH endpoint is read-only, validates live congress, and exclude
  assert.equal(candidate.votes_received,undefined);
  assert.equal(candidate.total_ballots,undefined);
  assert.ok(observed.some(row=>row[0]==="eq"&&row[1]==="status"&&row[2]==="live"));
- assert.ok(observed.some(row=>row[0]==="limit" || row[0]==="from" && row[1]==="bch_candidates"));
+ assert.equal(observed.filter(row=>row[0]==="from").length,1);
+ assert.ok(observed.some(row=>row[0]==="select"&&row[1].includes("bch_candidates(")));
+ assert.deepEqual(observed.find(row=>row[0]==="limit"),["limit",500,{referencedTable:"bch_candidates"}]);
+ assert.ok(observed.some(row=>row[0]==="order"&&row[2]?.referencedTable==="bch_candidates"));
+ assert.ok(observed.some(row=>row[0]==="abortSignal"&&row[1] instanceof AbortSignal));
+ assert.match(r.headers.get("Server-Timing"),/^supabase;dur=/);
  assert.equal((await call("bad.slug")).status,404);
+ empty=true;
+ assert.deepEqual((await (await call()).json()).candidates,[]);
+ empty=false;
  status="completed";
  assert.equal((await call()).status,404);
  status="live";failed=true;

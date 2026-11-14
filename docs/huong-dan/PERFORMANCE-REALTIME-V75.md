@@ -38,3 +38,19 @@ Giảm thời gian tải ban đầu, lượng dữ liệu gửi qua Next.js RSC,
 - Đo Chrome DevTools Network/Performance, Next.js/Vercel traces, Lighthouse **trước–sau trên cùng thiết bị và mạng**; không công bố phần trăm tăng tốc nếu chưa có đo production.
 
 **Cảnh báo tải:** Đây là tối ưu kiến trúc, **không thay thế** bài stress test 200–300 người đồng thời; không khởi chạy benchmark ghi điểm danh trên cơ sở dữ liệu production.
+
+## 5. V76 — giảm độ trễ GET /api/guest/[slug]/bch (14/11/2026)
+
+Sau khi k6 smoke test 5 VUs (23 requests) báo 1 timeout 12 giây, kiểm tra production cho thấy 3 lượt GET API BCH đều HTTP 200 với TTFB 1.918 / 1.697 / 1.737 giây, payload khoảng 1.267 byte. Không dùng số mẫu nhỏ này để suy ra sức tải tối đa.
+
+Truy vấn cũ gọi `congresses` rồi `bch_candidates` tuần tự. Truy vấn mới dùng PostgREST embedded `congresses(id,name,bch_candidates(...))` trong **một request Supabase** và giữ nguyên các kiểm soát:
+
+- Bắt buộc `slug` hợp lệ và `congresses.status=live` tại thời điểm đọc; không lưu cache chung.
+- Chỉ lấy tối đa 500 ứng viên trong đúng Đại hội, giữ `display_order,created_at`, chỉ xuất trường công khai, không xuất phiếu bầu.
+- Chờ tối đa 9 giây cho upstream; khi có lỗi trả HTTP 503 thay vì treo không giới hạn.
+- Trả `Server-Timing: supabase;dur=...` để phân biệt độ trễ truy vấn Supabase với thời gian truyền mạng/function; truy vấn vượt 2.500 ms được ghi cảnh báo Vercel Logs.
+- Không chỉnh RLS, quyền, bảng, phiếu bầu, dữ liệu điểm danh.
+
+**Đo kiểm chứng truy vấn thật (mẫu đơn, không phải benchmark):** truy vấn `congresses` 1.196 ms; `bch_candidates` 454 ms; truy vấn gộp 234 ms. Cả hai phương án đều trả đúng 2 ứng viên có cùng ID/thứ tự. Số đo có thể bị ảnh hưởng bởi cold start, DNS và cache kết nối nên không dùng để cam kết phần trăm cải thiện.
+
+**Kiểm chứng release:** build, lint, unit tests; trên production kiểm tra HTTP 200, `Server-Timing`, danh sách BCH đúng, Đại hội đóng 404 và không rò rỉ trường `votes_received`/`total_ballots`. Sau đó chạy lại k6 smoke ở 5 VUs rồi mới tăng theo 20 → 50 → 100 → 200 VUs có giám sát logs và ngưỡng dừng; không tải thử các API ghi production. Nếu p95 vẫn cao, đối chiếu vùng chạy Vercel Function và vùng Supabase trước khi đổi hạ tầng.
