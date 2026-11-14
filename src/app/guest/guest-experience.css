@@ -1,0 +1,273 @@
+/* Guest microsite · editorial event identity, independent of admin dashboard styles. */
+.guest-experience{
+ --guest-ink:#173349;
+ --guest-ink-muted:#708391;
+ --guest-navy:#102d43;
+ --guest-blue:#116c91;
+ --guest-gold:#d6ab66;
+ --guest-border:#dfe7eb;
+ background:#f5f7f6;
+ color:var(--guest-ink);
+ min-height:100dvh;
+ overflow-x:clip;
+}
+.guest-experience *{box-sizing:border-box}
+.guest-experience a:focus-visible,
+.guest-experience button:focus-visible{
+ outline:3px solid #67b3cd;
+ outline-offset:3px;
+}
+.guest-container{width:min(100% - 48px,1168px);margin-inline:auto}
+
+/* Shared masthead */
+.guest-topbar{background:#fff;border-bottom:1px solid #e4e9ea;position:relative;z-index:2}
+.guest-topbar-inner{display:flex;min-height:86px;align-items:center;justify-content:space-between;gap:24px}
+.guest-wordmark{display:inline-flex;align-items:center;gap:12px;min-width:0;text-decoration:none;color:var(--guest-ink)}
+.guest-wordmark .guest-wordmark-symbol{width:49px!important;height:49px!important;flex:0 0 49px;border-color:#dae3e5;background:white;border-radius:13px!important}
+.guest-wordmark-copy{display:flex;min-width:0;flex-direction:column;gap:4px}
+.guest-wordmark-copy strong{font-size:18px;letter-spacing:-.04em;font-weight:900;line-height:1.1}
+.guest-wordmark-period{color:#c6944d}
+.guest-wordmark-copy small{font-size:9px;font-weight:800;letter-spacing:.13em;color:#83949f;line-height:1.5}
+.guest-topnav{display:flex;align-items:center;gap:25px}
+.guest-topnav a{text-decoration:none;font-size:12px;font-weight:750;white-space:nowrap}
+.guest-nav-explore{color:#526c7b;transition:color .18s}
+.guest-nav-explore:hover{color:var(--guest-blue)}
+.guest-nav-login{min-height:42px;display:inline-flex;align-items:center;gap:10px;border-radius:10px;border:1px solid #cbdce3;padding:0 17px;color:#1e5e78;transition:background .2s,border-color .2s}
+.guest-nav-login:hover{background:#e8f5fa;border-color:#a6c9d7}
+
+/* Opening editorial masthead */
+.guest-intro{position:relative;isolation:isolate;background:#102e43;color:white;overflow:hidden}
+.guest-intro:before{
+ content:"";position:absolute;inset:0;z-index:-1;opacity:.24;
+ background-image:repeating-linear-gradient(135deg,transparent 0,transparent 48px,rgba(255,255,255,.09) 49px,transparent 50px);
+ background-size:480px 480px;
+}
+.guest-intro:after{content:"";position:absolute;z-index:-1;bottom:-205px;right:-130px;width:580px;height:580px;border-radius:50%;border:1px solid rgba(210,230,241,.11);box-shadow:0 0 0 80px rgba(255,255,255,.013),0 0 0 160px rgba(255,255,255,.013)}
+.guest-intro-inner{position:relative;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);align-items:center;gap:50px;padding-block:87px 84px}
+.guest-intro-copy{max-width:730px;position:relative;z-index:1}
+.guest-eyebrow{display:flex;align-items:center;gap:12px;color:#9acbd8;font-size:10px;font-weight:900;letter-spacing:.2em}
+.guest-eyebrow-rule{display:inline-block;width:27px;height:2px;background:var(--guest-gold)}
+.guest-intro-title{margin:26px 0 0;font-weight:900;font-size:clamp(33px,4.6vw,60px);line-height:1.18;letter-spacing:-.065em}
+.guest-intro-title span{color:var(--guest-gold)}
+.guest-intro-title em{font-style:normal;color:#c5e1e9;font-weight:550;letter-spacing:-.055em}
+.guest-intro-description{margin-top:24px;max-width:590px;font-size:14px;line-height:2;color:#c5d4dc}
+.guest-hero-link{margin-top:28px;display:inline-flex;align-items:center;gap:20px;min-height:50px;border:1px solid #5c8393;border-radius:9px;padding:0 20px;color:#fff;font-size:12px;font-weight:850;text-decoration:none;transition:background .2s,border-color .2s}
+.guest-hero-link:hover{background:rgba(255,255,255,.11);border-color:#b7d4df}
+.guest-intro-aside{display:flex;align-items:center;justify-content:center}
+.guest-intro-aside-frame{width:min(100%,335px);aspect-ratio:1/1.06;position:relative;border:1px solid rgba(219,233,239,.24);background:rgba(8,25,40,.23);box-shadow:inset 0 0 0 12px rgba(12,42,60,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.guest-intro-aside-frame:before{content:"";position:absolute;inset:15px;border:1px solid rgba(219,233,239,.12)}
+.guest-intro-aside-frame:after{content:"";position:absolute;width:165%;height:1px;transform:rotate(-47deg);background:rgba(227,194,133,.21)}
+.guest-aside-overline{position:relative;z-index:1;color:#9fc0cd;font-size:10px;font-weight:800;letter-spacing:.26em}
+.guest-aside-giant{position:relative;z-index:1;color:rgba(238,249,251,.92);font-size:clamp(88px,11vw,148px);line-height:1;font-weight:900;letter-spacing:-.1em;margin-right:.13em;margin-top:10px}
+.guest-aside-meta{position:relative;z-index:1;color:#ddbd89;text-align:center;font-weight:800;font-size:10px;line-height:1.9;letter-spacing:.22em}
+.guest-aside-index{position:absolute;right:31px;bottom:26px;color:#d3e7ec;font-size:12px;font-weight:750;letter-spacing:.1em}
+.guest-aside-index span{margin:0 5px;color:#bf9c68}
+.guest-intro-bottom{border-top:1px solid rgba(228,238,245,.15);background:rgba(7,24,38,.25)}
+.guest-intro-bottom .guest-container{min-height:43px;display:flex;align-items:center;justify-content:space-between;gap:20px;color:#95b7c4;font-size:9px;letter-spacing:.12em;font-weight:800}
+
+/* Public congress directory */
+.guest-directory-section{padding-top:65px;padding-bottom:70px;scroll-margin-top:24px}
+.guest-section-heading{display:flex;align-items:end;justify-content:space-between;gap:24px;padding-bottom:26px;border-bottom:1px solid #dce4e5}
+.guest-section-kicker{display:flex;align-items:center;gap:9px;font-size:10px;line-height:1.7;font-weight:900;letter-spacing:.17em;color:#31829c}
+.guest-section-heading h2,.guest-detail-toolbar h2{margin-top:13px;font-size:clamp(28px,3.5vw,40px);line-height:1.22;letter-spacing:-.06em;font-weight:900}
+.guest-section-heading h2 span,.guest-detail-toolbar h2 span{color:#3f8095}
+.guest-section-heading p:last-child{margin-top:12px;color:#758895;font-size:13px;line-height:1.7}
+.guest-directory-tally{display:flex;align-items:center;gap:16px;padding-bottom:4px;white-space:nowrap}
+.guest-directory-tally strong{font-size:51px;line-height:1;font-weight:800;letter-spacing:-.08em;font-variant-numeric:tabular-nums;color:#164765}
+.guest-directory-tally span{color:#80919c;border-left:1px solid #cbd8dd;padding-left:14px;font-size:9px;font-weight:850;letter-spacing:.13em;line-height:1.8}
+.guest-congress-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:21px;margin-top:29px;list-style:none;padding:0}
+.guest-congress-list-item{min-width:0}
+.guest-congress-card{position:relative;display:flex;flex-direction:column;height:100%;min-height:390px;background:#fff;border:1px solid #dbe5e8;border-radius:15px;overflow:hidden;padding:28px 30px 0;color:inherit;text-decoration:none;box-shadow:0 8px 24px rgba(27,52,67,.035);transition:transform .22s ease,border-color .22s,box-shadow .22s}
+.guest-congress-card:hover{transform:translateY(-4px);border-color:#a8c6d3;box-shadow:0 20px 42px rgba(26,64,85,.11)}
+.guest-congress-card-line{position:absolute;inset:0 auto auto 0;width:100%;height:3px;background:linear-gradient(90deg,#d7a960 0%,#b7cfdb 56%,#fff 100%)}
+.guest-congress-card-top{display:flex;align-items:center;justify-content:space-between;gap:15px}
+.guest-live-indicator,.guest-detail-status{display:inline-flex;align-items:center;gap:8px;color:#1b805e;font-size:10px;letter-spacing:.08em;font-weight:900}
+.guest-live-indicator{padding:9px 12px;border:1px solid #d4e9df;border-radius:99px;background:#f2faf5}
+.guest-live-dot{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#31a979;box-shadow:0 0 0 3px rgba(49,169,121,.11)}
+.guest-congress-serial{font-size:29px;line-height:1;font-weight:800;letter-spacing:-.06em;color:#cedbe0}
+.guest-congress-card-identity{display:flex;align-items:center;gap:13px;margin-top:29px}
+.guest-congress-logo{width:66px;height:66px;flex:0 0 66px;display:grid;place-items:center;background:#f7f9fa;border:1px solid #e2e9ed;border-radius:15px}
+.guest-congress-logo .brand-symbol{border:0;background:transparent;box-shadow:none;width:50px;height:50px}
+.guest-congress-organization{font-size:10px;font-weight:850;letter-spacing:.12em;color:#648294;text-transform:uppercase;line-height:1.6;max-width:210px}
+.guest-congress-name{display:block;margin-top:22px;font-size:clamp(19px,2.1vw,25px);font-weight:850;letter-spacing:-.04em;line-height:1.4;color:#173e56}
+.guest-congress-term{font-size:12px;color:#7d91a1;margin-top:6px}
+.guest-congress-info{display:flex;flex-wrap:wrap;column-gap:20px;row-gap:9px;margin-top:19px;margin-bottom:27px;color:#667f8c;font-size:12px;line-height:1.6}
+.guest-congress-info>span{display:inline-flex;align-items:flex-start;gap:7px;min-width:0}
+.guest-congress-info svg{flex:0 0 15px;margin-top:2px;color:#7e9cac}
+.guest-congress-card-bottom{margin-top:auto;margin-inline:-30px;padding:15px 20px 15px 30px;border-top:1px solid #e6eef0;background:#fcfdfd;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#126f94;font-size:12px;font-weight:850}
+.guest-congress-card-arrow{width:37px;height:37px;border-radius:9px;background:#e8f3f7;display:grid;place-items:center;transition:background .2s,color .2s,transform .2s}
+.guest-congress-card:hover .guest-congress-card-arrow{background:#116d90;color:white;transform:translateX(3px)}
+.guest-empty{position:relative;min-height:270px;background:#fff;border:1px solid #dfe7e9;border-radius:15px;margin-top:29px;padding:42px 48px;display:flex;align-items:center;gap:43px;overflow:hidden}
+.guest-empty:before{content:"";position:absolute;width:3px;left:0;top:0;bottom:0;background:#d5a761}
+.guest-empty-number{font-size:clamp(100px,14vw,175px);font-weight:850;letter-spacing:-.1em;line-height:1;color:#e8edef}
+.guest-empty-copy{position:relative;z-index:1}
+.guest-empty-marker{color:#2983a1;font-weight:900;font-size:10px;letter-spacing:.17em}
+.guest-empty h3{margin-top:14px;color:#223d52;font-size:clamp(20px,3vw,29px);font-weight:900;letter-spacing:-.05em}
+.guest-empty p{font-size:13px;line-height:1.85;color:#778b97;margin-top:11px}
+.guest-text-link{display:inline-flex;align-items:center;gap:11px;margin-top:22px;text-decoration:none;color:#147695;font-size:12px;font-weight:850}
+.guest-text-link:hover{text-decoration:underline}
+.guest-directory-guide{display:grid;grid-template-columns:210px minmax(0,1fr);gap:28px;align-items:start;padding:24px 0 65px;border-top:1px solid #dbe3e5}
+.guest-guide-heading{font-size:10px;font-weight:900;letter-spacing:.12em;color:#4d7386;padding-top:15px}
+.guest-guide-heading span{color:#c29a60;margin-right:8px}
+.guest-guide-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px}
+.guest-guide-items>div{display:flex;align-items:flex-start;gap:13px}
+.guest-guide-icon{width:40px;height:40px;flex:0 0 40px;border-radius:9px;background:#e9f1f4;color:#287c9a;display:grid;place-items:center}
+.guest-guide-items h3{font-size:12px;font-weight:850;color:#1c455d;line-height:1.5}
+.guest-guide-items p{font-size:11px;color:#81909a;line-height:1.7;margin-top:5px}
+.guest-footer{border-top:1px solid #dfe7e9;background:#fff}
+.guest-footer .guest-container{min-height:73px;display:flex;align-items:center;justify-content:space-between;gap:16px;color:#8093a0;font-size:10px;letter-spacing:.09em;font-weight:750}
+.guest-footer a{display:inline-flex;align-items:center;gap:7px;color:#2a6680;text-decoration:none;letter-spacing:0}
+.guest-footer a:hover{text-decoration:underline}
+
+/* Individual congress: institutional masthead with editorial section tabs */
+.guest-detail-breadcrumb{background:#f8faf9;border-bottom:1px solid #e4eaeb}
+.guest-detail-breadcrumb .guest-container{display:flex;align-items:center;gap:12px;min-height:47px;color:#79909d;font-size:11px;font-weight:700}
+.guest-detail-breadcrumb a{display:inline-flex;align-items:center;gap:8px;color:#30718d;text-decoration:none}
+.guest-detail-breadcrumb a:hover{text-decoration:underline}
+.guest-detail-hero{position:relative;overflow:hidden;isolation:isolate;background:#102d43;color:white}
+.guest-detail-hero:before{content:"";position:absolute;inset:0;z-index:-1;background:repeating-linear-gradient(125deg,transparent 0,transparent 68px,rgba(255,255,255,.045) 69px,transparent 70px);opacity:.38}
+.guest-detail-hero:after{content:"ĐẠI HỘI";position:absolute;z-index:-1;right:-18px;bottom:-72px;font-size:clamp(100px,14vw,230px);line-height:1;font-weight:900;letter-spacing:-.08em;white-space:nowrap;color:rgba(225,241,246,.037);pointer-events:none}
+.guest-detail-hero-inner{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.7fr);gap:58px;align-items:center;padding-block:55px 65px;position:relative}
+.guest-detail-topline{display:flex;align-items:center;gap:15px;margin-bottom:28px}
+.guest-detail-hero-brand{width:62px;height:62px;flex:0 0 62px;border:1px solid #c1d7e2;border-radius:13px;background:white;display:grid;place-items:center}
+.guest-detail-hero-brand .brand-symbol{width:50px;height:50px;border:0;box-shadow:none;background:transparent}
+.guest-detail-org{font-size:10px;font-weight:850;color:#b5d2de;letter-spacing:.17em;text-transform:uppercase;line-height:1.65}
+.guest-detail-status{color:#bae9ca;background:rgba(55,137,119,.12);border:1px solid rgba(127,207,161,.24);border-radius:99px;padding:9px 12px}
+.guest-detail-hero-copy h1{font-size:clamp(28px,4vw,47px);letter-spacing:-.045em;line-height:1.31;font-weight:900;margin-top:21px;max-width:760px}
+.guest-detail-metadata{display:flex;flex-wrap:wrap;gap:10px 23px;margin-top:28px}
+.guest-detail-metadata>span{display:inline-flex;align-items:center;gap:9px;color:#c4dce5;font-size:12px;line-height:1.6;max-width:100%}
+.guest-detail-metadata svg{flex:0 0 17px;color:#d8b47b}
+.guest-detail-summary{background:rgba(8,29,43,.48);border:1px solid rgba(203,229,238,.24);border-top:3px solid #cfab70;box-shadow:inset 0 0 0 7px rgba(255,255,255,.012);padding:26px 25px 22px}
+.guest-detail-summary-title{display:block;font-size:10px;letter-spacing:.2em;font-weight:850;color:#adcbd6;margin-bottom:18px}
+.guest-detail-summary-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid rgba(217,234,240,.16);padding:16px 0}
+.guest-detail-summary-row>span{display:inline-flex;align-items:center;gap:9px;color:#d6e7ed;font-size:12px;line-height:1.4}
+.guest-detail-summary-row svg{color:#cbb083;flex:0 0 19px}
+.guest-detail-summary-row strong{color:#fff;font-size:32px;letter-spacing:-.06em;font-weight:850;line-height:1;font-variant-numeric:tabular-nums}
+.guest-detail-summary-footer{display:block;padding-top:18px;border-top:1px solid rgba(217,234,240,.16);color:#89aaba;font-size:9px;line-height:1.6;font-weight:800;letter-spacing:.09em}
+.guest-detail-main{padding-block:50px 80px}
+.guest-detail-toolbar{display:flex;align-items:end;justify-content:space-between;gap:20px}
+.guest-detail-toolbar h2{margin-top:8px}
+.guest-back-link{display:inline-flex;align-items:center;gap:10px;min-height:40px;font-size:12px;font-weight:800;color:#357993;text-decoration:none}
+.guest-back-link:hover{text-decoration:underline}
+.guest-detail-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-top:26px;margin-bottom:24px}
+.guest-detail-tab{border:1px solid #dce5e8;display:flex;gap:15px;align-items:center;min-height:91px;padding:17px 20px;background:#fff;color:#274f65;border-radius:12px;text-align:left;cursor:pointer;transition:border-color .2s,background .2s,transform .2s,box-shadow .2s}
+.guest-detail-tab:hover{border-color:#9dbdc9;transform:translateY(-1px)}
+.guest-detail-tab.is-active{background:#e9f4f7;border-color:#83b7c9;box-shadow:inset 0 -3px 0 #177a9d}
+.guest-detail-tab-icon{display:grid;place-items:center;width:49px;height:49px;flex:0 0 49px;border:1px solid #dbe8ed;border-radius:11px;background:#f3f8fa;color:#387c96}
+.guest-detail-tab.is-active .guest-detail-tab-icon{background:#16799e;color:white;border-color:#16799e}
+.guest-detail-tab>span:nth-child(2){min-width:0;flex:1}
+.guest-detail-tab strong{display:block;font-size:14px;font-weight:850;line-height:1.6}
+.guest-detail-tab small{display:block;margin-top:2px;font-size:11px;line-height:1.6;color:#7d96a3}
+.guest-detail-tab-count{border-radius:8px;background:#f2f6f7;min-width:40px;text-align:center;padding:9px 8px;font-size:12px;font-weight:900;color:#286c89;font-variant-numeric:tabular-nums}
+.guest-detail-tab.is-active .guest-detail-tab-count{background:#fff}
+.guest-detail-panel{min-width:0;outline-offset:7px}
+.guest-detail-panel-header{display:flex;align-items:end;justify-content:space-between;gap:20px;padding:0 2px 20px}
+.guest-detail-panel-header h3{font-size:clamp(20px,3vw,27px);font-weight:900;line-height:1.3;letter-spacing:-.05em;margin-top:5px}
+.guest-detail-panel-counter{border:1px solid #dae4e8;border-radius:99px;background:#fff;color:#648093;font-size:11px;font-weight:850;padding:9px 13px;white-space:nowrap}
+.guest-detail-panel .bch-swipe-root{margin-top:12px}
+.guest-detail-panel-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:11px;border-radius:14px;border:1px solid #dbe7ea;padding:60px 25px;background:#fff;color:#638798}
+.guest-detail-panel-empty strong{font-size:15px;color:#274d62}
+.guest-detail-panel-empty p{font-size:12px;line-height:1.8}
+.guest-detail-bottom-nav{display:flex;justify-content:center;margin-top:42px}
+.guest-detail-bottom-nav a{display:inline-flex;align-items:center;gap:10px;border:1px solid #d7e4e8;border-radius:10px;background:#fff;padding:13px 18px;font-size:12px;color:#2a6c88;font-weight:800;text-decoration:none}
+.guest-detail-bottom-nav a:hover{background:#e7f3f7}
+
+@media(max-width:900px){
+ .guest-intro-inner{grid-template-columns:minmax(0,1fr) minmax(210px,.65fr);gap:24px;padding-block:64px}
+ .guest-intro-title{font-size:clamp(34px,5vw,49px)}
+ .guest-aside-giant{font-size:104px}
+ .guest-detail-hero-inner{gap:25px;grid-template-columns:minmax(0,1.25fr) minmax(230px,.75fr)}
+ .guest-directory-guide{grid-template-columns:1fr;gap:17px}
+ .guest-guide-items{gap:15px}
+}
+@media(max-width:700px){
+ .guest-container{width:min(100% - 32px,1168px)}
+ .guest-topbar-inner{min-height:72px}
+ .guest-wordmark .guest-wordmark-symbol{width:40px!important;height:40px!important;flex-basis:40px;border-radius:10px!important}
+ .guest-wordmark-copy strong{font-size:15px}
+ .guest-wordmark-copy small{font-size:8px;letter-spacing:.07em}
+ .guest-topnav{gap:10px}
+ .guest-nav-explore{display:none}
+ .guest-nav-login{min-height:39px;padding-inline:12px;font-size:11px!important}
+ .guest-intro-inner{grid-template-columns:minmax(0,1fr);padding-block:60px 58px}
+ .guest-intro-aside{display:none}
+ .guest-intro-title{font-size:clamp(34px,8.2vw,49px)}
+ .guest-intro-description{margin-top:19px;font-size:13px;line-height:1.9}
+ .guest-eyebrow{font-size:9px;letter-spacing:.13em}
+ .guest-intro-bottom .guest-container span:last-child{display:none}
+ .guest-directory-section{padding-top:42px;padding-bottom:42px}
+ .guest-directory-tally strong{font-size:39px}
+ .guest-directory-tally span{font-size:8px;letter-spacing:0;padding-left:10px}
+ .guest-section-heading{gap:10px}
+ .guest-section-heading h2{font-size:clamp(25px,6vw,34px)}
+ .guest-congress-grid{grid-template-columns:1fr;gap:16px;margin-top:23px}
+ .guest-congress-card{min-height:355px;padding:23px 23px 0}
+ .guest-congress-name{font-size:21px}
+ .guest-congress-card-bottom{margin-inline:-23px;padding-left:23px}
+ .guest-congress-logo{width:59px;height:59px;flex-basis:59px}
+ .guest-congress-logo .brand-symbol{width:45px;height:45px}
+ .guest-empty{padding:31px 24px;gap:17px}
+ .guest-empty-number{font-size:89px}
+ .guest-empty h3{font-size:22px}
+ .guest-guide-items{grid-template-columns:1fr;gap:22px}
+ .guest-directory-guide{padding-bottom:40px}
+ .guest-footer .guest-container{min-height:69px}
+ .guest-footer .guest-container>span{font-size:9px;letter-spacing:0}
+ .guest-detail-hero-inner{grid-template-columns:1fr;gap:27px;padding-block:36px 43px}
+ .guest-detail-topline{margin-bottom:23px}
+ .guest-detail-hero-copy h1{font-size:clamp(27px,6.8vw,41px)}
+ .guest-detail-summary{padding:20px 22px}
+ .guest-detail-summary-title{margin-bottom:12px}
+ .guest-detail-summary-row{padding:12px 0}
+ .guest-detail-summary-row strong{font-size:27px}
+ .guest-detail-summary-footer{padding-top:13px}
+ .guest-detail-main{padding-block:34px 58px}
+ .guest-detail-toolbar{align-items:start;flex-direction:column;gap:4px}
+ .guest-detail-toolbar h2{font-size:29px}
+ .guest-detail-tabs{gap:9px;margin-top:23px}
+ .guest-detail-tab{gap:9px;min-height:86px;padding:12px 11px}
+ .guest-detail-tab-icon{width:37px;height:37px;flex-basis:37px}
+ .guest-detail-tab-icon svg{width:18px;height:18px}
+ .guest-detail-tab strong{font-size:12px}
+ .guest-detail-tab small{font-size:10px}
+ .guest-detail-tab-count{min-width:27px;padding:6px 4px;font-size:10px}
+ .guest-detail-panel-header{align-items:start;gap:10px}
+ .guest-detail-panel-counter{font-size:10px;padding:8px 10px}
+}
+@media(max-width:380px){
+ .guest-wordmark-copy small{display:none}
+ .guest-section-heading{align-items:start}
+ .guest-directory-tally{gap:7px}
+ .guest-directory-tally strong{font-size:34px}
+ .guest-directory-tally span{display:none}
+ .guest-empty-number{display:none}
+ .guest-detail-tab-icon{display:none}
+ .guest-detail-tab{gap:7px}
+ .guest-detail-tab small{font-size:9px}
+ .guest-detail-metadata{gap:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ .guest-experience .guest-congress-card,.guest-experience .guest-congress-card-arrow,
+ .guest-experience .guest-hero-link,.guest-experience .guest-detail-tab,
+ .guest-experience .guest-nav-login{transition:none!important;transform:none!important}
+}
+
+/* Resilience for unusually long congress names and narrow mobile viewports. */
+.guest-experience .guest-detail-hero-copy h1,
+.guest-experience .guest-congress-name,
+.guest-experience .guest-wordmark-copy strong{
+ overflow-wrap:anywhere;
+}
+.guest-experience .guest-detail-hero-copy,
+.guest-experience .guest-congress-card,
+.guest-experience .guest-topbar-inner>*{min-width:0}
+@media(max-width:700px){
+ .guest-experience .guest-wordmark{flex:1 1 auto}
+ .guest-experience .guest-topnav{flex:0 0 auto}
+}
+@media(max-width:420px){
+ .guest-experience .guest-wordmark-copy small{display:none}
+ .guest-experience .guest-topbar-inner{gap:8px}
+ .guest-experience .guest-nav-login{padding-inline:9px}
+ .guest-experience .guest-detail-tab{min-width:0}
+}

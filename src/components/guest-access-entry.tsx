@@ -1,6 +1,7 @@
 import Link from "next/link";
-import {ArrowRight,BookOpen,CalendarDays,MapPin,ShieldCheck,Users} from "lucide-react";
-import {BrandMark} from "@/components/brand-mark";
+import {ArrowDownRight,ArrowRight,BookOpen,CalendarDays,ChevronRight,FileText,MapPin,Radio,UsersRound} from "lucide-react";
+import {BrandMark,congressBranding} from "@/components/brand-mark";
+import {GuestSiteHeader} from "@/components/guest-site-header";
 
 export type GuestCongress={
  id:string;slug:string;name:string;term:string|null;
@@ -8,64 +9,112 @@ export type GuestCongress={
  starts_at:string|null;ends_at:string|null
 };
 
+function formatDate(value:string|null){
+ if(!value)return null;
+ const date=new Date(value);
+ return Number.isNaN(date.getTime())?null:new Intl.DateTimeFormat("vi-VN",{
+  day:"2-digit",month:"2-digit",year:"numeric",timeZone:"Asia/Ho_Chi_Minh"
+ }).format(date);
+}
+
 export function GuestAccessEntry({options}:{options:GuestCongress[]}){
- return <main className="min-h-dvh bg-[#f3f7fa] px-4 py-8 text-[#18354c] sm:py-14">
-  <div className="mx-auto max-w-[1040px]">
-   <header className="mb-9 flex flex-wrap items-center justify-between gap-3">
-    <Link href="/" className="flex items-center gap-3">
-     <BrandMark className="!h-11 !w-11"/>
-     <span className="text-lg font-extrabold tracking-tight">Đại hội số <span className="text-[#1484b1]">/ Khách</span></span>
-    </Link>
-    <Link href="/login" className="text-xs font-semibold text-[#44768d] underline">Đăng nhập đại biểu / BTC</Link>
-   </header>
-   <section className="overflow-hidden rounded-[22px] border border-[#d9e6ee] bg-white shadow-[0_18px_65px_rgba(16,55,78,.075)]">
-    <div className="bg-[#16334b] px-6 py-9 text-white sm:px-10">
-     <p className="text-[11px] font-bold uppercase tracking-[.2em] text-[#9ed8ee]">CHẾ ĐỘ KHÁCH · KHÔNG CẦN ĐĂNG NHẬP</p>
-     <h1 className="mt-3 text-[clamp(26px,4vw,38px)] font-extrabold leading-[1.2]">Khám phá các Đại hội đang diễn ra</h1>
-     <p className="mt-3 max-w-2xl text-[13px] leading-7 text-[#d2e4ee]">
-      Chọn Đại hội để xem thông tin chương trình, tài liệu được công bố và nhân sự giới thiệu BCH.
-      Không cần tài khoản, mật khẩu hay mã truy cập.
+ return <main className="guest-experience guest-directory">
+  <GuestSiteHeader/>
+  <section className="guest-intro">
+   <div className="guest-container guest-intro-inner">
+    <div className="guest-intro-copy">
+     <p className="guest-eyebrow"><span className="guest-eyebrow-rule"/> KHÔNG GIAN ĐẠI HỘI · CHẾ ĐỘ KHÁCH</p>
+     <h1 className="guest-intro-title">Đại hội đang diễn ra<span>.</span><br/>
+      <em>Khám phá từ đây.</em></h1>
+     <p className="guest-intro-description">
+      Theo dõi thông tin các kỳ Đại hội Đoàn – Hội, khám phá văn kiện và hồ sơ
+      nhân sự được Ban Tổ chức công bố.
      </p>
+     <a href="#danh-sach-dai-hoi" className="guest-hero-link">
+      Khám phá Đại hội <ArrowDownRight size={19} aria-hidden="true"/>
+     </a>
     </div>
-    <div className="space-y-4 p-5 sm:p-9">
-     <div className="flex flex-wrap items-center justify-between gap-3">
-      <h2 className="text-[17px] font-extrabold text-[#203f53]">Đại hội đang diễn ra</h2>
-      <span className="rounded-full bg-[#e4f4ee] px-3 py-1.5 text-[11px] font-bold text-[#207958]">{options.length} Đại hội</span>
+    <div className="guest-intro-aside" aria-hidden="true">
+     <div className="guest-intro-aside-frame">
+      <span className="guest-aside-overline">CỔNG THÔNG TIN</span>
+      <span className="guest-aside-giant">ĐH</span>
+      <span className="guest-aside-meta">ĐOÀN · HỘI<br/>VIỆT NAM</span>
+      <span className="guest-aside-index">ĐH<span>/</span>VN</span>
      </div>
-     {options.length===0?
-      <div role="status" className="rounded-xl border border-[#dce8ed] bg-[#f6fafb] px-5 py-8 text-center">
-       <p className="text-sm font-bold text-[#2e6076]">Hiện chưa có Đại hội nào đang diễn ra.</p>
-       <p className="mt-2 text-xs leading-6 text-[#6f8a99]">Danh sách sẽ tự xuất hiện khi Ban Tổ chức chuyển trạng thái Đại hội sang “Đang diễn ra”. Bạn không cần nhập mã.</p>
-      </div>:
-      <div className="grid gap-4 sm:grid-cols-2">
-       {options.map(c=><Link href={"/guest/"+encodeURIComponent(c.slug)} key={c.id}
-        className="group flex min-h-[200px] flex-col rounded-xl border border-[#dce7ee] bg-[#fbfdfe] p-5 transition-colors hover:border-[#8cc1d8] hover:bg-[#f1f9fd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1679a7]">
-        <div className="flex items-start justify-between gap-3">
-         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e3f4e9] px-3 py-1 text-[10px] font-extrabold text-[#207c55]">
-          <span className="size-1.5 rounded-full bg-[#2c9a61]"/> ĐANG DIỄN RA
-         </span>
-         <BrandMark kind={c.kind} className="!h-9 !w-9 shrink-0"/>
-        </div>
-        <h3 className="mt-4 text-[16px] font-extrabold leading-6 text-[#17384f] group-hover:text-[#0875a7]">{c.name}</h3>
-        {c.term&&<p className="mt-1 text-[12px] text-[#6e8798]">Nhiệm kỳ {c.term}</p>}
-        {c.venue&&<p className="mt-3 flex items-start gap-1.5 text-[12px] text-[#6b8394]"><MapPin size={14} className="mt-0.5 shrink-0"/>{c.venue}</p>}
-        {c.starts_at&&<p className="mt-1 flex items-center gap-1.5 text-[12px] text-[#6b8394]"><CalendarDays size={14}/>{new Intl.DateTimeFormat("vi-VN",{dateStyle:"medium",timeZone:"Asia/Ho_Chi_Minh"}).format(new Date(c.starts_at))}</p>}
-        <span className="mt-auto flex items-center gap-2 pt-5 text-[12px] font-extrabold text-[#117fa9]">Xem thông tin Đại hội <ArrowRight size={16} className="transition-transform group-hover:translate-x-1"/></span>
-       </Link>)}
-      </div>}
     </div>
-   </section>
-   <div className="mt-6 grid gap-3 sm:grid-cols-3">
-    {[
-     {icon:BookOpen,title:"Tài liệu Đại hội",detail:"Chỉ xem tài liệu Ban Tổ chức đã công bố."},
-     {icon:Users,title:"Nhân sự BCH",detail:"Hồ sơ ứng viên giới thiệu Ban Chấp hành."},
-     {icon:ShieldCheck,title:"Truy cập công khai",detail:"Không có quyền điểm danh, xem ghế cá nhân hay quản trị."}
-    ].map(item=><div key={item.title} className="rounded-xl border border-[#dce8ed] bg-white p-4">
-     <item.icon size={19} className="text-[#137da7]"/>
-     <p className="mt-3 text-sm font-bold">{item.title}</p>
-     <p className="mt-1 text-xs leading-5 text-[#708b9c]">{item.detail}</p>
-    </div>)}
    </div>
-  </div>
+   <div className="guest-intro-bottom" aria-hidden="true"><div className="guest-container"><span>THÔNG TIN CHÍNH THỨC</span><span>ĐOÀN TNCS HỒ CHÍ MINH · HỘI SINH VIÊN VIỆT NAM</span></div></div>
+  </section>
+
+  <section className="guest-container guest-directory-section" id="danh-sach-dai-hoi" aria-labelledby="guest-list-title">
+   <div className="guest-section-heading">
+    <div>
+     <p className="guest-section-kicker"><Radio size={15} aria-hidden="true"/> CẬP NHẬT TRỰC TIẾP</p>
+     <h2 id="guest-list-title">Các Đại hội <span>đang diễn ra</span></h2>
+     <p>Lựa chọn Đại hội bạn muốn tìm hiểu.</p>
+    </div>
+    <div className="guest-directory-tally" aria-label={options.length+" Đại hội đang diễn ra"}>
+     <strong>{String(options.length).padStart(2,"0")}</strong>
+     <span>ĐẠI HỘI<br/>ĐANG DIỄN RA</span>
+    </div>
+   </div>
+
+   {options.length===0?
+    <div className="guest-empty" role="status">
+     <span className="guest-empty-number" aria-hidden="true">00</span>
+     <div className="guest-empty-copy">
+      <span className="guest-empty-marker">CHƯA CÓ LỊCH ĐẠI HỘI</span>
+      <h3>Chưa có Đại hội đang diễn ra</h3>
+      <p>Danh sách sẽ được cập nhật khi Ban Tổ chức bắt đầu Đại hội.</p>
+      <Link href="/" className="guest-text-link">Về trang chủ <ArrowRight size={16} aria-hidden="true"/></Link>
+     </div>
+    </div>:
+    <ol className="guest-congress-grid">
+     {options.map((congress,index)=><li key={congress.id} className="guest-congress-list-item">
+      <Link className="guest-congress-card" href={"/guest/"+encodeURIComponent(congress.slug)}
+       aria-label={"Xem thông tin "+congress.name}>
+       <span className="guest-congress-card-line" aria-hidden="true"/>
+       <span className="guest-congress-card-top">
+        <span className="guest-live-indicator"><span className="guest-live-dot"/> ĐANG DIỄN RA</span>
+        <span className="guest-congress-serial">{String(index+1).padStart(2,"0")}</span>
+       </span>
+       <span className="guest-congress-card-identity">
+        <span className="guest-congress-logo"><BrandMark kind={congress.kind}/></span>
+        <span className="guest-congress-organization">{congressBranding[congress.kind].name}</span>
+       </span>
+       <span className="guest-congress-name">{congress.name}</span>
+       {congress.term&&<span className="guest-congress-term">Nhiệm kỳ {congress.term}</span>}
+       <span className="guest-congress-info">
+        {congress.venue&&<span><MapPin size={15} aria-hidden="true"/>{congress.venue}</span>}
+        {formatDate(congress.starts_at)&&<span><CalendarDays size={15} aria-hidden="true"/>{formatDate(congress.starts_at)}</span>}
+       </span>
+       <span className="guest-congress-card-bottom">
+        <span>Khám phá Đại hội</span>
+        <span className="guest-congress-card-arrow"><ArrowRight size={20} aria-hidden="true"/></span>
+       </span>
+      </Link>
+     </li>)}
+    </ol>}
+  </section>
+
+  <section className="guest-container guest-directory-guide" aria-label="Nội dung có thể khám phá">
+   <div className="guest-guide-heading"><span>01 /</span> THÔNG TIN CÔNG BỐ</div>
+   <div className="guest-guide-items">
+    <div><span className="guest-guide-icon"><FileText size={22} aria-hidden="true"/></span><div>
+     <h3>Văn kiện Đại hội</h3><p>Tra cứu tài liệu và các nội dung được công bố.</p>
+    </div></div>
+    <div><span className="guest-guide-icon"><UsersRound size={22} aria-hidden="true"/></span><div>
+     <h3>Nhân sự giới thiệu BCH</h3><p>Khám phá hồ sơ trích ngang các ứng viên.</p>
+    </div></div>
+    <div><span className="guest-guide-icon"><BookOpen size={22} aria-hidden="true"/></span><div>
+     <h3>Thông tin Đại hội</h3><p>Tên Đại hội, nhiệm kỳ và địa điểm tổ chức.</p>
+    </div></div>
+   </div>
+  </section>
+  <footer className="guest-footer">
+   <div className="guest-container"><span>ĐẠI HỘI SỐ · KHÔNG GIAN ĐOÀN – HỘI</span>
+    <Link href="/login">Cổng đăng nhập <ChevronRight size={16} aria-hidden="true"/></Link>
+   </div>
+  </footer>
  </main>;
 }
