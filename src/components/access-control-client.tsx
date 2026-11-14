@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useMemo,useState} from "react";
 import Link from "next/link";
-import {useSearchParams} from "next/navigation";
+import {usePathname,useRouter,useSearchParams} from "next/navigation";
 import {ArrowLeft,Check,Eye,FolderKey,LockKeyhole,Plus,RefreshCw,Save,Search,ShieldCheck,Trash2,Users} from "lucide-react";
 import {ACCOUNT_PERMISSION_CAPABILITIES,canCongress} from "@/lib/congress-permissions";
 import {baseManagedAbilities,editableGroupAbilities,RBAC_ABILITY_LABELS,RBAC_LABELS,
@@ -16,10 +16,12 @@ type Congress={id:string;name:string;kind:string};
 type Data={accounts:Account[];groups:Group[];congresses:Congress[];truncated:boolean};
 const staffRole=(r:ManagedRole)=>r==="admin"||r==="checkin"||r==="secretary";
 const chip="rounded-lg border border-[#dae4eb] bg-white px-3 py-2 text-[12px] font-semibold text-[#31556d]";
-export function AccessControlClient(){
+export function AccessControlClient({initialCongressId=""}:{initialCongressId?:string}={}){
  const params=useSearchParams();
+ const router=useRouter();
+ const pathname=usePathname();
  const [data,setData]=useState<Data|null>(null);
- const [congressId,setCongressId]=useState(params.get("congressId")||"");
+ const [congressId,setCongressId]=useState(initialCongressId||params.get("congressId")||"");
  const [selectedId,setSelectedId]=useState<string|null>(null);
  const [search,setSearch]=useState("");
  const [roleFilter,setRoleFilter]=useState("all");
@@ -28,6 +30,16 @@ export function AccessControlClient(){
   id:null,role:"delegate",name:"",abilities:baseManagedAbilities("delegate")});
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
  const [error,setError]=useState(""),[notice,setNotice]=useState("");
+ function changeCongress(nextId:string){
+  setCongressId(nextId);
+  setNotice("");
+  // Keep the administrative sidebar tied to the congress being inspected.
+  // Global RBAC remains super-admin-only; changing the filter grants no rights.
+  if(nextId&&pathname==="/dashboard/access")
+   router.replace("/dashboard/access?congressId="+encodeURIComponent(nextId),{scroll:false});
+  else if(nextId&&initialCongressId&&nextId!==initialCongressId)
+   router.push("/congresses/"+encodeURIComponent(nextId)+"/permissions");
+ }
  const selected=data?.accounts.find(a=>a.userId===selectedId)||null;
  const membership=selected?.memberships.find(m=>m.congressId===congressId)||null;
  const groups=data?.groups.filter(g=>g.congress_id===congressId)||[];
@@ -107,10 +119,11 @@ export function AccessControlClient(){
    </div>
   </header>
   <div className="flex flex-wrap gap-2">
-   <Link href="/dashboard" className={chip}><ArrowLeft size={13} className="mr-1 inline"/> Quay về Admin</Link>
+   <Link href={initialCongressId?"/congresses/"+initialCongressId:"/dashboard"} className={chip}>
+    <ArrowLeft size={13} className="mr-1 inline"/> {initialCongressId?"Về Đại hội":"Quay về Admin"}</Link>
    <label className="inline-flex items-center gap-2 text-[12px] font-semibold text-[#456679]">
     Đại hội <select className="field min-h-10 max-w-[min(70vw,470px)]" value={congressId}
-     onChange={e=>{setCongressId(e.target.value);setNotice("");}} aria-label="Lọc theo Đại hội">
+     onChange={e=>changeCongress(e.target.value)} aria-label="Lọc theo Đại hội">
       {(data?.congresses||[]).map(c=><option value={c.id} key={c.id}>{c.name}</option>)}
     </select>
    </label>
@@ -174,7 +187,7 @@ export function AccessControlClient(){
      <div className="mt-4 border-t border-[#e6edf1] pt-4">
       <h3 className="text-[13px] font-bold text-[#2e536a]">Các Đại hội đã tham gia</h3>
       <div className="mt-2 flex flex-wrap gap-2">{selected.memberships.map(m=><button
-       onClick={()=>setCongressId(m.congressId)} key={m.congressId}
+       onClick={()=>changeCongress(m.congressId)} key={m.congressId}
        className={chip+" "+(m.congressId===congressId?"!border-[#78b6d2] !bg-[#eaf5fa]":"")}>
        {data?.congresses.find(c=>c.id===m.congressId)?.name||"Đại hội"} · {RBAC_LABELS[m.role]}</button>)}
        {!selected.memberships.length&&<span className="text-[12px] text-[#8197a4]">Chưa có vai trò theo Đại hội.</span>}

@@ -8,7 +8,8 @@ export type AdminSearchableGroup<T extends AdminSearchableNav>={
 };
 
 export function isAdminNavActive(path:string,href:string):boolean{
- return path===href||(href!=="/dashboard"&&path.startsWith(href+"/"));
+ const route=href.split("?")[0];
+ return path===route||(route!=="/dashboard"&&path.startsWith(route+"/"));
 }
 
 export function findAdminNavActive<T extends AdminSearchableNav>(

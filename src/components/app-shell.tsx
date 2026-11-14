@@ -38,7 +38,7 @@ export function AppShell({children,name,congressId,congressName,
  const triggerRef=useRef<HTMLButtonElement>(null);
  const overview:NavItem={name:congressId?"Tất cả Đại hội":"Tổng quan hệ thống",href:"/dashboard",icon:LayoutGrid};
  const logs:NavItem={name:"Nhật ký hệ thống",href:"/dashboard/system-logs",icon:ScrollText};
- const globalAccess:NavItem={name:"RBAC · Toàn bộ tài khoản",href:"/dashboard/access",icon:ShieldCheck};
+ const globalAccess:NavItem={name:"RBAC · Toàn bộ tài khoản",href:"/dashboard/access"+(congressId?"?congressId="+encodeURIComponent(congressId):""),icon:ShieldCheck};
  const myAccount:NavItem={name:"Tài khoản & bảo mật",href:"/account",icon:CircleUserRound};
  const base=congressId?"/congresses/"+congressId:"";
  const canUse=(ability:CongressAbility)=>effectiveAbilities?effectiveAbilities.includes(ability):canCongress(accessRole,ability);

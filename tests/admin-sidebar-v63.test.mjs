@@ -22,6 +22,9 @@ test("most specific admin route wins and no root false positive",()=>{
  assert.equal(findAdminNavActive("/dashboard",pages,overview),overview);
  assert.equal(isAdminNavActive("/dashboard/another","/dashboard"),false);
  assert.equal(isAdminNavActive("/dashboard/accessory","/dashboard/access"),false);
+ assert.equal(isAdminNavActive("/dashboard/access","/dashboard/access?congressId=one"),true);
+ assert.equal(isAdminNavActive("/dashboard/access/preview/any","/dashboard/access?congressId=one"),true);
+ assert.equal(isAdminNavActive("/dashboard/accessory","/dashboard/access?congressId=one"),false);
 });
 
 test("sidebar search matches Vietnamese names and groups without inventing permissions",()=>{
