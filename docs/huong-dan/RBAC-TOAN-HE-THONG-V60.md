@@ -8,7 +8,7 @@ Super Admin xem danh bạ từ Supabase Auth, bao gồm **quản trị hệ th�
 - Lọc, tìm tài khoản theo email/tên và chọn Đại hội để quản lý.
 - Phân quyền theo **vai trò nền** và **nhóm tùy chỉnh theo Đại hội**. Nhóm chỉ được thu hẹp quyền của vai trò, không thể tự cấp thêm quyền quản trị hoặc chuyển vai trò.
 - Gán/gỡ nhóm quyền của từng tài khoản; thiết lập quyền cá nhân theo API được xác thực. Với BTC, giữ cơ chế RPC V58 có nhật ký. Với đại biểu/khách mời, hỗ trợ các quyền cổng điện tử.
-- **Xem giao diện tài khoản** (`/dashboard/access/preview/[userId]`): bản mô phỏng **chỉ đọc**, dựng trên server từ dữ liệu và quyền thực tế; không phải đăng nhập thay, không lấy mật khẩu, không đổi cookie/JWT hay bật thao tác ghi. Có banner cảnh báo và nút trở về.
+- **Xem giao diện tài khoản** (`/dashboard/access/preview/[userId]`): với **tài khoản BTC**, V71 hiển thị cùng `AppShell` và đúng component **Bảng điều hành Đại hội** của giao diện thật, gồm thanh bên Admin, chỉ số và phân hệ theo quyền RBAC của tài khoản đích; các mục còn lại hiển thị bản tóm tắt chỉ đọc trong thanh bên chuẩn. Với **đại biểu/khách mời có tài khoản**, vẫn dùng các trang cổng đại biểu thực tế. Preview luôn chỉ đọc: không phải đăng nhập thay, không lấy mật khẩu, không đổi cookie/JWT, không cho ghi, quét điểm danh hoặc đăng xuất. Banner cảnh báo và nút Thoát xem thử nằm ngoài khu vực khóa thao tác.
 - Áp dụng bảo vệ server-side cho nội dung thẻ, tài liệu, BCH, ghế, quét QR, lịch sử và cập nhật hồ sơ; bảo vệ ở PostgreSQL RLS với các truy vấn trực tiếp.
 - Lịch sử thao tác quản lý nhóm, gán nhóm và giới hạn quyền cá nhân được ghi ở audit log và nhật ký hệ thống.
 

@@ -101,7 +101,7 @@ test("Phân tích là phân hệ độc lập; dữ liệu được phân trang,
  const page=read("../src/app/congresses/[id]/quality/page.tsx");
  const source=read("../src/lib/delegate-quality-source.ts");
  const shell=read("../src/components/app-shell.tsx");
- const home=read("../src/app/congresses/[id]/page.tsx");
+ const home=read("../src/components/congress-overview.tsx");
  const old=read("../src/app/congresses/[id]/delegates/quality/page.tsx");
  assert.match(shell,/canUse\("quality.read"\)/);
  assert.match(shell,/name:"Phân tích chất lượng",href:base\+"\/quality"/);

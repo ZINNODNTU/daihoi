@@ -37,13 +37,13 @@ test("Trang demo hoạt động độc lập không yêu cầu dữ liệu thậ
  assert.match(demo,/DỮ LIỆU MẪU/);
 });
 test("Dashboard và Đại hội dùng command center, metrics thực tế và tránh glow",()=>{
- for(const path of ["src/app/dashboard/page.tsx","src/app/congresses/[id]/page.tsx"]){
+ for(const path of ["src/app/dashboard/page.tsx","src/components/congress-overview.tsx"]){
    const s=source(path);
    assert.match(s,/command-hero/);
    assert.match(s,/metric-card/);
    assert.doesNotMatch(s,/blur-\[|bg-gradient-to|rounded-\[24px\]/);
  }
- const congress=source("src/app/congresses/[id]/page.tsx");
+ const congress=source("src/components/congress-overview.tsx");
  assert.match(congress,/congress\.name/);
  assert.match(congress,/arrived/);
  assert.match(congress,/percent/);

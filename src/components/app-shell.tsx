@@ -20,11 +20,11 @@ type Props={
  children:React.ReactNode;name:string;congressId?:string;congressName?:string;
  congressKind?:CongressKind;canManage?:boolean;canViewBch?:boolean;
  canCheckin?:boolean;canViewSystemLogs?:boolean;accessRole?:CongressRole;
- effectiveAbilities?:CongressAbility[];
+ effectiveAbilities?:CongressAbility[];previewMode?:boolean;previewRoute?:string;
 };
 
 export function AppShell({children,name,congressId,congressName,
- congressKind="doan",canViewSystemLogs=false,accessRole=null,effectiveAbilities}:Props){
+ congressKind="doan",canViewSystemLogs=false,accessRole=null,effectiveAbilities,previewMode=false,previewRoute}:Props){
  const [mobile,setMobile]=useState(false);
  const [compact,setCompact]=useState(false);
  const [query,setQuery]=useState("");
@@ -87,7 +87,7 @@ export function AppShell({children,name,congressId,congressName,
   ...(canViewSystemLogs?[{id:"system-admin",title:"Quản trị hệ thống",items:[globalAccess,logs]}]:[])
  ].filter(group=>group.items.length>0);
  const items=[overview,...congressItems,...adminItems,...(canViewSystemLogs?[globalAccess,logs]:[]),myAccount];
- const active=findAdminNavActive(path,items,overview);
+ const active=findAdminNavActive(previewRoute||path,items,overview);
  const mobileItems=congressId?congressItems.filter(item=>[
   base,base+"/attendance",base+"/delegates",base+"/ballots",base+"/bch-candidates",
   base+"/documents",base+"/reports"
@@ -189,7 +189,7 @@ export function AppShell({children,name,congressId,congressName,
   </Link>;
  }
  return <div className="app-layout admin-workspace min-h-dvh lg:flex">
-  {canViewSystemLogs&&<AdminErrorMonitor/>}
+  {canViewSystemLogs&&!previewMode&&<AdminErrorMonitor/>}
   <a href="#noi-dung-chinh" className="skip-link">Bỏ qua điều hướng đến nội dung</a>
   {mobile&&<button type="button" aria-label="Đóng bảng điều hướng"
    onClick={closeDrawer}
@@ -285,14 +285,14 @@ export function AppShell({children,name,congressId,congressName,
    </div>
 
    <div className="admin-sidebar-footer shrink-0 border-t border-white/10 px-3 py-3">
-    {navLink(myAccount)}
+    {previewMode?<span className="flex items-center gap-3 px-3 py-3 text-[12px] font-semibold text-[#adc8d8]"><CircleUserRound size={18}/> Tài khoản & bảo mật · Chỉ xem</span>:navLink(myAccount)}
     <div className="admin-sidebar-profile mt-2 flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[.055] px-2.5 py-3">
      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-white/15 bg-white/10 text-[13px] font-extrabold text-white">{avatar}</span>
      <div className="admin-sidebar-profile-text min-w-0 flex-1">
       <p className="truncate text-[12px] font-bold text-white" title={displayName}>{displayName}</p>
       <p className="mt-1 truncate text-[10px] text-[#a9c4d5]">{roleTitle}</p>
      </div>
-     <button type="button" onClick={()=>void logout()} aria-label="Đăng xuất" title="Đăng xuất"
+     <button type="button" onClick={()=>{if(!previewMode)void logout();}} disabled={previewMode} aria-label="Đăng xuất" title={previewMode?"Đã khóa đăng xuất ở chế độ chỉ đọc":"Đăng xuất"}
       className="admin-sidebar-logout admin-sidebar-icon-button flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
       <LogOut size={17}/>
      </button>
@@ -331,7 +331,7 @@ export function AppShell({children,name,congressId,congressName,
      </div>
     </div>
     <div className="flex shrink-0 items-center gap-3">
-     {congressId&&canUse("attendance.scan")&&
+     {congressId&&!previewMode&&canUse("attendance.scan")&&
       <Link href={base+"/attendance"}
        className="hidden min-h-9 items-center gap-2 rounded-lg border border-[#cde2eb] bg-[#f4f9fb] px-3 text-[11px] font-bold text-[#2b718f] hover:bg-[#eaf5f9] md:inline-flex">
        <QrCode size={15}/> Điểm danh nhanh <ArrowRight size={13}/>

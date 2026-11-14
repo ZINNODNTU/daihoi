@@ -109,7 +109,7 @@ test("Revoking BTC workspace.view removes the congress but keeps the same UI she
 
 test("Congress dashboard uses the common admin layout and honors per-module permissions",()=>{
  const layout=read("src/app/congresses/[id]/layout.tsx");
- const page=read("src/app/congresses/[id]/page.tsx");
+ const page=read("src/components/congress-overview.tsx");
  const shell=read("src/components/app-shell.tsx");
  const login=read("src/app/api/auth/login/route.ts");
  assert.match(layout,/<AppShell/);
