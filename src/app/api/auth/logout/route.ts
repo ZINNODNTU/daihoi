@@ -35,6 +35,7 @@ export async function POST(request:NextRequest){
   const {error}=await client.auth.signOut();
   if(error)return NextResponse.json({error:"Không thể đăng xuất. Hãy thử lại."},{status:503});
   response.cookies.delete("daihoi_active_congress");
+   response.cookies.delete("daihoi_guest_view");
    return response;
  }catch{return NextResponse.json({error:"Không kết nối được máy chủ đăng xuất."},{status:503});}
 }

@@ -29,8 +29,17 @@ export const getPortalAbilities=cache(async(userId:string,congressId:string,role
     .eq("user_id",userId).eq("congress_id",congressId).limit(12)
   ]);
   if(denials.error&&!isRbacMigrationPending(denials.error)||scope.group&&scope.group.role!==role)return [];
-  const granted=resolveGroupAbilities(baseManagedAbilities(role) as PortalAbility[],
+  let granted=resolveGroupAbilities(baseManagedAbilities(role) as PortalAbility[],
    scope.group?.abilities??null).filter(a=>!(denials.data||[]).some(d=>d.ability===a));
+  if(role==="guest"){
+   // Guest delegates may use their assigned seat/check-in features; a viewer-only
+   // guest account with no active delegate profile cannot gain those abilities.
+   const {data:profiles,error:profileError}=await createAdminClient().from("delegates")
+    .select("id").eq("auth_user_id",userId).eq("congress_id",congressId)
+    .eq("delegate_type","guest").eq("is_active",true).limit(1);
+   if(profileError||!profiles?.length)
+    granted=granted.filter(a=>a!=="portal.checkin"&&a!=="portal.seating"&&a!=="portal.history");
+  }
   return granted.includes("portal.access")?granted:[];
  }catch{return [];}
 });

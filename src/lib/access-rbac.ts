@@ -30,7 +30,7 @@ export function isManagedRole(v:unknown):v is ManagedRole{
 }
 export function baseManagedAbilities(role:ManagedRole):string[]{
  if(role==="delegate")return [...PORTAL_ABILITIES];
- if(role==="guest")return ["portal.access","portal.card","portal.documents","portal.bch"];
+ if(role==="guest")return ["portal.access","portal.card","portal.documents","portal.bch","portal.checkin","portal.seating","portal.history"];
  return [...roleAbilities(role).filter(a=>ACCOUNT_PERMISSION_CAPABILITIES.includes(a as typeof ACCOUNT_PERMISSION_CAPABILITIES[number]))];
 }
 export function editableGroupAbilities(role:ManagedRole):string[]{

@@ -4,6 +4,11 @@
 
 Đại hội số là nền tảng điều hành nhiều Đại hội Đoàn/Hội với **Next.js, Supabase, Google Drive** và Vercel (khi triển khai). Phần tài liệu được tổ chức theo **mục đích sử dụng**, không chỉ theo mốc phiên bản.
 
+## Cập nhật tài khoản và chế độ khách (14/11/2026)
+
+- [Tài khoản quản trị chính BTC V65](huong-dan/TAI-KHOAN-BTC-CHINH-V65.md): một tài khoản quản trị cho mỗi Đại hội, một cổng đăng nhập, RBAC nhân sự BTC.
+- [Chế độ khách xem Đại hội và đại biểu khách mời V66](huong-dan/CHE-DO-KHACH-DAI-HOI-V66.md): mã truy cập khách, tài liệu, BCH, sơ đồ ghế và điểm danh có phân quyền.
+
 ## Đọc theo nhu cầu
 
 | Bạn cần làm gì? | Tài liệu chính |

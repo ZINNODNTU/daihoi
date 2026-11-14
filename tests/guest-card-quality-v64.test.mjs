@@ -6,11 +6,12 @@ import {calculateDelegateQuality} from "../src/lib/delegate-demographics.ts";
 
 const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 
-test("Guests may have a card and BCH without check-in rights by default",()=>{
+test("Guest delegates have linked-profile-only check-in rights while viewer-only guests remain read-only",()=>{
  const rbac=read("src/lib/access-rbac.ts");
  const portal=read("src/app/my-card/page.tsx");
  const shell=read("src/components/delegate-shell.tsx");
- assert.match(rbac,/if\(role==="guest"\)return \["portal.access","portal.card","portal.documents","portal.bch"\]/);
+ assert.match(rbac,/if\(role==="guest"\)return \["portal.access","portal.card","portal.documents","portal.bch","portal.checkin","portal.seating","portal.history"\]/);
+  assert.match(read("src/lib/rbac-server.ts"),/if\(profileError\|\|!profiles\?\.length\)/);
  assert.match(portal,/hasPortalAbility\(user.id,selected.id,"portal.card"\)/);
  assert.match(portal,/MyDelegateCards items=\{visible\}/);
  assert.match(shell,/guestOnly\?links.filter\(link=>\["\/my-card"/);

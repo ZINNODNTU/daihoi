@@ -31,12 +31,12 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
     "/my-card/seats":"portal.seating","/my-card/documents":"portal.documents",
     "/my-card/bch":"portal.bch","/my-card/history":"portal.history"
    };
-   const visibleLinks=(guestOnly?links.filter(link=>["/my-card","/my-card/documents","/my-card/bch","/account"].includes(link.href)):links)
+   const visibleLinks=(guestOnly?links.filter(link=>["/my-card","/my-card/checkin","/my-card/seats","/my-card/documents","/my-card/bch","/my-card/history","/account"].includes(link.href)):links)
     .filter(link=>!allowedAbilities||!bySection[link.href]||allowedAbilities.includes(bySection[link.href]))
      .filter(link=>!previewBasePath||link.href!=="/account");
- const primaryLinks=guestOnly?visibleLinks.filter(link=>link.href!=="/account"):
+ const primaryLinks=guestOnly?visibleLinks.filter(link=>["/my-card","/my-card/checkin","/my-card/seats","/my-card/documents"].includes(link.href)):
    visibleLinks.filter(link=>["/my-card","/my-card/checkin","/my-card/seats","/my-card/documents"].includes(link.href));
-  const moreLinks=guestOnly?[]:visibleLinks.filter(link=>!primaryLinks.some(primary=>primary.href===link.href));
+  const moreLinks=visibleLinks.filter(link=>!primaryLinks.some(primary=>primary.href===link.href));
   const [moreOpen,setMoreOpen]=useState(false);
   const moreButton=useRef<HTMLButtonElement>(null);
   const firstMoreLink=useRef<HTMLAnchorElement>(null);

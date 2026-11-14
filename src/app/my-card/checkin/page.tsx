@@ -48,7 +48,7 @@ export default async function DelegateCheckinPage(){
   <div className="flex items-start gap-3 border-b border-[#dbe5eb] pb-5 sm:gap-4">
    <BrandMark kind={current.kind} className="!h-[56px] !w-[56px] !shrink-0 !rounded-xl !border-[#dae5eb] !bg-white !p-2 !shadow-none"/>
    <div className="min-w-0">
-    <p className={"text-[11px] font-bold uppercase tracking-[.11em] "+theme.eyebrow}>CỔNG ĐẠI BIỂU</p>
+    <p className={"text-[11px] font-bold uppercase tracking-[.11em] "+theme.eyebrow}>{current.delegateType==="guest"?"CỔNG ĐẠI BIỂU KHÁCH MỜI":"CỔNG ĐẠI BIỂU"}</p>
     <h1 className="mt-1 text-[clamp(24px,4vw,30px)] font-extrabold leading-[1.3] text-[#1b374c]">Điểm danh</h1>
     <p className="mt-1 text-[12px] leading-5 text-[#567387]">{current.congressName}</p>
    </div>

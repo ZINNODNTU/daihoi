@@ -35,6 +35,7 @@ const gates=[
   ["document-management-v43","documents","id,congress_id,display_order"],
   ["btc-isolation-v45","btc_accounts","user_id,congress_id,login_email,full_name,disabled_at"],
    ["btc-primary-admin-v65","btc_accounts","user_id,congress_id,is_primary"],
+   ["guest-view-v66","congress_guest_links","congress_id,access_hash,enabled,rotated_at"],
   ["congress-lifecycle-v46","congress_identity_cleanup_queue","id,congress_id,user_id,status,attempts"],
  ["bch","bch_candidates","id,congress_id,full_name,photo_path"],
  ["seating-v6","seating_layouts","id,congress_id,grid_rows,grid_columns,version"],

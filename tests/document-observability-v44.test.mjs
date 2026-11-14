@@ -19,7 +19,8 @@ function compile(path,mocks){
  new Function("require","module","exports",js)(name=>{
   if(name==="next/server")return {NextResponse:{json:(body,options={})=>
    new Response(JSON.stringify(body),{status:options.status||200,headers:options.headers})}};
-  if(name in mocks)return mocks[name];
+  if(name==="@/lib/guest-congress-access")return {hasGuestCongressAccess:async()=>false};
+   if(name in mocks)return mocks[name];
   throw Error("Unexpected import "+name);
  },mod,mod.exports);
  return mod.exports;

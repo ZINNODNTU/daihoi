@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import {getAuth,getPortalViewerAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {hasPortalAbility} from "@/lib/rbac-server";
+import {hasGuestCongressAccess} from "@/lib/guest-congress-access";
 import {readPortrait,getPortraitWidth} from "@/lib/portrait-storage";
 import {bchPortraitKey,isAuthorizedBchPhotoKey} from "@/lib/portrait-policy";
 import {preparePortrait,savePortraitObject,PortraitError} from "@/lib/portrait-upload";
@@ -16,20 +17,26 @@ const fail=(message:string,status:number)=>NextResponse.json({error:message},{
 async function authorize(id:string,write:boolean){
  if(!uuid.test(id))return {error:fail("Mã nhân sự BCH không hợp lệ.",400)} as const;
  const {supabase,user}=write?await getAuth():await getPortalViewerAuth();
- if(!user)return {error:fail("Vui lòng đăng nhập.",401)} as const;
  const db=createAdminClient();
  const {data:candidate,error}=await db.from("bch_candidates")
   .select("id,congress_id,photo_path,updated_at").eq("id",id).maybeSingle();
  if(error||!candidate)return {error:fail("Không tìm thấy nhân sự BCH.",404)} as const;
+ if(!user){
+  if(write||!(await hasGuestCongressAccess(candidate.congress_id)))
+   return {error:fail("Vui lòng đăng nhập hoặc nhập mã khách Đại hội.",401)} as const;
+  return {candidate,supabase} as const;
+ }
  const admin=await hasCongressAbility(supabase,user.id,candidate.congress_id,"bch.write");
  if(write&&!admin)return {error:fail("Chỉ quản trị Đại hội được thay ảnh nhân sự BCH.",403)} as const;
  if(!write&&!admin){
-   const canSee=await hasCongressAbility(supabase,user.id,candidate.congress_id,"bch.read")||
-    await hasPortalAbility(user.id,candidate.congress_id,"portal.bch");
-   if(!canSee)return {error:fail("Bạn không có quyền xem ảnh nhân sự BCH.",403)} as const;
-  }
-  return {candidate,supabase} as const;
+  const canSee=await hasCongressAbility(supabase,user.id,candidate.congress_id,"bch.read")||
+   await hasPortalAbility(user.id,candidate.congress_id,"portal.bch")||
+   await hasGuestCongressAccess(candidate.congress_id);
+  if(!canSee)return {error:fail("Bạn không có quyền xem ảnh nhân sự BCH.",403)} as const;
+ }
+ return {candidate,supabase} as const;
 }
+
 function expectedPath(congressId:string,candidateId:string){
  return bchPortraitKey(congressId,candidateId);
 }
