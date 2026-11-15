@@ -2,10 +2,10 @@ import {normalizeBirthDate,normalizeGender} from "./delegate-demographics.ts";
 
 export const DELEGATE_ROSTER_HEADERS=[
  "STT","HỌ VÀ TÊN","MSSV","NGÀY THÁNG NĂM SINH (dd/mm/yyyy)",
- "","CHỨC VỤ","ĐƠN VỊ"
+ "","CHỨC VỤ","ĐƠN VỊ","LOẠI ĐẠI BIỂU"
 ] as const;
 export const DELEGATE_ROSTER_SUBHEADERS=[
- "","","","NAM","NỮ","",""
+ "","","","NAM","NỮ","","",""
 ] as const;
 
 export type DelegateUploadRow={
@@ -26,11 +26,15 @@ const key=(value:unknown):string=>text(value).toLocaleLowerCase("vi")
 const get=(row:readonly unknown[],index:number):string=>index<0?"":text(row[index]);
 const indexOf=(keys:string[],names:readonly string[])=>keys.findIndex(h=>
  names.some(name=>h===name||h.startsWith(name)));
-function kind(value:string):DelegateUploadRow["delegate_type"]{
+function kind(value:string,line:number):DelegateUploadRow["delegate_type"]{
  const normalized=key(value);
- if(normalized.includes("khach")||normalized==="guest")return "guest";
- if(normalized.includes("dukhuyet")||normalized==="alternate")return "alternate";
- return "official";
+ if(!normalized||normalized==="chinhthuc"||normalized==="official"||
+  normalized==="daibieuchinhthuc")return "official";
+ if(normalized==="dukhuyet"||normalized==="alternate"||
+  normalized==="daibieudukhuyet")return "alternate";
+ if(normalized==="khachmoi"||normalized==="guest"||
+  normalized==="daibieukhachmoi")return "guest";
+ throw new Error("Dòng "+line+": Loại đại biểu không hợp lệ. Chọn Chính thức, Dự khuyết hoặc Khách mời.");
 }
 const mssvPattern=/^[A-Za-z0-9][A-Za-z0-9._-]{3,31}$/;
 const limit=(value:string,max:number,field:string,line:number)=>{
@@ -71,7 +75,7 @@ export function parseDelegateImportSheet(matrix:readonly (readonly unknown[])[])
   const line=i+1;
   const full_name=limit(field(row,["hovaten","hoten","fullname","tensinhvien"]),160,"Họ tên",line);
   const student_id=field(row,["mssv","msvv","masosinhvien","studentid"]).toUpperCase();
-  const role=kind(field(row,["vaitro","loaidaibieu","delegatetype"]));
+  const role=kind(field(row,["vaitro","loaidaibieu","delegatetype"]),line);
   if(!full_name)throw new Error("Dòng "+line+": thiếu họ và tên.");
   if(!student_id&&role!=="guest")throw new Error("Dòng "+line+": thiếu MSSV (chỉ khách mời được để trống).");
   if(student_id&&!mssvPattern.test(student_id))

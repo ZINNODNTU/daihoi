@@ -220,10 +220,10 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     value:"",type:String,borderColor:"#D5E1E9",borderStyle:"thin" as const,
     fontFamily:"Times New Roman",height:22
    })));
-   const widths=[7,30,20,18,18,28,34].map(width=>({width}));
+   const widths=[7,30,20,18,18,28,34,20].map(width=>({width}));
    await writeExcelFile([{sheet:"Danh sach dai bieu",stickyRowsCount:2,
-    columns:widths,data:[top,sub,...empty] as unknown as (string|number)[][]}]).toFile("mau-nhap-dai-bieu-chuc-vu-don-vi-NAM-NU.xlsx");
-   setSuccess("Đã tải mẫu 7 cột: STT, Họ tên, MSSV, Ngày sinh NAM/NỮ, Chức vụ, Đơn vị. Điền dữ liệu từ dòng 3.");
+    columns:widths,data:[top,sub,...empty] as unknown as (string|number)[][]}]).toFile("mau-nhap-dai-bieu-NAM-NU-chuc-vu-don-vi-loai.xlsx");
+   setSuccess("Đã tải mẫu 8 cột có Loại đại biểu: Chính thức, Dự khuyết hoặc Khách mời. Điền dữ liệu từ dòng 3.");
   }catch(error){
    setError("Không tạo được Excel mẫu: "+(error instanceof Error?error.message:"Lỗi không xác định"));
   }
@@ -300,8 +300,8 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   {uploadRows&&<div className="card p-5 mb-5">
    <p className="font-bold">Đã đọc {uploadRows.length} dòng · Có thể thêm {importableRows.length} đại biểu</p>
     {skippedImportCount>0&&<p className="mt-2 rounded-lg border border-[#e7d6ae] bg-[#fff9ec] px-3 py-2 text-xs text-[#88642e]">Đã bỏ qua {skippedImportCount} MSSV có sẵn tại Đại hội hiện tại, tránh nhập trùng. Chỉ các dòng mới được thêm.</p>}
-   <p className="helper my-3">Mẫu hai dòng tiêu đề: nhập ngày sinh vào cột NAM hoặc NỮ để tự nhận giới tính. Hệ thống chỉ lấy MSSV, họ tên, đơn vị/chức vụ, giới tính và ngày sinh; các cột thông tin khác trong file được bỏ qua.</p>
-   <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Đơn vị</th><th>Chức vụ</th><th>Giới tính</th><th>Ngày sinh</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.unit||"—"}</td><td>{r.position||"—"}</td><td>{r.gender==="male"?"Nam":r.gender==="female"?"Nữ":r.gender||"—"}</td><td>{birthLabel(r.birth_date||null)}</td></tr>)}</tbody></table></div>
+   <p className="helper my-3">Mẫu 8 cột với ngày sinh NAM/NỮ và Loại đại biểu (Chính thức, Dự khuyết, Khách mời). Để trống loại sẽ mặc định Chính thức. Các mẫu Excel cũ vẫn nhập được.</p>
+   <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Đơn vị</th><th>Chức vụ</th><th>Loại đại biểu</th><th>Giới tính</th><th>Ngày sinh</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.unit||"—"}</td><td>{r.position||"—"}</td><td>{kindLabel(r.delegate_type)}</td><td>{r.gender==="male"?"Nam":r.gender==="female"?"Nữ":r.gender||"—"}</td><td>{birthLabel(r.birth_date||null)}</td></tr>)}</tbody></table></div>
    <div className="flex gap-2"><button type="button" className="btn btn-primary" onClick={()=>void save(importableRows)} disabled={busy||!importableRows.length}>Xác nhận nhập</button>
     <button className="btn btn-secondary" onClick={()=>setUploadRows(null)}>Hủy</button></div>
   </div>}
