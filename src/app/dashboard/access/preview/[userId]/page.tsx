@@ -20,6 +20,7 @@ import DelegateCheckinPage from "@/app/my-card/checkin/page";
 import DelegateSeatsPage from "@/app/my-card/seats/page";
 import DelegateDocumentsPage from "@/app/my-card/documents/page";
 import DelegateBchPage from "@/app/my-card/bch/page";
+import DelegateNewCommitteePage from "@/app/my-card/bch-new/page";
 import DelegateHistoryPage from "@/app/my-card/history/page";
 
 export const dynamic="force-dynamic";
@@ -86,6 +87,7 @@ export default async function AccessPreview({params,searchParams}:{
    {id:"seating",ability:"portal.seating"},
    {id:"documents",ability:"portal.documents"},
    {id:"bch",ability:"portal.bch"},
+    {id:"bch-new",ability:"portal.bch"},
    {id:"history",ability:"portal.history"}
   ];
   const available=views.filter(item=>portalRights.includes(item.ability as never));
@@ -123,6 +125,7 @@ export default async function AccessPreview({params,searchParams}:{
      selectedView==="seating"?<DelegateSeatsPage searchParams={Promise.resolve({sessionId})}/>:
      selectedView==="documents"?<DelegateDocumentsPage/>:
      selectedView==="bch"?<DelegateBchPage/>:
+     selectedView==="bch-new"?<DelegateNewCommitteePage/>:
      selectedView==="history"?<DelegateHistoryPage/>:
      <div className="rounded-xl border border-[#dce8ee] bg-white p-6 text-sm text-[#526d7f]">
       Tài khoản không được cấp quyền xem phân hệ nào tại Đại hội này.

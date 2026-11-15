@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import {useEffect,useState} from "react";
-import {ArrowLeft,ArrowRight,Award,CheckCircle2,Presentation,ShieldAlert,X} from "lucide-react";
+import {ArrowLeft,ArrowRight,Award,CheckCircle2,Presentation,ShieldAlert,X,Send,Undo2} from "lucide-react";
 import {BrandMark} from "@/components/brand-mark";
 import {formatBallotPercentage,selectNewBchMembers,type BchBallotCandidate} from "@/lib/bch-candidates";
 
@@ -22,10 +22,18 @@ function Portrait({candidate,allowPhoto}:{
  </div>;
 }
 
-export function BchNewCommitteeLaunch({candidates,total,congressName,canViewBch}:{
- candidates:BchBallotCandidate[];total:number|null;congressName:string;canViewBch:boolean
+export function BchNewCommitteeLaunch({candidates,total,congressName,congressId,canViewBch,
+ canPublish,publication,onPublicationChange,publicationError}:{
+ candidates:BchBallotCandidate[];total:number|null;congressName:string;congressId:string;
+ canViewBch:boolean;canPublish:boolean;
+ publication:{memberCount:number;publishedAt:string}|null;
+ onPublicationChange:(value:{memberCount:number;publishedAt:string}|null)=>void;
+ publicationError:string;
 }){
- const [countInput,setCountInput]=useState("");
+ const [countInput,setCountInput]=useState(publication?String(publication.memberCount):"");
+ const [publishing,setPublishing]=useState(false);
+ const [publicationNotice,setPublicationNotice]=useState("");
+ const [publicationFailure,setPublicationFailure]=useState("");
  const [acknowledgedTie,setAcknowledgedTie]=useState(false);
  const [open,setOpen]=useState(false);
  const [page,setPage]=useState(0);
@@ -45,9 +53,45 @@ export function BchNewCommitteeLaunch({candidates,total,congressName,canViewBch}
   document.addEventListener("keydown",onKey);
   return()=>{document.body.style.overflow=previous;document.removeEventListener("keydown",onKey);};
  },[showModal,pages]);
+ async function publish(showPresentation:boolean){
+  if(!canPublish||publishing||error||cutoffTie&&!acknowledgedTie||publicationError)return;
+  setPublishing(true);setPublicationFailure("");setPublicationNotice("");
+  try{
+   const response=await fetch("/api/bch-candidates/new-committee",{
+    method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({congressId,count:Number(countInput),
+     memberIds:members.map(item=>item.id),acknowledgeTie:acknowledgedTie})
+   });
+   const json=await response.json();
+   if(!response.ok)throw new Error(json.error||"Không công bố được BCH khóa mới.");
+   onPublicationChange({memberCount:json.memberCount,publishedAt:json.publishedAt});
+   setPublicationNotice("Đã công bố đúng "+json.memberCount+
+    " ủy viên BCH khóa mới tới cổng đại biểu và khách mời.");
+   if(showPresentation){setPage(0);setOpen(true);}
+  }catch(e){
+   setPublicationFailure(e instanceof Error?e.message:"Không công bố được BCH khóa mới.");
+  }finally{setPublishing(false);}
+ }
  function start(){
   if(error||cutoffTie&&!acknowledgedTie)return;
+  if(canPublish){void publish(true);return;}
   setPage(0);setOpen(true);
+ }
+ async function retract(){
+  if(!canPublish||publishing||!publication||!window.confirm(
+   "Thu hồi danh sách BCH khóa mới khỏi cổng đại biểu và khách mời?"))return;
+  setPublishing(true);setPublicationFailure("");setPublicationNotice("");
+  try{
+   const response=await fetch("/api/bch-candidates/new-committee",{
+    method:"DELETE",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({congressId})
+   });
+   const json=await response.json();
+   if(!response.ok)throw new Error(json.error||"Không thu hồi được danh sách.");
+   onPublicationChange(null);
+   setPublicationNotice("Đã thu hồi BCH khóa mới khỏi cổng đại biểu và khách mời.");
+  }catch(e){setPublicationFailure(e instanceof Error?e.message:"Không thể thu hồi danh sách.");}
+  finally{setPublishing(false);}
  }
  return <section aria-labelledby="new-bch-title" className="overflow-hidden rounded-2xl border border-[#d5e5ed] bg-white">
   <div className="border-b border-[#e1edf2] bg-[linear-gradient(110deg,#eff7fb,#ffffff_70%,#fcf6e9)] px-4 py-5 sm:px-6">
@@ -74,16 +118,36 @@ export function BchNewCommitteeLaunch({candidates,total,congressName,canViewBch}
     <label className="block w-full max-w-[245px]">
      <span className="text-[12px] font-bold text-[#355e74]">Số lượng ủy viên BCH khóa mới</span>
      <input type="number" min={1} max={candidates.length} step={1} inputMode="numeric"
-      value={countInput} onChange={e=>{setCountInput(e.target.value);setAcknowledgedTie(false);setOpen(false);}}
+      value={countInput} onChange={e=>{setCountInput(e.target.value);setAcknowledgedTie(false);setOpen(false);setPublicationFailure("");}}
       placeholder="Ví dụ: 15" className="field mt-2 min-h-12 w-full rounded-xl tabular-nums"
       aria-label="Số lượng ủy viên BCH khóa mới"/>
     </label>
-    <button type="button" disabled={!!error||cutoffTie&&!acknowledgedTie}
+    <button type="button" disabled={!!error||cutoffTie&&!acknowledgedTie||publishing||canPublish&&!!publicationError}
      onClick={start}
      className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#176d90] px-5 text-[12px] font-extrabold text-white disabled:cursor-not-allowed disabled:bg-[#dfe8ed] disabled:text-[#829aa9]">
-     <Presentation size={18}/> Trình chiếu ra mắt {members.length||""} ủy viên
+     <Presentation size={18}/> {canPublish?"Công bố & trình chiếu":"Xem thử trình chiếu"} {members.length||""} ủy viên
     </button>
+    {canPublish&&<button type="button" onClick={()=>void publish(false)}
+     disabled={!!error||cutoffTie&&!acknowledgedTie||publishing||!!publicationError}
+     className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-[#c9dfd9] bg-[#eff9f5] px-5 text-[12px] font-extrabold text-[#217254] disabled:opacity-50">
+     <Send size={17}/> {publishing?"Đang công bố...":"Công bố BCH khóa mới"}
+    </button>}
    </div>
+   {publicationError&&<p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">{publicationError}</p>}
+   {publicationFailure&&<p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">{publicationFailure}</p>}
+   {publicationNotice&&<p role="status" className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-[12px] text-green-800">{publicationNotice}</p>}
+   {publication&&<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b9e0d2] bg-[#f1fbf6] p-4 text-[12px] text-[#286d50]">
+    <div>
+     <p className="flex items-center gap-2 font-bold"><CheckCircle2 size={17}/>
+      Đã công bố BCH khóa mới · {publication.memberCount} ủy viên</p>
+     <p className="mt-1 text-[11px]">Cổng đại biểu và khách mời đang hiển thị đúng danh sách đã chốt.
+      Nếu thay đổi kết quả phiếu hoặc số lượng, cần công bố lại.</p>
+    </div>
+    {canPublish&&<button type="button" onClick={()=>void retract()} disabled={publishing}
+     className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#b9d8cd] bg-white px-3 font-bold text-[#357060]">
+     <Undo2 size={15}/> Thu hồi công bố
+    </button>}
+   </div>}
    {error&&<p role="status" className="rounded-lg bg-[#f7fafb] px-3 py-2 text-[12px] leading-5 text-[#728b9c]">{error}</p>}
    {cutoffTie&&!error&&<div className="rounded-xl border border-[#ecd8b8] bg-[#fff8e9] p-4">
     <p className="flex items-start gap-2 text-[12px] font-bold leading-5 text-[#885e26]">
@@ -125,8 +189,8 @@ export function BchNewCommitteeLaunch({candidates,total,congressName,canViewBch}
     </div>
    </>}
    <p className="text-[11px] leading-5 text-[#8395a1]">
-    Danh sách ra mắt là đề xuất xếp hạng tự động từ phiếu đã lưu, không tự thay thế biên bản,
-    kết luận về điều kiện trúng cử hoặc quyết định công nhận BCH mới.
+    Danh sách được đề xuất từ phiếu đã nhập. BTC cần đối chiếu biên bản trước khi công bố;
+    cổng đại biểu và khách mời chỉ hiển thị danh sách BCH khóa mới đã được BTC chốt và phát hành.
    </p>
   </div>
   {showModal&&<div role="dialog" aria-modal="true" aria-label="Ra mắt Ban Chấp hành khóa mới"

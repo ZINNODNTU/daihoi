@@ -2,7 +2,7 @@
 import {usePathname} from "next/navigation";
 import Link from "next/link";
 import {useEffect,useRef,useState} from "react";
-import {Armchair,BookOpen,Camera,History,IdCard,LogOut,ShieldCheck,UserRound,Users,Ellipsis} from "lucide-react";
+import {Armchair,BookOpen,Camera,History,IdCard,LogOut,ShieldCheck,UserRound,Users,Ellipsis,Award} from "lucide-react";
 import {BrandMark} from "@/components/brand-mark";
 import {PortalCongressPicker,type CongressChoice} from "@/components/portal-congress-picker";
 
@@ -13,6 +13,7 @@ const links:NavItem[]=[
  {href:"/my-card/seats",label:"Chỗ ngồi",mobile:"Ghế",icon:Armchair},
  {href:"/my-card/documents",label:"Tài liệu Đại hội",mobile:"Tài liệu",icon:BookOpen},
  {href:"/my-card/bch",label:"Nhân sự BCH",mobile:"BCH",icon:Users},
+  {href:"/my-card/bch-new",label:"BCH khóa mới",mobile:"BCH mới",icon:Award},
  {href:"/my-card/history",label:"Lịch sử",mobile:"Lịch sử",icon:History},
  {href:"/account",label:"Tài khoản",mobile:"Cá nhân",icon:UserRound}
 ];
@@ -20,7 +21,8 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
  const path=usePathname();
   const previewSections:Record<string,string>={
    "/my-card":"overview","/my-card/checkin":"checkin","/my-card/seats":"seating",
-   "/my-card/documents":"documents","/my-card/bch":"bch","/my-card/history":"history"
+   "/my-card/documents":"documents","/my-card/bch":"bch",
+    "/my-card/bch-new":"bch-new","/my-card/history":"history"
   };
   const navHref=(href:string)=>previewBasePath&&previewSections[href]?
    previewBasePath+"?congressId="+encodeURIComponent(activeCongressId||"")+
@@ -29,9 +31,10 @@ export function DelegateShell({children,name,guestOnly=false,congresses=[],activ
   const bySection:Record<string,string>={
     "/my-card":"portal.card","/my-card/checkin":"portal.checkin",
     "/my-card/seats":"portal.seating","/my-card/documents":"portal.documents",
-    "/my-card/bch":"portal.bch","/my-card/history":"portal.history"
+    "/my-card/bch":"portal.bch","/my-card/bch-new":"portal.bch",
+     "/my-card/history":"portal.history"
    };
-   const visibleLinks=(guestOnly?links.filter(link=>["/my-card","/my-card/checkin","/my-card/seats","/my-card/documents","/my-card/bch","/my-card/history","/account"].includes(link.href)):links)
+   const visibleLinks=(guestOnly?links.filter(link=>["/my-card","/my-card/checkin","/my-card/seats","/my-card/documents","/my-card/bch","/my-card/bch-new","/my-card/history","/account"].includes(link.href)):links)
     .filter(link=>!allowedAbilities||!bySection[link.href]||allowedAbilities.includes(bySection[link.href]))
      .filter(link=>!previewBasePath||link.href!=="/account");
  const primaryLinks=guestOnly?visibleLinks.filter(link=>["/my-card","/my-card/checkin","/my-card/seats","/my-card/documents"].includes(link.href)):

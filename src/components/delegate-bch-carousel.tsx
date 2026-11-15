@@ -8,13 +8,16 @@
  import type {BchCandidate} from "@/lib/bch-candidates";
 
  type Candidate=BchCandidate&{congressName:string};
+ type BchCardVariant="candidate"|"new";
  type HorizontalDirection="left"|"right";
 
  function normalize(value:string){
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/gi,"d").toLowerCase();
  }
 
- export function DelegateBchCarousel({items,initialCongressId=""}:{items:Candidate[];initialCongressId?:string}){
+ export function DelegateBchCarousel({items,initialCongressId="",variant="candidate"}:{
+ items:Candidate[];initialCongressId?:string;variant?:BchCardVariant
+ }){
   const [congressId,setCongressId]=useState(initialCongressId);
   const [query,setQuery]=useState("");
   const congresses=[...new Map(items.map(item=>[item.congress_id,{id:item.congress_id,name:item.congressName}])).values()];
@@ -38,11 +41,11 @@
       </select>
      </label>}
     </div>
-    <p className="mt-3 text-[12px] font-semibold text-[#577c91]" role="status">{filtered.length} / {items.length} ứng viên</p>
+    <p className="mt-3 text-[12px] font-semibold text-[#577c91]" role="status">{filtered.length} / {items.length} {variant==="new"?"ủy viên BCH khóa mới":"ứng viên"}</p>
    </section>
    {filtered.length?<>
-    <div className="lg:hidden"><BchCandidateSlides key={congressId+"_"+query} items={filtered}/></div>
-    <div className="hidden lg:block"><BchCandidateGrid items={filtered}/></div>
+    <div className="lg:hidden"><BchCandidateSlides key={congressId+"_"+query} items={filtered} variant={variant}/></div>
+    <div className="hidden lg:block"><BchCandidateGrid items={filtered} variant={variant}/></div>
    </>:
     <div className="rounded-2xl border border-[#dae6ee] bg-white p-7 text-center">
      <p className="text-[14px] font-bold text-[#42657a]">Không tìm thấy ứng viên phù hợp.</p>
@@ -52,7 +55,7 @@
   </div>;
  }
 
- function CandidateProfile({candidate,foreground}:{candidate:Candidate;foreground:boolean}){
+ function CandidateProfile({candidate,foreground,variant="candidate"}:{candidate:Candidate;foreground:boolean;variant?:BchCardVariant}){
   const photoUrl="/api/bch-candidates/"+candidate.id+"/photo?w=160&v="+encodeURIComponent(candidate.updated_at);
    const [failedSrc,setFailedSrc]=useState<string|null>(null);
    const facts:[string,string][]=[
@@ -67,7 +70,7 @@
    <header className="relative overflow-hidden bg-[#172a48] px-4 pb-11 pt-5 text-center text-white sm:px-5 sm:pt-6">
     <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-36 w-36 rounded-full border-[25px] border-white/[.04]"/>
     <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#e2bf7f]">HỒ SƠ TRÍCH NGANG</p>
-    <h2 className="mt-2 text-[14px] font-extrabold leading-6 text-white sm:text-[15px]">NHÂN SỰ GIỚI THIỆU BCH</h2>
+    <h2 className="mt-2 text-[14px] font-extrabold leading-6 text-white sm:text-[15px]">{variant==="new"?"BAN CHẤP HÀNH KHÓA MỚI":"NHÂN SỰ GIỚI THIỆU BCH"}</h2>
     <p className="mx-auto mt-1 max-w-[310px] text-[10px] leading-5 text-[#bed2df]">{candidate.congressName}</p>
    </header>
    <div className="relative -mt-8 flex flex-1 flex-col px-3 pb-5 text-center sm:px-5 sm:pb-6">
@@ -78,7 +81,7 @@
       className="h-full w-full object-cover"/>:
       <span className="flex h-full w-full items-center justify-center text-[#a1b4c3]"><UserRound size={43}/></span>}
     </div>
-    <span className="mt-3 inline-flex rounded-full bg-[#edf4f9] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.08em] text-[#276b91]">ỨNG CỬ VIÊN BCH</span>
+    <span className="mt-3 inline-flex rounded-full bg-[#edf4f9] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.08em] text-[#276b91]">{variant==="new"?"ỦY VIÊN BCH KHÓA MỚI":"ỨNG CỬ VIÊN BCH"}</span>
     <h3 className="mt-2 break-words text-[clamp(21px,5vw,26px)] font-extrabold leading-[1.18] tracking-[-.03em] text-[#213b59]">{candidate.full_name}</h3>
     <p className="mt-2 min-h-[34px] text-[12px] font-semibold leading-5 text-[#54728b]">{candidate.current_position}</p>
     <dl className="mt-4 divide-y divide-[#eaf0f4] rounded-[12px] border border-[#e0e9ef] bg-[#fafcfe] px-3 text-left sm:px-4">
@@ -89,7 +92,7 @@
     </dl>
     <div className="mt-auto flex items-center justify-between gap-2 pt-4 text-[10px] font-semibold text-[#91a5b1]">
      <span className="inline-flex items-center gap-1"><MapPin size={13}/> Đại hội</span>
-     <span className="inline-flex items-center gap-1"><GraduationCap size={13}/> Hồ sơ giới thiệu</span>
+     <span className="inline-flex items-center gap-1"><GraduationCap size={13}/> {variant==="new"?"Đã công bố":"Hồ sơ giới thiệu"}</span>
     </div>
    </div>
   </article>;
@@ -113,9 +116,9 @@
   return null;
  }
 
- function SwipeSurface({items,active,previewDirection,onPreview}:{
+ function SwipeSurface({items,active,previewDirection,onPreview,variant}:{
   items:Candidate[];active:number;previewDirection:HorizontalDirection;
-  onPreview:(direction:HorizontalDirection)=>void;
+  onPreview:(direction:HorizontalDirection)=>void;variant:BchCardVariant;
  }){
   const {dragStateRef}=SwipeableCards.useSwipeableCardsContext();
   const pointerStart=useRef<{id:number;x:number}|null>(null);
@@ -159,17 +162,17 @@
     aria-hidden={card.id.startsWith("preview:")?"true":undefined}
     className="bch-swipe-card" data-bch-preview={card.id.startsWith("preview:")?"true":undefined}>
     <CandidateProfile candidate={card.id.startsWith("preview:")?(preview||candidate):candidate}
-     foreground={!card.id.startsWith("preview:")}/>
+     foreground={!card.id.startsWith("preview:")} variant={variant}/>
    </SwipeableCards.CardWrapper>)}
   </SwipeableCards.Cards>;
  }
 
- function BchCandidateGrid({items}:{items:Candidate[]}){
-   return <section aria-label="Toàn bộ hồ sơ ứng viên BCH" className="min-w-0 space-y-5">
+ function BchCandidateGrid({items,variant}:{items:Candidate[];variant:BchCardVariant}){
+   return <section aria-label={variant==="new"?"Toàn bộ ủy viên BCH khóa mới":"Toàn bộ hồ sơ ứng viên BCH"} className="min-w-0 space-y-5">
     <div className="flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-[#dae6ee] bg-white px-5 py-4">
      <div>
       <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#748c9e]">DANH SÁCH TRÍCH NGANG</p>
-      <h2 className="mt-1 text-[19px] font-extrabold text-[#1d3f60]">Toàn bộ {items.length} ứng viên BCH</h2>
+      <h2 className="mt-1 text-[19px] font-extrabold text-[#1d3f60]">{variant==="new"?`BCH khóa mới · ${items.length} ủy viên`:`Toàn bộ ${items.length} ứng viên BCH`}</h2>
      </div>
      <p className="max-w-[380px] text-right text-[12px] leading-5 text-[#71899b]">
       Tất cả flashcard được hiển thị đồng thời theo thứ tự do Ban Tổ chức sắp xếp.
@@ -181,16 +184,16 @@
        <span className="tabular-nums">HỒ SƠ {String(index+1).padStart(2,"0")}</span>
        <span className="tabular-nums">{index+1} / {items.length}</span>
       </div>
-      <div className="min-w-0 flex-1"><CandidateProfile candidate={candidate} foreground={false}/></div>
+      <div className="min-w-0 flex-1"><CandidateProfile candidate={candidate} foreground={false} variant={variant}/></div>
      </li>)}
     </ol>
     <p className="text-center text-[11px] leading-5 text-[#8398a6]">
-     Thông tin do Ban Tổ chức giới thiệu và cung cấp; danh sách không phải kết quả bầu BCH.
+     {variant==="new"?"Danh sách ủy viên BCH khóa mới do Ban Tổ chức đã công bố.":"Thông tin do Ban Tổ chức giới thiệu và cung cấp; danh sách không phải kết quả bầu BCH."}
     </p>
    </section>;
   }
 
-  function BchCandidateSlides({items}:{items:Candidate[]}){
+  function BchCandidateSlides({items,variant}:{items:Candidate[];variant:BchCardVariant}){
   const [active,setActive]=useState(0);
   const [previewDirection,setPreviewDirection]=useState<HorizontalDirection>("left");
   const pending=useRef<HorizontalDirection|null>(null);
@@ -203,14 +206,14 @@
   }
   // The last card in the input array is the topmost card in the library.
   const cards=[
-   ...(items.length>1?[{id:"preview:"+current.id,card:<CandidateProfile candidate={items[active+1]||items[active-1]} foreground={false}/>}]:[]),
-   {id:"active:"+current.id,card:<CandidateProfile candidate={current} foreground/>}
+   ...(items.length>1?[{id:"preview:"+current.id,card:<CandidateProfile candidate={items[active+1]||items[active-1]} foreground={false} variant={variant}/>}]:[]),
+   {id:"active:"+current.id,card:<CandidateProfile candidate={current} foreground variant={variant}/>}
   ];
   return <section aria-label="Các thẻ trích ngang nhân sự BCH" className="min-w-0 space-y-4">
    <div className="rounded-2xl border border-[#dae6ee] bg-white px-3 py-3 sm:px-6 sm:py-4">
     <div className="flex items-center justify-between gap-3">
      <div className="min-w-0">
-      <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#748c9e]">HỒ SƠ NHÂN SỰ GIỚI THIỆU</p>
+      <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#748c9e]">{variant==="new"?"BCH KHÓA MỚI ĐÃ CÔNG BỐ":"HỒ SƠ NHÂN SỰ GIỚI THIỆU"}</p>
       <p className="mt-1 text-[16px] font-extrabold text-[#1d3f60]" aria-live="polite" aria-atomic="true">
        Nhân sự {active+1} / {items.length}
       </p>
@@ -242,7 +245,7 @@
     className="bch-swipe-root mx-auto w-full max-w-[440px] min-w-0 px-2 pt-3 sm:px-6"
    >
     <AdvanceWhenSwipeFinishes pendingRef={pending} onComplete={completed}/>
-    <SwipeSurface items={items} active={active} previewDirection={previewDirection}
+    <SwipeSurface items={items} active={active} previewDirection={previewDirection} variant={variant}
      onPreview={setPreviewDirection}/>
     <div className="mt-5 flex items-center justify-between gap-3 px-1" aria-label="Điều hướng thẻ nhân sự">
      <SwipeableCards.SwipeRightButton type="button" disabled={!canPrevious}
@@ -267,7 +270,7 @@
     </select>
    </label>}
    <p className="flex items-center justify-center gap-2 text-center text-[11px] text-[#8297a7]">
-    <Users size={15}/> Thông tin do Ban Tổ chức giới thiệu và cung cấp.
+    <Users size={15}/> {variant==="new"?"Danh sách BCH khóa mới do Ban Tổ chức công bố.":"Thông tin do Ban Tổ chức giới thiệu và cung cấp."}
    </p>
    <p className="text-center text-[11px] leading-5 text-[#8398a6]">
     Thao tác vuốt chỉ để xem hồ sơ, không phải biểu quyết hay đánh giá ứng viên.

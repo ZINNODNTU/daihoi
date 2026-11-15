@@ -13,13 +13,16 @@ type Props={
  congressId:string;congressName:string;congressCode:string;
  initialCandidates:BchBallotCandidate[];totalBallots:number|null;
  canWrite:boolean;canViewBch:boolean;initialError:string;
+ initialPublication:{memberCount:number;publishedAt:string}|null;publicationError:string;
 };
 const number=(value:number)=>value.toLocaleString("vi-VN");
 
 export function BchBallotsClient({congressId,congressName,congressCode,
- initialCandidates,totalBallots,canWrite,canViewBch,initialError}:Props){
+ initialCandidates,totalBallots,canWrite,canViewBch,initialError,
+ initialPublication,publicationError}:Props){
  const [candidates,setCandidates]=useState(initialCandidates);
  const [total,setTotal]=useState<number|null>(totalBallots);
+ const [published,setPublished]=useState(initialPublication);
  const [search,setSearch]=useState("");
  const [filter,setFilter]=useState<"all"|"entered"|"pending">("all");
  const [sortMode,setSortMode]=useState<"votes_desc"|"manual">("votes_desc");
@@ -47,6 +50,9 @@ export function BchBallotsClient({congressId,congressName,congressCode,
    if(!response.ok)throw Error(body.error||"Không tải lại được sổ kiểm phiếu.");
    setCandidates(body.candidates||[]);
    setTotal(body.total_ballots??null);
+   const pubResponse=await fetch("/api/bch-candidates/new-committee?"+new URLSearchParams({congressId}),{
+    credentials:"same-origin",cache:"no-store"});
+   if(pubResponse.ok){const pub=await pubResponse.json();setPublished(pub.publication??null);}
    setNotice("Dữ liệu đã được cập nhật từ máy chủ.");
   }catch(e){setError(e instanceof Error?e.message:"Không thể đồng bộ dữ liệu.");}
   finally{setBusy(false);}
@@ -197,8 +203,9 @@ export function BchBallotsClient({congressId,congressName,congressCode,
      {!visible.length&&<p className="p-5 text-[12px] text-[#738e9d]">Không có ứng viên phù hợp với bộ lọc.</p>}
     </div>
    </section>}
-  <BchNewCommitteeLaunch candidates={candidates} total={total}
-    congressName={congressName} canViewBch={canViewBch}/>
+  <BchNewCommitteeLaunch congressId={congressId} candidates={candidates} total={total}
+    congressName={congressName} canViewBch={canViewBch} canPublish={canWrite}
+    publication={published} onPublicationChange={setPublished} publicationError={publicationError}/>
    <p className="text-[11px] leading-6 text-[#7b919f]">
    Sổ kiểm phiếu chỉ ghi nhận kết quả từ biên bản thực tế; không phải hệ thống bỏ phiếu điện tử.
    Quyền xem và quyền ghi được quản lý riêng cho từng tài khoản BTC tại trang Phân quyền Đại hội.

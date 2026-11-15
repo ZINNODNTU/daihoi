@@ -71,6 +71,7 @@ function createPreview({actorRole="super_admin",btcActive=true,abilities=[
   "@/app/my-card/seats/page":{default:"SeatsPage"},
   "@/app/my-card/documents/page":{default:"DocumentsPage"},
   "@/app/my-card/bch/page":{default:"BchPage"},
+   "@/app/my-card/bch-new/page":{default:"BchNewPage"},
   "@/app/my-card/history/page":{default:"HistoryPage"}
  };
  const cjs={exports:{}};

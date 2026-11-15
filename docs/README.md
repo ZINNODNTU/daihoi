@@ -4,6 +4,10 @@
 
 Đại hội số là nền tảng điều hành nhiều Đại hội Đoàn/Hội với **Next.js, Supabase, Google Drive** và Vercel (khi triển khai). Phần tài liệu được tổ chức theo **mục đích sử dụng**, không chỉ theo mốc phiên bản.
 
+## Công bố BCH khóa mới (15/11/2026)
+
+- [BCH khóa mới V83](huong-dan/BCH-KHOA-MOI-V83.md): BTC chốt và công bố chính xác N ủy viên sau kiểm phiếu; đại biểu và khách xem flashcard, chỉ truy cập dữ liệu đã công bố, yêu cầu migration V83.
+
 ## Nhập hồ sơ đại biểu theo mẫu Nam/Nữ (15/11/2026)
 
 - [Mẫu nhập hồ sơ đại biểu V78](huong-dan/MAU-NHAP-HO-SO-DAI-BIEU-V78.md): mẫu Excel 8 cột với ngày sinh NAM/NỮ, Chức vụ/Đơn vị riêng và Loại đại biểu (Chính thức/Dự khuyết/Khách mời); không cần migration Supabase mới.
