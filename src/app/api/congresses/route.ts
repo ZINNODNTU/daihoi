@@ -3,6 +3,7 @@ import {getAuth} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {provisionBtcAccount} from "@/lib/btc-accounts";
 import {writeSystemLog} from "@/lib/system-log";
+import {congressFullName,congressShortName} from "@/lib/congress-title";
 
 export const runtime="nodejs";
 const HEADERS={"Cache-Control":"private, no-store"};
@@ -21,14 +22,16 @@ export async function POST(request:Request){
    return fail("Chỉ quản trị hệ thống được tạo Đại hội.",403);
   const body=await request.json().catch(()=>null);
   if(!body||typeof body!=="object")return fail("Dữ liệu không hợp lệ.",400);
-  const name=String(body.name||"").trim().slice(0,250);
+  const rawName=typeof body.name==="string"?body.name:"";
   const slug=String(body.slug||"").trim().toLowerCase();
   const orgName=String(body.organization_name||"").trim().slice(0,180);
   const orgCode=String(body.organization_code||"").trim().toLowerCase().slice(0,60);
   const kind=body.kind==="hoi_sinh_vien"?"hoi_sinh_vien":"doan";
+   const specificName=congressShortName(rawName,kind);
+   const name=congressFullName(specificName,kind);
   const adminName=typeof body.btc_admin_name==="string"?
    body.btc_admin_name.trim().replace(/\s+/g," "):"";
-  if(name.length<5||orgName.length<2||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)||
+  if(specificName.length<2||specificName.length>180||name.length>250||orgName.length<2||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)||
    !/^[a-z0-9-]+$/.test(orgCode)||adminName.length<2||adminName.length>120)
    return fail("Vui lòng nhập đủ thông tin Đại hội và họ tên người quản trị chính.",400);
   const db=createAdminClient();

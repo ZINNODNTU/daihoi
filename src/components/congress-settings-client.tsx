@@ -1,10 +1,12 @@
 "use client";
 import {useState} from "react";
 import {Save,Settings2} from "lucide-react";
+import {CONGRESS_FORMAL_HEADING,congressShortName,type CongressTitleKind} from "@/lib/congress-title";
 type Status="preparing"|"live"|"completed";
 type Values={id:string;name:string;term:string;venue:string;status:Status;slug:string;kind:string};
 export function CongressSettingsClient({initial}:{initial:Values}){
- const [value,setValue]=useState(initial);
+ const kind:CongressTitleKind=initial.kind==="hoi_sinh_vien"?"hoi_sinh_vien":"doan";
+ const [value,setValue]=useState({...initial,name:congressShortName(initial.name,kind)});
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
  const [message,setMessage]=useState("");
@@ -26,7 +28,19 @@ export function CongressSettingsClient({initial}:{initial:Values}){
   {message&&<p role="status" className="card p-4 text-teal-700">{message}</p>}
   <form className="card p-4 sm:p-6 space-y-5" onSubmit={save}>
    <div className="flex gap-2 items-center font-bold text-lg"><Settings2 size={21}/> Thông tin tổ chức</div>
-   <label className="block"><span className="text-sm font-semibold">Tên Đại hội</span><input className="field w-full mt-2" minLength={5} maxLength={250} required value={value.name} onChange={e=>setValue({...value,name:e.target.value})}/></label>
+   <div className="space-y-3">
+     <p className="text-sm font-semibold">Tên Đại hội</p>
+     <div className="rounded-xl border border-[#d3e2ec] bg-[#f1f7fa] px-4 py-3">
+      <p className="text-[12px] font-extrabold leading-5 text-[#21516c]">{CONGRESS_FORMAL_HEADING[kind]}</p>
+      <p className="mt-1 text-[11px] text-[#6e8798]">Tiêu đề cố định theo loại Đại hội.</p>
+     </div>
+     <label className="block"><span className="text-[12px] font-semibold text-[#456477]">Tên đơn vị / kỳ Đại hội</span>
+      <input className="field mt-2 w-full" minLength={2} maxLength={180} required
+       placeholder={kind==="doan"?"Khoa Công nghệ thông tin hoặc Chi đoàn 23DTH1":"Hội Sinh viên Khoa Công nghệ thông tin"}
+       value={value.name} onChange={e=>setValue({...value,name:e.target.value})}/>
+     </label>
+     {value.name.trim()&&<p className="text-[12px] text-[#567b90]"><strong>Hiển thị:</strong> {CONGRESS_FORMAL_HEADING[kind]} {congressShortName(value.name,kind)}</p>}
+    </div>
    <div className="grid gap-4 md:grid-cols-2">
     <label className="block"><span className="text-sm font-semibold">Nhiệm kỳ</span><input className="field w-full mt-2" maxLength={50} value={value.term} onChange={e=>setValue({...value,term:e.target.value})}/></label>
     <label className="block"><span className="text-sm font-semibold">Địa điểm</span><input className="field w-full mt-2" maxLength={180} value={value.venue} onChange={e=>setValue({...value,venue:e.target.value})}/></label>

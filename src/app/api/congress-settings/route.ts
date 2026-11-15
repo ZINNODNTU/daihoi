@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {congressFullName,congressShortName} from "@/lib/congress-title";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function PATCH(request:Request){
  try{
@@ -10,14 +11,22 @@ export async function PATCH(request:Request){
   const congressId=String(body.congressId||"");
   if(!uuid.test(congressId)||!(await hasCongressAbility(supabase,user.id,congressId,"settings.manage")))
    return NextResponse.json({error:"Chỉ quản trị Đại hội được cập nhật thông tin."},{status:403});
-  const name=String(body.name||"").trim();
+  const rawName=typeof body.name==="string"?body.name:"";
   const venue=String(body.venue||"").trim();
   const term=String(body.term||"").trim();
   const status=body.status;
-  if(name.length<5||name.length>250||venue.length>180||term.length>50||
+  if(rawName.length>350||venue.length>180||term.length>50||
     !["preparing","live","completed"].includes(status))
    return NextResponse.json({error:"Tên, nhiệm kỳ, địa điểm hoặc trạng thái không hợp lệ."},{status:400});
-  const {data,error}=await createAdminClient().from("congresses").update({name,venue,term,status})
+  const db=createAdminClient();
+   const existing=await db.from("congresses").select("kind").eq("id",congressId).maybeSingle();
+   if(existing.error||!existing.data)return NextResponse.json({error:"Không xác định được loại Đại hội."},{status:404});
+   const kind=existing.data.kind==="hoi_sinh_vien"?"hoi_sinh_vien":"doan";
+   const specificName=congressShortName(rawName,kind);
+   const name=congressFullName(specificName,kind);
+   if(specificName.length<2||specificName.length>180||name.length>250)
+    return NextResponse.json({error:"Tên đơn vị / kỳ Đại hội phải từ 2 đến 180 ký tự."},{status:400});
+   const {data,error}=await db.from("congresses").update({name,venue,term,status})
    .eq("id",congressId).select("id,name,venue,term,status").maybeSingle();
   if(error||!data)return NextResponse.json({error:"Không thể lưu cấu hình Đại hội."},{status:500});
   return NextResponse.json({ok:true,congress:data},{headers:{"Cache-Control":"no-store"}});

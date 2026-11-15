@@ -4,6 +4,10 @@
 
 Đại hội số là nền tảng điều hành nhiều Đại hội Đoàn/Hội với **Next.js, Supabase, Google Drive** và Vercel (khi triển khai). Phần tài liệu được tổ chức theo **mục đích sử dụng**, không chỉ theo mốc phiên bản.
 
+## Tiêu đề Đại hội Đoàn/Hội (15/11/2026)
+
+- [Tiêu đề Đại hội và thẻ đại biểu V85](huong-dan/TIEU-DE-DAI-HOI-DOAN-HOI-V85.md): tiêu đề mặc định theo loại Đoàn/Hội, BTC chỉ nhập tên đơn vị/kỳ Đại hội; thẻ online và bản in hiện hai dòng, tương thích tên Đại hội cũ, không cần migration.
+
 ## Công bố BCH khóa mới (15/11/2026)
 
 - [BCH khóa mới V84](huong-dan/BCH-KHOA-MOI-V84.md): BTC công bố đúng N ủy viên từ dữ liệu ứng viên và kiểm phiếu gốc; lưu ID và thời điểm trên bản ghi Đại hội, không tạo bảng mới; đại biểu và khách xem flashcard sau công bố.

@@ -2,6 +2,7 @@
 import Image from "next/image";
 import {congressBranding} from "@/components/brand-mark";
 import {delegateTheme} from "@/lib/delegate-brand-theme";
+import {CONGRESS_FORMAL_HEADING,congressShortName} from "@/lib/congress-title";
 import {useCallback,useEffect,useLayoutEffect,useRef,useState} from "react";
 import Link from "next/link";
 import {Armchair,ArrowUpRight,BookOpen,Camera,CheckCircle2,History,Maximize2,Minimize2,Printer,UserRound,Users,X} from "lucide-react";
@@ -21,6 +22,7 @@ function activeSession(sessions:PortalSession[]){
 
 export function DelegatePass({item,priority}:{item:PortalDelegate;priority:boolean}){
  const theme=delegateTheme(item.kind);
+  const specificCongressName=congressShortName(item.congressName,item.kind);
  const session=activeSession(item.sessions);
  const seat=session?.seat;
  const photoUrl="/api/delegates/"+item.id+"/photo?w=160&v="+encodeURIComponent(item.photoPath||"");
@@ -45,9 +47,11 @@ export function DelegatePass({item,priority}:{item:PortalDelegate;priority:boole
     </div>
    </div>
    <div className="relative mt-5 border-t border-[#d8e1e7]/85 pt-4 text-center">
-    <p className={"text-[9px] font-extrabold uppercase tracking-[.17em] "+theme.eyebrow}>ĐẠI HỘI</p>
-    <h2 className="mx-auto mt-1.5 max-w-[320px] text-[17px] font-extrabold leading-[1.4] tracking-[-.025em] text-[#233b50] sm:text-[18px]">
-     {item.congressName}
+    <p className={"mx-auto max-w-[326px] text-[12px] font-extrabold leading-[1.5] tracking-[-.01em] "+theme.eyebrow}>
+     {CONGRESS_FORMAL_HEADING[item.kind]}
+    </p>
+    <h2 className="mx-auto mt-2 max-w-[320px] break-words text-[18px] font-extrabold leading-[1.4] tracking-[-.025em] text-[#233b50] sm:text-[19px]">
+     {specificCongressName||"Chưa cập nhật tên Đại hội"}
     </h2>
     {item.term&&<p className="mt-1.5 text-[11px] font-semibold leading-5 text-[#577487]">Nhiệm kỳ {item.term}</p>}
    </div>

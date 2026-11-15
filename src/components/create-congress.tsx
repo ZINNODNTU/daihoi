@@ -3,6 +3,7 @@ import {FormEvent,useState} from "react";
 import Link from "next/link";
 import {useRouter} from "next/navigation";
 import {Check,ClipboardCopy,Eye,EyeOff,ShieldCheck} from "lucide-react";
+import {CONGRESS_FORMAL_HEADING,congressShortName,type CongressTitleKind} from "@/lib/congress-title";
 
 type Issued={userId:string;name:string;email:string;initialPassword:string};
 export function CreateCongress(){
@@ -10,6 +11,8 @@ export function CreateCongress(){
  const [busy,setBusy]=useState(false),[error,setError]=useState("");
  const [issued,setIssued]=useState<{congressId:string;credentials:Issued}|null>(null);
  const [showPassword,setShowPassword]=useState(false),[copied,setCopied]=useState(false);
+  const [kind,setKind]=useState<CongressTitleKind>("doan");
+  const [congressName,setCongressName]=useState("");
  async function create(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(busy||issued)return;
   setBusy(true);setError("");
@@ -53,11 +56,25 @@ export function CreateCongress(){
     <button type="button" className="btn btn-secondary" onClick={()=>{setIssued(null);setCopied(false);setShowPassword(false);}}>Tạo Đại hội khác</button>
    </div>
   </div>:<form onSubmit={create} className="grid gap-4 sm:grid-cols-2 sm:gap-5">
-   <label className="sm:col-span-2"><span className="label">Tên Đại hội *</span><input name="name" className="field" required minLength={5} placeholder="Đại hội Đoàn Trường Đại học ABC lần thứ XII"/></label>
+   <div className="sm:col-span-2 space-y-2">
+     <p className="label">Tên Đại hội *</p>
+     <div className="rounded-xl border border-[#cbdfe9] bg-[#f2f7fa] px-4 py-3">
+      <p className="text-[12px] font-extrabold leading-5 text-[#285675]">{CONGRESS_FORMAL_HEADING[kind]}</p>
+      <p className="mt-1 text-[12px] text-[#718c9d]">Dòng tiêu đề cố định theo loại Đại hội · không cần nhập lại.</p>
+     </div>
+     <label className="block"><span className="label">Tên đơn vị / kỳ Đại hội</span>
+      <input name="name" className="field" required minLength={2} maxLength={180}
+       value={congressName} onChange={e=>setCongressName(e.target.value)}
+       placeholder={kind==="doan"?"Khoa Công nghệ thông tin hoặc Chi đoàn 23DTH1":"Hội Sinh viên Khoa Công nghệ thông tin"}/>
+     </label>
+     {congressName.trim()&&<p className="text-[12px] leading-6 text-[#54788a]">
+      <strong>Hiển thị:</strong> {CONGRESS_FORMAL_HEADING[kind]} {congressShortName(congressName,kind)}
+     </p>}
+    </div>
    <label><span className="label">Tên đơn vị *</span><input name="organization_name" className="field" required placeholder="Đoàn Trường Đại học ABC"/></label>
    <label><span className="label">Mã đơn vị *</span><input name="organization_code" className="field" required pattern="[a-z0-9-]+" placeholder="doan-truong-abc"/></label>
    <label><span className="label">Đường dẫn (slug) *</span><input name="slug" className="field" required pattern="[a-z0-9-]+" placeholder="dai-hoi-doan-abc-2027"/></label>
-   <label><span className="label">Loại Đại hội</span><select name="kind" className="field"><option value="doan">Đoàn TNCS Hồ Chí Minh</option><option value="hoi_sinh_vien">Hội Sinh viên Việt Nam</option></select></label>
+   <label><span className="label">Loại Đại hội</span><select name="kind" className="field" value={kind} onChange={e=>setKind(e.target.value as CongressTitleKind)}><option value="doan">Đoàn TNCS Hồ Chí Minh</option><option value="hoi_sinh_vien">Hội Sinh viên Việt Nam</option></select></label>
    <label><span className="label">Nhiệm kỳ</span><input name="term" className="field" placeholder="2027–2029"/></label>
    <label><span className="label">Địa điểm</span><input name="venue" className="field" placeholder="Hội trường A"/></label>
    <label className="sm:col-span-2"><span className="label">Họ tên người quản trị chính BTC *</span>
