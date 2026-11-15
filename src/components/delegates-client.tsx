@@ -10,11 +10,22 @@ import type {Delegate,AttendanceSession} from "@/lib/types";
 import {displayTime} from "@/lib/attendance-report";
 import {normalizeBirthDate,normalizeGender} from "@/lib/delegate-demographics";
 import {DELEGATE_IMPORT_COLUMNS,delegateImportRow,splitDelegateImportBatches,selectDelegateTransfer} from "@/lib/delegate-transfer";
+import {DELEGATE_ROSTER_HEADERS,DELEGATE_ROSTER_SUBHEADERS,parseDelegateImportSheet,type DelegateUploadRow} from "@/lib/delegate-roster-import";
 type Props={
- congressId:string;congressCode:string;delegates:Delegate[];canManage:boolean;
+ congressId:string;congressCode:string;delegates:Delegate[];canManage:boolean;rosterReady:boolean;
  sessions:AttendanceSession[];
 };
-type Row={full_name:string;unit:string;student_id:string;position:string;delegate_type:"official"|"alternate"|"guest";gender:string;birth_date:string};
+type Row=DelegateUploadRow;
+const ROSTER_EDIT_FIELDS=[
+ {key:"hometown",label:"Quê quán",max:240},
+ {key:"religion",label:"Tôn giáo",max:120},
+ {key:"ethnicity",label:"Dân tộc",max:100},
+ {key:"union_join_date",label:"Ngày vào Đoàn",max:10},
+ {key:"phone_number",label:"Số điện thoại",max:24},
+ {key:"class_name",label:"Lớp",max:120},
+ {key:"profile_notes",label:"Ghi chú (Đảng viên)",max:500}
+] as const;
+type RosterFieldKey=(typeof ROSTER_EDIT_FIELDS)[number]["key"];
 type PhotoTarget={kind:"new"}|{kind:"existing";delegate:Delegate};
 type Card={
  id:string;name:string;code:string;barcodeCode:string;token:string;
@@ -38,7 +49,7 @@ function saveSvg(id:string,name:string){
  const url=URL.createObjectURL(blob),a=document.createElement("a");
  a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
-export function DelegatesClient({congressId,congressCode,delegates,canManage,sessions}:Props){
+export function DelegatesClient({congressId,congressCode,delegates,canManage,rosterReady,sessions}:Props){
  const router=useRouter();
  const [search,setSearch]=useState(""),[open,setOpen]=useState(false);
   const [selectedIds,setSelectedIds]=useState<Set<string>>(()=>new Set());
@@ -53,6 +64,10 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
  const [editBirthDate,setEditBirthDate]=useState("");
  const [editUnit,setEditUnit]=useState("");
  const [editPosition,setEditPosition]=useState("");
+ const [editExtra,setEditExtra]=useState({
+  hometown:"",religion:"",ethnicity:"",union_join_date:"",
+  phone_number:"",class_name:"",profile_notes:""
+ });
  const [pendingPhotoPreview,setPendingPhotoPreview]=useState<string|null>(null);
  useEffect(()=>()=>{if(pendingPhotoPreview)URL.revokeObjectURL(pendingPhotoPreview);},[pendingPhotoPreview]);
  async function uploadPhoto(delegateId:string,photo:Blob){
@@ -98,6 +113,9 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
  const existingStudentIds=new Set(delegates.map(d=>d.student_id?.toUpperCase()).filter(Boolean));
  const importableRows=uploadRows?.filter(row=>!row.student_id||!existingStudentIds.has(row.student_id.toUpperCase()))||[];
  const skippedImportCount=uploadRows?uploadRows.length-importableRows.length:0;
+ const importNeedsRoster=!!uploadRows?.some(row=>
+  row.hometown||row.religion||row.ethnicity||row.union_join_date||
+  row.phone_number||row.class_name||row.profile_notes);
  function selectFiltered(){
   setSelectedIds(previous=>{
    const next=new Set(previous);
@@ -163,86 +181,69 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    position:String(form.get("position")||"").trim(),
    delegate_type:parseKind(String(form.get("delegate_type")||"official")),
     gender:String(form.get("gender")||""),
-    birth_date:String(form.get("birth_date")||"")}],pendingPhoto);
+    birth_date:String(form.get("birth_date")||""),
+     ...(rosterReady?Object.fromEntries(ROSTER_EDIT_FIELDS.map(field=>[
+      field.key,String(form.get(field.key)||"")])):{})}],pendingPhoto);
  }
  async function handleFile(e:ChangeEvent<HTMLInputElement>){
   const file=e.target.files?.[0];if(!file)return;
-  if(file.size>2*1024*1024){setError("File Excel/CSV không được vượt quá 2 MB.");e.target.value="";return;}
-  setError("");setUploadRows(null);
+  e.target.value="";
+  if(file.size>2*1024*1024){setError("File Excel/CSV không được vượt quá 2 MB.");return;}
+  setError("");setSuccess("");setUploadRows(null);
+  setBusy(true);
   try{
    let matrix:(string|number|Date|null|undefined)[][]=[];
    if(file.name.toLowerCase().endsWith(".xlsx")){
     const {readSheet}=await import("read-excel-file/browser");
-    matrix=(await readSheet(file)).map(row=>row.map(cell=>cell===null?null:
-      cell instanceof Date?cell.toISOString().slice(0,10):String(cell)));
+    // Keep real Date/Excel serial cells: the roster parser knows both formats.
+    matrix=await readSheet(file) as (string|number|Date|null|undefined)[][];
    }else if(file.name.toLowerCase().endsWith(".csv")){
-    const text=await file.text();
+    const contents=await file.text();
     const records:string[][]=[];
-    let line:string[]=[];let item="",quoted=false;
-    for(let i=0;i<text.length;i++){
-     const c=text[i];
-     if(c==='"'&&quoted&&text[i+1]==='"'){item+='"';i++;}
-     else if(c==='"'){quoted=!quoted;}
+    let cells:string[]=[],cell="",quoted=false;
+    for(let i=0;i<contents.length;i++){
+     const c=contents[i];
+     if(c==='"'&&quoted&&contents[i+1]==='"'){cell+='"';i++;}
+     else if(c==='"')quoted=!quoted;
      else if((c===','||c===';'||c==='\n')&&!quoted){
-      line.push(item);item="";
-      if(c==='\n'){records.push(line);line=[];}
-     }else if(c!=='\r')item+=c;
+      cells.push(cell);cell="";
+      if(c==='\n'){records.push(cells);cells=[];}
+     }else if(c!=='\r')cell+=c;
     }
-    line.push(item);if(line.some(x=>x.trim()))records.push(line);
+    cells.push(cell);if(cells.some(value=>value.trim()))records.push(cells);
     matrix=records;
-   }else throw new Error("Hãy chọn tệp .xlsx hoặc .csv.");
-   if(matrix.length<2)throw new Error("Tệp chưa có dữ liệu.");
-   const key=(value:unknown)=>String(value??"").trim().toLocaleLowerCase("vi")
-    .normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]/g,"");
-   const heading=matrix[0].map(key);
-   const fields={
-    student_id:["mssv","masosinhvien","studentid"],
-    full_name:["hoten","hovaten","tensinhvien","fullname"],
-    unit:["chidoan","donvi","lop","unit"],
-    position:["chucvu","chucdanh","position"],
-    delegate_type:["vaitro","loaidaibieu","delegatetype"],
-     gender:["gioitinh","sex","gender"],
-     birth_date:["ngaysinh","ngaythangnamsinh","dateofbirth","birthdate","dob"]
-   };
-   const lookup=(names:string[])=>heading.findIndex(h=>names.map(key).includes(h));
-   const header=lookup(fields.full_name)>=0&&(lookup(fields.student_id)>=0||lookup(fields.unit)>=0);
-   const get=(cells:(string|number|Date|null|undefined)[],field:keyof typeof fields,fallback:number)=>
-    String(cells[header?lookup(fields[field]):fallback]??"").trim();
-   const rows:Row[]=matrix.slice(header?1:0)
-    .filter(r=>r.some(x=>x!==null&&String(x).trim()))
-    .map(r=>({
-     full_name:get(r,"full_name",1),
-     unit:get(r,"unit",2),
-     student_id:get(r,"student_id",0).toUpperCase(),
-     position:get(r,"position",3),
-     delegate_type:parseKind(get(r,"delegate_type",4)),
-      gender:get(r,"gender",5),birth_date:get(r,"birth_date",6)
-    }));
-   if(rows.length>250)throw new Error("Mỗi tệp tối đa 250 đại biểu.");
-   if(rows.some(r=>!r.full_name||(!r.student_id&&r.delegate_type!=="guest")))
-    throw new Error("Thiếu họ tên hoặc MSSV. Khách mời có thể không có MSSV.");
-   if(rows.some(r=>r.student_id&&!/^[A-Za-z0-9][A-Za-z0-9._-]{3,31}$/.test(r.student_id)))
-    throw new Error("MSSV phải từ 4–32 ký tự (chữ, số, dấu chấm, - hoặc _).");
-   for(let i=0;i<rows.length;i++){
-     try{normalizeGender(rows[i].gender);normalizeBirthDate(rows[i].birth_date);}
-     catch(error){throw new Error("Dòng "+(i+(header?2:1))+": "+(error instanceof Error?error.message:"Ngày sinh/giới tính không hợp lệ."));}
-    }
-    const ids=rows.map(r=>r.student_id).filter(Boolean);
-   if(new Set(ids).size!==ids.length)throw new Error("MSSV bị trùng trong tệp Excel.");
-   setUploadRows(rows);
-  }catch(e){setError(e instanceof Error?e.message:"Không đọc được tệp.");}
-  e.target.value="";
+   }else throw new Error("Chỉ hỗ trợ tệp .xlsx hoặc .csv.");
+   setUploadRows(parseDelegateImportSheet(matrix));
+  }catch(error){
+   setError(error instanceof Error?error.message:"Không đọc được tệp Excel.");
+  }finally{setBusy(false);}
  }
  async function downloadTemplate(){
   try{
    const {default:writeExcelFile}=await import("write-excel-file/browser");
-   await writeExcelFile([{sheet:"Danh sach dai bieu",stickyRowsCount:1,data:[
-    [...DELEGATE_IMPORT_COLUMNS],
-    ["2200000001","Nguyễn Văn A","22DTH1","Bí thư","Chính thức","Nam","24/09/2003"],
-    ["","","","","","",""],
-    ["","Trần Thị B","Đơn vị khách mời","Đại diện","Khách mời","Nữ","05/04/1988"]
-   ]}]).toFile("mau-danh-sach-dai-bieu.xlsx");
-  }catch{setError("Không thể tạo file Excel mẫu.");}
+   const style={
+    fontFamily:"Times New Roman",fontSize:11,fontWeight:"bold",textColor:"#173B59",
+    backgroundColor:"#E7F0F7",align:"center" as const,alignVertical:"center" as const,
+    wrap:true,borderColor:"#9CB4C5",borderStyle:"thin" as const
+   };
+   const top=DELEGATE_ROSTER_HEADERS.map((label,index)=>{
+    if(index===4)return null; // The D1 heading spans both NAM and NỮ.
+    return {value:label||"",type:String,...style,height:42,
+     ...(index===3?{columnSpan:2}:{rowSpan:2})};
+   });
+   const sub=DELEGATE_ROSTER_SUBHEADERS.map((label,index)=>
+    index===3||index===4?{value:label,type:String,...style,height:25}:null);
+   const empty=Array.from({length:50},()=>Array.from({length:13},()=>({
+    value:"",type:String,borderColor:"#D5E1E9",borderStyle:"thin" as const,
+    fontFamily:"Times New Roman",height:22
+   })));
+   const widths=[7,28,18,17,17,21,16,14,19,33,20,16,25].map(width=>({width}));
+   await writeExcelFile([{sheet:"Danh sach dai bieu",stickyRowsCount:2,
+    columns:widths,data:[top,sub,...empty] as unknown as (string|number)[][]}]).toFile("mau-ho-so-dai-bieu-NAM-NU.xlsx");
+   setSuccess("Đã tải mẫu trích ngang đại biểu. Điền ngày sinh đúng cột NAM hoặc NỮ từ dòng 3.");
+  }catch(error){
+   setError("Không tạo được Excel mẫu: "+(error instanceof Error?error.message:"Lỗi không xác định"));
+  }
  }
  function openDemographics(delegate:Delegate){
   setDemographicsTarget(delegate);
@@ -250,6 +251,12 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   setEditBirthDate(delegate.birth_date||"");
   setEditUnit(delegate.unit||"");
   setEditPosition(delegate.position||"");
+  setEditExtra({
+   hometown:delegate.hometown||"",religion:delegate.religion||"",
+   ethnicity:delegate.ethnicity||"",union_join_date:delegate.union_join_date||"",
+   phone_number:delegate.phone_number||"",class_name:delegate.class_name||"",
+   profile_notes:delegate.profile_notes||""
+  });
   setError("");
  }
  async function updateDemographics(e:FormEvent<HTMLFormElement>){
@@ -260,7 +267,8 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    const response=await fetch("/api/delegates",{
     method:"PATCH",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({congressId,delegateId:demographicsTarget.id,
-     gender:editGender,birth_date:editBirthDate,unit:editUnit,position:editPosition})
+     gender:editGender,birth_date:editBirthDate,unit:editUnit,position:editPosition,
+     ...(rosterReady?editExtra:{})})
    });
    const result=await response.json();
    if(!response.ok)throw new Error(result.error||"Không cập nhật được hồ sơ.");
@@ -310,14 +318,18 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   </div>
   <p className="w-full text-[10px] leading-5 text-[#7d95a5]">Chỉ xuất các trường hồ sơ có thể nhập lại. Không xuất mật khẩu, mã QR, ảnh hay ghế; ảnh sẽ được liên kết theo tài khoản khi cấp tài khoản tại Đại hội nhận.</p>
  </section>}
- {error&&<p role="alert" className="bg-red-50 text-red-700 p-3 rounded-xl mb-5">{error}</p>}
+ {!rosterReady&&canManage&&<p role="alert" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-900">
+     Đang chờ migration <code>upgrade-delegate-roster-v78.sql</code> trên Supabase.
+     File mẫu vẫn tải được; không thể lưu các cột Quê quán, Tôn giáo, Dân tộc, Ngày vào Đoàn, SĐT, Lớp, Ghi chú cho tới khi cập nhật cơ sở dữ liệu.
+    </p>}
+   {error&&<p role="alert" className="bg-red-50 text-red-700 p-3 rounded-xl mb-5">{error}</p>}
   {success&&<p role="status" className="bg-green-50 text-green-700 p-3 rounded-xl mb-5">{success}</p>}
   {uploadRows&&<div className="card p-5 mb-5">
    <p className="font-bold">Đã đọc {uploadRows.length} dòng · Có thể thêm {importableRows.length} đại biểu</p>
     {skippedImportCount>0&&<p className="mt-2 rounded-lg border border-[#e7d6ae] bg-[#fff9ec] px-3 py-2 text-xs text-[#88642e]">Đã bỏ qua {skippedImportCount} MSSV có sẵn tại Đại hội hiện tại, tránh nhập trùng. Chỉ các dòng mới được thêm.</p>}
-   <p className="helper my-3">MSSV · Họ tên · Đơn vị · Chức vụ · Vai trò · Giới tính · Ngày sinh (dd/mm/yyyy). Mã đại biểu được tự cấp sau khi lưu. Email đăng nhập tự tạo từ MSSV@dntu.edu.vn.</p>
-   <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Đơn vị</th><th>Vai trò</th><th>Giới tính</th><th>Ngày sinh</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.unit}</td><td>{kindLabel(r.delegate_type)}</td><td>{r.gender||"—"}</td><td>{r.birth_date||"—"}</td></tr>)}</tbody></table></div>
-   <div className="flex gap-2"><button type="button" className="btn btn-primary" onClick={()=>void save(importableRows)} disabled={busy||!importableRows.length}>Xác nhận nhập</button>
+   <p className="helper my-3">Mẫu hai dòng tiêu đề: nhập ngày sinh vào cột NAM hoặc NỮ để tự nhận giới tính. Mã đại biểu được cấp tự động; giữ các cột quê quán, tôn giáo, dân tộc, ngày vào Đoàn, chức vụ, SĐT, lớp và ghi chú.</p>
+   <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Quê quán</th><th>Ngày vào Đoàn</th><th>Lớp / Đơn vị</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.gender==="male"?"Nam":r.gender==="female"?"Nữ":r.gender||"—"}</td><td>{birthLabel(r.birth_date||null)}</td><td>{r.hometown||"—"}</td><td>{birthLabel(r.union_join_date||null)}</td><td>{r.class_name||r.unit||"—"}</td></tr>)}</tbody></table></div>
+   <div className="flex gap-2"><button type="button" className="btn btn-primary" onClick={()=>void save(importableRows)} disabled={busy||!importableRows.length||(!rosterReady&&importNeedsRoster)}>Xác nhận nhập</button>
     <button className="btn btn-secondary" onClick={()=>setUploadRows(null)}>Hủy</button></div>
   </div>}
   {open&&canManage&&<div className="card p-6 mb-6"><h2 className="section-title mb-5">Thêm đại biểu</h2>
@@ -350,7 +362,15 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       <input name="birth_date" type="date" min="1900-01-01" className="field"/>
       <span className="helper">Không bắt buộc; dùng để thống kê độ tuổi thực tế.</span>
      </label>
-     <button disabled={busy} className="btn btn-primary md:col-span-2">Lưu đại biểu</button>
+     {rosterReady&&<div className="grid gap-3 md:col-span-2 md:grid-cols-2">
+       {ROSTER_EDIT_FIELDS.map(field=><label key={field.key} className="block">
+        <span className="label">{field.label}</span>
+        <input className="field" name={field.key}
+         type={field.key==="union_join_date"?"date":"text"}
+         maxLength={field.max} placeholder={field.key==="union_join_date"?"dd/mm/yyyy":field.label}/>
+       </label>)}
+      </div>}
+      <button disabled={busy} className="btn btn-primary md:col-span-2">Lưu đại biểu</button>
    </form>
   </div>}
   <div className="card overflow-hidden">
@@ -443,7 +463,15 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       <label className="block"><span className="label">Ngày tháng năm sinh</span>
        <input className="field" type="date" min="1900-01-01" value={editBirthDate}
         onChange={e=>setEditBirthDate(e.target.value)}/></label>
-      <p className="text-xs leading-6 text-[#748d9c]">Đơn vị và chức vụ được đồng bộ trên hồ sơ và thẻ đại biểu; giới tính và ngày sinh phục vụ thống kê.</p>
+      {rosterReady&&<div className="grid gap-3 sm:grid-cols-2">
+        {ROSTER_EDIT_FIELDS.map(field=><label key={field.key} className="block">
+         <span className="label">{field.label}</span>
+         <input className="field" type={field.key==="union_join_date"?"date":"text"}
+          maxLength={field.max} value={editExtra[field.key]}
+          onChange={e=>setEditExtra(prev=>({...prev,[field.key]:e.target.value}))}/>
+        </label>)}
+       </div>}
+       <p className="text-xs leading-6 text-[#748d9c]">Đơn vị và chức vụ được đồng bộ trên hồ sơ và thẻ đại biểu; giới tính và ngày sinh phục vụ thống kê.</p>
       {error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
       <div className="flex flex-wrap justify-end gap-2">
        <button type="button" className="btn btn-secondary" disabled={busy}
