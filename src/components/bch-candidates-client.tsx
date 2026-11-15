@@ -1,14 +1,14 @@
 "use client";
 
-import {FormEvent,useEffect,useMemo,useState} from "react";
+import {ChangeEvent,FormEvent,useEffect,useMemo,useRef,useState} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
  BookOpen,Camera,Download,Edit3,FileSpreadsheet,GraduationCap,RefreshCw,UserRound,
- Plus,Search,Trash2,UserRoundPlus,Users,X,GripVertical,ArrowUp,ArrowDown,ClipboardList
+ Plus,Search,Trash2,UserRoundPlus,Users,X,GripVertical,ArrowUp,ArrowDown,ClipboardList,Upload
 } from "lucide-react";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
-import {sortBchCandidates,validateBchInput,type BchCandidate} from "@/lib/bch-candidates";
+import {BCH_IMPORT_COLUMNS,parseBchImportMatrix,sortBchCandidates,validateBchInput,type BchCandidate} from "@/lib/bch-candidates";
 
 type DelegateOption={id:string;full_name:string;position:string;code:string;photo_path:string|null};
 type PhotoTarget={kind:"form"}|{kind:"existing";candidate:BchCandidate};
@@ -84,6 +84,11 @@ export function BchCandidatesClient({
  const [pendingPhoto,setPendingPhoto]=useState<Blob|null>(null);
  const [pendingPhotoPreview,setPendingPhotoPreview]=useState<string|null>(null);
  const [selectedDelegateId,setSelectedDelegateId]=useState("");
+ const fileRef=useRef<HTMLInputElement>(null);
+ const [showImport,setShowImport]=useState(false);
+ const [importPreview,setImportPreview]=useState<{
+  filename:string;parsed:ReturnType<typeof parseBchImportMatrix>;
+ }|null>(null);
  useEffect(()=>()=>{if(pendingPhotoPreview)URL.revokeObjectURL(pendingPhotoPreview);},[pendingPhotoPreview]);
  const selectedDelegate=delegates.find(delegate=>delegate.id===selectedDelegateId);
  const currentFormCandidate=editing?candidates.find(candidate=>candidate.id===editing):null;
@@ -284,6 +289,53 @@ export function BchCandidatesClient({
    }]).toFile("trich-ngang-nhan-su-BCH-"+encodeFilename(congressCode)+".xlsx");
   }catch{setError("Không tạo được file Excel. Vui lòng thử lại.");}
  }
+
+ async function downloadTemplate(){
+  setError("");
+  try{
+   const {default:writeExcelFile}=await import("write-excel-file/browser");
+   await writeExcelFile([{sheet:"Trich ngang BCH",stickyRowsCount:1,
+    data:[[...BCH_IMPORT_COLUMNS]]}]).toFile("mau-nhap-nhan-su-BCH.xlsx");
+  }catch{setError("Không tải được mẫu Excel.");}
+ }
+ async function chooseImportFile(event:ChangeEvent<HTMLInputElement>){
+  const file=event.currentTarget.files?.[0];
+  event.currentTarget.value="";
+  if(!file)return;
+  setError("");setNotice("");setImportPreview(null);setShowImport(true);
+  if(!file.name.toLocaleLowerCase().endsWith(".xlsx")||file.size>2*1024*1024){
+   setError("Chỉ hỗ trợ file .xlsx tối đa 2 MB.");return;
+  }
+  setBusy(true);
+  try{
+   const {readSheet}=await import("read-excel-file/browser");
+   const matrix=await readSheet(file);
+   const parsed=parseBchImportMatrix(matrix,sorted,maxOrder);
+   setImportPreview({filename:file.name,parsed});
+  }catch{
+   setError("Không đọc được file Excel. Hãy dùng tệp .xlsx và kiểm tra dữ liệu.");
+  }finally{setBusy(false);}
+ }
+ async function confirmImport(){
+  const parsed=importPreview?.parsed;
+  if(!canManage||busy||!parsed||parsed.errors.length||parsed.invalidCount||!parsed.rows.length)return;
+  setBusy(true);setError("");setNotice("");
+  try{
+   const response=await fetch("/api/bch-candidates/import",{
+    method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({congressId,candidates:parsed.rows})
+   });
+   const body=await response.json();
+   if(!response.ok)throw new Error(body.error||"Không nhập được danh sách nhân sự.");
+   setCandidates(previous=>sortBchCandidates([...previous,...(body.candidates as BchCandidate[])]));
+   setNotice("Đã nhập "+body.count+" nhân sự BCH từ Excel."+
+    (parsed.skipped?" Bỏ qua "+parsed.skipped+" hồ sơ trùng.":"")+
+    " Danh sách của Đại hội đã được cập nhật.");
+   setImportPreview(null);setShowImport(false);
+  }catch(err){
+   setError(err instanceof Error?err.message:"Không lưu được danh sách từ Excel.");
+  }finally{setBusy(false);}
+ }
  return <div className="space-y-6">
   <header className="flex flex-wrap items-start justify-between gap-4">
    <div className="min-w-0">
@@ -299,7 +351,11 @@ export function BchCandidatesClient({
      disabled={busy||!sorted.length} onClick={()=>void downloadExcel()}>
      <Download size={16}/> Xuất Excel
     </button>
-    {canViewBallots&&congressKind==="doan"&&<Link href={"/congresses/"+congressId+"/ballots"}
+    {canManage&&<button type="button" className="btn btn-secondary flex-1 justify-center sm:flex-none"
+      disabled={busy} onClick={()=>{setShowImport(true);fileRef.current?.click();}}>
+      <Upload size={16}/> Nhập Excel
+     </button>}
+     {canViewBallots&&congressKind==="doan"&&<Link href={"/congresses/"+congressId+"/ballots"}
      className="btn btn-primary flex-1 justify-center sm:flex-none">
      <ClipboardList size={17}/> Mở sổ kiểm phiếu
     </Link>}
@@ -327,7 +383,77 @@ export function BchCandidatesClient({
    {error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">{error}</div>}
   {notice&&<div role="status" className="rounded-xl border border-[#cce8db] bg-[#eef9f2] px-4 py-3 text-[13px] font-medium text-[#197750]">{notice}</div>}
 
-  {showForm&&canManage&&<section className="overflow-hidden rounded-xl border border-[#d3e5f1] bg-white shadow-[0_10px_30px_rgba(17,60,80,.05)]">
+  {canManage&&<input ref={fileRef} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    aria-label="Chọn tệp Excel nhân sự BCH" className="sr-only"
+    onChange={e=>void chooseImportFile(e)}/>}
+   {showImport&&canManage&&<section className="overflow-hidden rounded-xl border border-[#d2e4ee] bg-white">
+    <div className="flex items-center justify-between border-b border-[#e3edf2] bg-[#f4f9fc] px-4 py-3 sm:px-5">
+     <h2 className="flex items-center gap-2 text-[15px] font-bold text-[#245975]">
+      <FileSpreadsheet size={18}/> Nhập danh sách nhân sự BCH từ Excel
+     </h2>
+     <button type="button" className="rounded-lg p-2 text-[#667f8d] hover:bg-[#e8f0f5]"
+      disabled={busy} aria-label="Đóng nhập Excel" onClick={()=>{setShowImport(false);setImportPreview(null);}}>
+      <X size={18}/></button>
+    </div>
+    <div className="space-y-4 p-4 sm:p-5">
+     <p className="text-sm leading-6 text-[#567386]">
+      Dùng đúng 7 trường thông tin: Họ tên, Năm sinh, Quê quán, Dân tộc, Trình độ,
+      Năm vào Đoàn, Chức vụ hiện tại. Cột STT là tùy chọn, có thể đổi thứ tự cột.
+      Tối đa 200 người/tệp, định dạng .xlsx (2 MB).
+     </p>
+     <div className="flex flex-wrap gap-2">
+      <button type="button" disabled={busy} className="btn btn-secondary" onClick={()=>fileRef.current?.click()}>
+       <Upload size={16}/> Chọn tệp Excel
+      </button>
+      <button type="button" disabled={busy} className="btn btn-secondary" onClick={()=>void downloadTemplate()}>
+       <Download size={16}/> Tải file Excel mẫu
+      </button>
+     </div>
+     <p className="text-xs leading-5 text-[#758e9d]">
+      Chỉ bổ sung nhân sự vào Đại hội đang chọn; không ghi đè hồ sơ cũ, không nhập ảnh,
+      dữ liệu kiểm phiếu hoặc tài khoản. Hồ sơ trùng Họ tên + Năm sinh + Quê quán được bỏ qua khi xem trước.
+     </p>
+     {importPreview&&<div className="rounded-lg border border-[#dce8ef] bg-[#f9fcfe] p-4">
+      <p className="font-semibold text-[#244f69]">{importPreview.filename}</p>
+      <p className="mt-1 text-sm text-[#58778b]">
+       {importPreview.parsed.sourceCount} dòng dữ liệu · {importPreview.parsed.rows.length} sẽ thêm
+       · {importPreview.parsed.skipped} trùng bỏ qua
+       · {importPreview.parsed.invalidCount} dòng lỗi
+      </p>
+      {!!importPreview.parsed.errors.length&&<div role="alert" className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+       <p className="font-semibold">Vui lòng sửa file Excel trước khi nhập:</p>
+       {importPreview.parsed.errors.map((issue,index)=><p key={index} className="mt-1">{issue}</p>)}
+      </div>}
+      {!!importPreview.parsed.rows.length&&<div className="mt-3 overflow-x-auto">
+       <table className="min-w-full text-left text-xs">
+        <thead><tr className="border-b border-[#dbe7ec] text-[#6b8795]">
+         <th className="px-2 py-2">STT</th><th className="px-2 py-2">Họ tên</th>
+         <th className="px-2 py-2">Năm sinh</th><th className="px-2 py-2">Quê quán</th>
+         <th className="px-2 py-2">Chức vụ</th>
+        </tr></thead>
+        <tbody>{importPreview.parsed.rows.slice(0,5).map((item,index)=><tr key={index} className="border-b border-[#edf2f5]">
+         <td className="px-2 py-2">{index+1}</td><td className="px-2 py-2 font-semibold">{item.full_name}</td>
+         <td className="px-2 py-2">{item.birth_year}</td><td className="px-2 py-2">{item.hometown}</td>
+         <td className="px-2 py-2">{item.current_position}</td>
+        </tr>)}</tbody>
+       </table>
+       {importPreview.parsed.rows.length>5&&<p className="mt-2 text-xs text-[#6b8795]">
+        Hiển thị trước 5/{importPreview.parsed.rows.length} nhân sự.</p>}
+      </div>}
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
+       <button type="button" className="btn btn-secondary" disabled={busy}
+        onClick={()=>{setShowImport(false);setImportPreview(null);}}>Hủy</button>
+       <button type="button" className="btn btn-primary" disabled={busy||!!importPreview.parsed.errors.length||
+        !!importPreview.parsed.invalidCount||!importPreview.parsed.rows.length}
+        onClick={()=>void confirmImport()}>
+        <Upload size={16}/>{busy?"Đang nhập...":"Xác nhận nhập "+importPreview.parsed.rows.length+" nhân sự"}
+       </button>
+      </div>
+     </div>}
+    </div>
+   </section>}
+
+   {showForm&&canManage&&<section className="overflow-hidden rounded-xl border border-[#d3e5f1] bg-white shadow-[0_10px_30px_rgba(17,60,80,.05)]">
    <div className="flex items-center justify-between gap-3 border-b border-[#e5edf2] bg-[#f5f9fc] px-4 py-3 sm:px-6">
     <h2 className="flex items-center gap-2 text-[15px] font-bold text-[#285b78]">
      <UserRoundPlus size={19}/>{editing?"Chỉnh sửa nhân sự":"Thêm nhân sự giới thiệu BCH"}

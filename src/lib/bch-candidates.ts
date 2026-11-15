@@ -191,6 +191,70 @@ export function validateBchInput(body:unknown,year=currentYear()):Validation{
   votes_received:votes,total_ballots:total
  },error:null};
 }
+
+/** Workbook columns match the existing BCH export. No ballot data or photos are imported. */
+export const BCH_IMPORT_COLUMNS=["STT","Họ tên","Năm sinh","Quê quán","Dân tộc",
+ "Trình độ","Năm vào Đoàn","Chức vụ hiện tại"] as const;
+export const BCH_IMPORT_MAX_ROWS=200;
+const columnNames={
+ full_name:["hoten","hovaten","fullname"],
+ birth_year:["namsinh","birthyear"],
+ hometown:["quequan","hometown"],
+ ethnicity:["dantoc","ethnicity"],
+ education_level:["trinhdo","trinhdohocvan","educationlevel"],
+ union_join_year:["namvaodoan","unionjoinyear"],
+ current_position:["chucvuhientai","chucvu","currentposition"]
+} as const;
+const sheetKey=(value:unknown)=>String(value??"").trim().toLocaleLowerCase("vi")
+ .normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]/g,"");
+
+/** Duplicate identity is scoped to a congress, not just the full name. */
+export function bchPersonKey(person:Pick<BchCandidateInput,"full_name"|"birth_year"|"hometown">){
+ return [sheetKey(person.full_name),String(person.birth_year),sheetKey(person.hometown)].join("|");
+}
+export function parseBchImportMatrix(
+ matrix:readonly (readonly unknown[])[],
+ existing:readonly Pick<BchCandidateInput,"full_name"|"birth_year"|"hometown">[],
+ startOrder:number
+):{rows:BchCandidateInput[];skipped:number;sourceCount:number;invalidCount:number;errors:string[]}{
+ const result={rows:[] as BchCandidateInput[],skipped:0,sourceCount:0,invalidCount:0,errors:[] as string[]};
+ const headers=(matrix[0]||[]).map(sheetKey);
+ const indexes={} as Record<keyof typeof columnNames,number>;
+ const labels:Record<keyof typeof columnNames,string>={
+  full_name:"Họ tên",birth_year:"Năm sinh",hometown:"Quê quán",ethnicity:"Dân tộc",
+  education_level:"Trình độ",union_join_year:"Năm vào Đoàn",current_position:"Chức vụ hiện tại"
+ };
+ for(const [field,aliases] of Object.entries(columnNames) as [keyof typeof columnNames,readonly string[]][]){
+  const position=headers.findIndex(header=>aliases.includes(header));
+  if(position<0)result.errors.push("Thiếu cột: "+labels[field]);
+  indexes[field]=position;
+ }
+ if(result.errors.length)return result;
+ const seen=new Set(existing.map(bchPersonKey));
+ for(let i=1;i<matrix.length;i++){
+  const cells=matrix[i];
+  if(!cells||!cells.some(cell=>String(cell??"").trim()))continue;
+  result.sourceCount++;
+  if(result.sourceCount>BCH_IMPORT_MAX_ROWS){
+   result.errors.push("Mỗi lần nhập tối đa "+BCH_IMPORT_MAX_ROWS+" nhân sự. Hãy chia tệp thành nhiều phần.");
+   return {...result,rows:[]};
+  }
+  const row=Object.fromEntries((Object.keys(columnNames) as (keyof typeof columnNames)[])
+   .map(key=>[key,String(cells[indexes[key]]??"").trim()])) as Record<keyof typeof columnNames,string>;
+  const checked=validateBchInput({...row,display_order:Math.min(10000,startOrder+result.rows.length+1)});
+  if(!checked.data){
+   result.invalidCount++;
+   if(result.errors.length<8)result.errors.push("Dòng "+(i+1)+": "+(checked.error||"Dữ liệu không hợp lệ."));
+   continue;
+  }
+  const key=bchPersonKey(checked.data);
+  if(seen.has(key)){result.skipped++;continue;}
+  seen.add(key);
+  result.rows.push(checked.data);
+ }
+ return result;
+}
+
 export function sortBchCandidates(items:BchCandidate[]){
  return [...items].sort((a,b)=>a.display_order-b.display_order||
   a.full_name.localeCompare(b.full_name,"vi")||a.id.localeCompare(b.id));
