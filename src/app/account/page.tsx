@@ -70,6 +70,7 @@ export default async function AccountPage(){
   const guestOnly=selected?!selected.asDelegate:!owned.data?.length&&Boolean(guestMemberships.data?.length);
  const personal:EditableDelegate[]=first?[{
   ...first,congressName:"Tất cả Đại hội",
+   kind:(selected?.kind??context?.options.find(c=>c.id===first.congress_id)?.kind)==="hoi_sinh_vien"?"hoi_sinh_vien":"doan",
   gender:(first.gender||null) as EditableDelegate["gender"]
  }]:[];
  return <DelegateShell name={first?.full_name||name} guestOnly={guestOnly}

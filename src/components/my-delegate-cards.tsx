@@ -1,11 +1,12 @@
 "use client";
 import Image from "next/image";
 import {congressBranding} from "@/components/brand-mark";
+import {DelegatePortrait} from "@/components/delegate-portrait";
 import {delegateTheme} from "@/lib/delegate-brand-theme";
 import {CONGRESS_FORMAL_HEADING,congressShortName} from "@/lib/congress-title";
 import {useCallback,useEffect,useLayoutEffect,useRef,useState} from "react";
 import Link from "next/link";
-import {Armchair,ArrowUpRight,BookOpen,Camera,CheckCircle2,History,Maximize2,Minimize2,Printer,UserRound,Users,X} from "lucide-react";
+import {Armchair,ArrowUpRight,BookOpen,Camera,CheckCircle2,History,Maximize2,Minimize2,Printer,Users,X} from "lucide-react";
 import {DelegateBarcode} from "@/components/delegate-barcode";
 import {getWindowStatus} from "@/lib/attendance-window";
 import {calculateDelegatePassScale} from "@/lib/delegate-pass-layout";
@@ -25,8 +26,8 @@ export function DelegatePass({item,priority}:{item:PortalDelegate;priority:boole
   const specificCongressName=congressShortName(item.congressName,item.kind);
  const session=activeSession(item.sessions);
  const seat=session?.seat;
- const photoUrl="/api/delegates/"+item.id+"/photo?w=160&v="+encodeURIComponent(item.photoPath||"");
- const [failedSrc,setFailedSrc]=useState<string|null>(null);
+
+
  return <article aria-label={"Thẻ định danh của "+item.fullName}
   data-congress-kind={item.kind}
   className="delegate-pass premium-delegate-id relative isolate mx-auto w-full min-w-0 max-w-[386px] overflow-hidden rounded-[24px] border border-[#e2d9d0] bg-[#fffdfa] text-[#243e53] shadow-[0_24px_56px_rgba(26,62,89,.13),0_3px_10px_rgba(26,62,89,.055)]">
@@ -58,14 +59,9 @@ export function DelegatePass({item,priority}:{item:PortalDelegate;priority:boole
   </header>
   <div className="relative -mt-9 flex flex-col items-center px-4 pb-5 sm:px-6">
    <div className={"relative overflow-hidden rounded-[13px] border-[5px] border-white bg-[#ecf4f8] shadow-[0_9px_25px_rgba(36,67,96,.16),0_0_0_1px_rgba(89,125,151,.16)] "+(item.kind==="hoi_sinh_vien"?"ring-1 ring-[#d7eaf5]":"ring-1 ring-[#f0d9d5]")}>
-    {item.photoPath&&failedSrc!==photoUrl?<Image unoptimized
-     src={photoUrl} onError={()=>setFailedSrc(photoUrl)}
-     loading={priority?"eager":"lazy"} fetchPriority={priority?"high":undefined}
-     width={128} height={170} alt={"Ảnh chân dung "+item.fullName}
-     className="h-[min(43vw,163px)] w-[min(32vw,122px)] object-cover sm:h-[170px] sm:w-[128px]"/>:
-     <div className="flex h-[min(43vw,163px)] w-[min(32vw,122px)] items-center justify-center bg-[#f1f5f8] text-[#96aaba] sm:h-[170px] sm:w-[128px]">
-      <UserRound size={46} strokeWidth={1.45}/>
-     </div>}
+    <DelegatePortrait delegateId={item.id} fullName={item.fullName} photoPath={item.photoPath}
+      kind={item.kind} width={128} height={170} priority={priority} version={item.photoPath||""}
+      className="h-[min(43vw,163px)] w-[min(32vw,122px)] sm:h-[170px] sm:w-[128px]"/>
    </div>
    <div className="mt-4 w-full min-w-0 text-center">
     <span className={"inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-extrabold uppercase tracking-[.09em] "+theme.chip}>

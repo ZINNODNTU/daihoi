@@ -71,7 +71,9 @@ test("delegate pass uses brand-specific pale header, keeps print, barcode and fu
  assert.match(card,/premium-id-watermark/);
  assert.match(card,/premium-id-hologram/);
  assert.match(card,/DelegateBarcode/);
- assert.match(card,/photoPath&&failedSrc!==photoUrl/);
+ assert.match(card,/<DelegatePortrait delegateId=\{item.id\}/);
+ assert.match(card,/photoPath=\{item.photoPath\}/);
+ assert.match(card,/kind=\{item.kind\}/);
  assert.doesNotMatch(card,/bg-\[#17263f\]|bg-\[#0c405b\]/);
  assert.match(ui,/FullDelegatePassViewer/);
  assert.match(ui,/calculateDelegatePassScale/);
@@ -90,7 +92,9 @@ test("session QR landing displays the same brand without changing protected chec
  assert.match(client,/<BrandMark kind=\{kind\}/);
  assert.match(client,/role="alert"/);
  assert.match(client,/aria-live="polite"/);
- assert.match(client,/onError=\{\(\)=>setPhotoFailed\(true\)\}/);
+ assert.match(client,/<DelegatePortrait delegateId=\{delegate.id\}/);
+ assert.match(client,/photoPath=\{delegate.photo_path\} kind=\{kind\}/);
+ assert.match(read("src/components/delegate-portrait.tsx"),/onError=\{\(\)=>setFailedUrl\(url\)\}/);
  assert.match(client,/credentials:"same-origin"/);
  assert.match(client,/queueMicrotask\(\(\)=>void submit\(\)\)/);
 });

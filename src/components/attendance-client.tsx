@@ -13,10 +13,11 @@ import {
 import type {Delegate,AttendanceSession,Checkin} from "@/lib/types";
 import {currentSessionCheckins,type SeatPlacement} from "@/lib/attendance-seating";
 import {RecentCheckinCard} from "@/components/recent-checkin-card";
+import type {CongressKind} from "@/components/brand-mark";
 import {startTrackedScanner,trackedBoxStyle} from "@/lib/fast-qr-camera";
 
 type Props={
- congressId:string;delegates:Delegate[];sessions:AttendanceSession[];
+ congressId:string;congressKind:CongressKind;delegates:Delegate[];sessions:AttendanceSession[];
  initialCheckins:Checkin[];seatByDelegate:Record<string,SeatPlacement>;
  canScan:boolean;canManage:boolean;hideManagement?:boolean;defaultSessionId?:string;
 };
@@ -36,7 +37,7 @@ function windowBody(start:string,end:string){
  if(!checked.window)throw new Error(checked.error||"Khoảng thời gian không hợp lệ.");
  return {startsAt,endsAt};
 }
-export function AttendanceClient({congressId,delegates,sessions:initialSessions,initialCheckins,seatByDelegate,
+export function AttendanceClient({congressId,congressKind,delegates,sessions:initialSessions,initialCheckins,seatByDelegate,
  canScan,canManage,hideManagement=false,defaultSessionId=""}:Props){
  const [sessions,setSessions]=useState(initialSessions);
  const [sessionId,setSessionId]=useState(
@@ -467,7 +468,7 @@ export function AttendanceClient({congressId,delegates,sessions:initialSessions,
     </div>
     <div className="order-1 min-w-0 xl:order-2 xl:sticky xl:top-[105px]">
      <RecentCheckinCard latest={filtered[0]||null} recent={filtered.slice(0,4)}
-      delegates={lookup} seats={seatByDelegate} now={clock}/>
+      delegates={lookup} seats={seatByDelegate} now={clock} congressKind={congressKind}/>
     </div>
    </div>
    {review&&<div role="presentation" className="modal-overlay fixed inset-0 z-50 bg-[#0d2945]/60 flex items-center justify-center p-4"

@@ -1,14 +1,15 @@
 "use client";
 import {FormEvent,useState} from "react";
-import Image from "next/image";
 import {useRouter} from "next/navigation";
-import {Camera,CheckCircle2,Save,UserRound} from "lucide-react";
+import {Camera,CheckCircle2,Save} from "lucide-react";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
+import {DelegatePortrait} from "@/components/delegate-portrait";
+import type {CongressKind} from "@/components/brand-mark";
 
 export type EditableDelegate={
  id:string;congress_id:string;full_name:string;unit:string;position:string;
  gender:"male"|"female"|"other"|null;birth_date:string|null;photo_path:string|null;
- congressName:string;
+ congressName:string;kind?:CongressKind;
 };
 export function DelegateProfileEditor({initial}:{initial:EditableDelegate[]}){
  const router=useRouter();
@@ -82,10 +83,9 @@ export function DelegateProfileEditor({initial}:{initial:EditableDelegate[]}){
   <div className="grid gap-7 md:grid-cols-[190px_minmax(0,1fr)]">
    <div className="flex flex-row items-center gap-3 rounded-xl bg-[#f6f9fc] p-3 sm:flex-col sm:bg-transparent sm:p-0">
     <div className="flex h-[144px] w-[108px] shrink-0 items-center justify-center overflow-hidden sm:h-[224px] sm:w-[168px] rounded-xl border-4 border-white bg-[#eef3f8] shadow-[0_6px_22px_rgba(25,55,80,.15)]">
-     {selected.photo_path?<Image unoptimized width={168} height={224}
-      src={"/api/delegates/"+selected.id+"/photo?w=160&v="+(version[selected.id]||0)}
-      alt={"Ảnh đại biểu "+selected.full_name} className="h-full w-full object-cover"/>:
-      <UserRound size={62} className="text-[#a6b7c6]"/>}
+     <DelegatePortrait delegateId={selected.id} fullName={selected.full_name}
+      photoPath={selected.photo_path} kind={selected.kind||"doan"} width={168} height={224}
+      version={version[selected.id]||0} className="h-full w-full"/>
     </div>
     <div className="min-w-0 flex-1 sm:w-full">
      <button type="button" disabled={busy} onClick={()=>setPhotoId(selected.id)}

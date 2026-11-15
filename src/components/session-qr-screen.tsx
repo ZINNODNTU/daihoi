@@ -39,10 +39,10 @@ export function SessionQrScreen({congressId,sessions,initialSessionId,congressNa
  const summary=useMemo(()=>liveData?computeLiveSummary(liveData):null,[liveData]);
  // Clock ticks must not rerender a 500-seat map or reload the greeting portrait.
  const welcomeView=useMemo(()=>
-  <ProjectionWelcome data={liveData} congressName={congressName} compact featured={featured}/>,
-  [liveData,congressName,featured]);
- const queueView=useMemo(()=><ProjectionArrivalQueue data={liveData} waiting={waiting}/>,
-  [liveData,waiting]);
+  <ProjectionWelcome data={liveData} congressName={congressName} compact featured={featured} congressKind={congressKind}/>,
+  [liveData,congressName,featured,congressKind]);
+ const queueView=useMemo(()=><ProjectionArrivalQueue data={liveData} waiting={waiting} congressKind={congressKind}/>,
+  [liveData,waiting,congressKind]);
  const seatingView=useMemo(()=>
   <ProjectionSeatingMap data={liveData} congressId={congressId} compact featuredDelegateId={featured?.delegate_id}/>,
   [liveData,congressId,featured?.delegate_id]);

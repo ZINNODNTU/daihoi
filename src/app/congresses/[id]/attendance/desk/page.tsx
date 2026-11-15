@@ -13,7 +13,7 @@ export default async function AttendanceDeskPage({params,searchParams}:{
  const selectedSessionId=(await searchParams).sessionId||"";
  const {supabase,user}=await getAuth();
  if(!user||!(await hasCongressAbility(supabase,user.id,id,"attendance.scan")))notFound();
- const [delegates,sessions,checkins]=await Promise.all([
+ const [delegates,sessions,checkins,congress]=await Promise.all([
   supabase.from("delegates")
    .select("id,congress_id,code,full_name,unit,delegate_type,qr_version,barcode_code,is_active,photo_path")
    .eq("congress_id",id).order("code"),
@@ -21,7 +21,8 @@ export default async function AttendanceDeskPage({params,searchParams}:{
    .select("id,congress_id,name,status,starts_at,ends_at,qr_policy,seating_layout_id")
    .eq("congress_id",id).order("created_at",{ascending:false}),
   supabase.from("checkins").select("*").eq("congress_id",id)
-   .order("checked_in_at",{ascending:false}).limit(1500)
+   .order("checked_in_at",{ascending:false}).limit(1500),
+   supabase.from("congresses").select("kind").eq("id",id).maybeSingle()
  ]);
  const canScan=!!user&&await hasCongressAbility(supabase,user.id,id,"attendance.scan");
  const canManage=!!user&&await hasCongressAbility(supabase,user.id,id,"attendance.sessions");
@@ -48,6 +49,7 @@ export default async function AttendanceDeskPage({params,searchParams}:{
   }
  }
  return <AttendanceClient congressId={id}
+   congressKind={congress.data?.kind==="hoi_sinh_vien"?"hoi_sinh_vien":"doan"}
   delegates={(delegates.data||[]) as Delegate[]}
   sessions={(sessions.data||[]) as AttendanceSession[]}
   initialCheckins={(checkins.data||[]) as Checkin[]}

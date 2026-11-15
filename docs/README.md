@@ -4,6 +4,10 @@
 
 Đại hội số là nền tảng điều hành nhiều Đại hội Đoàn/Hội với **Next.js, Supabase, Google Drive** và Vercel (khi triển khai). Phần tài liệu được tổ chức theo **mục đích sử dụng**, không chỉ theo mốc phiên bản.
 
+## Ảnh đại biểu mặc định theo loại Đại hội (15/11/2026)
+
+- [Ảnh đại biểu mặc định V86](huong-dan/ANH-DAI-BIEU-MAC-DINH-DOAN-HOI-V86.md): chưa có ảnh chân dung sẽ hiển thị đúng logo Đoàn/Hội; không upload ảnh giả hay làm thay đổi Supabase, dùng chung cho thẻ, quản lý và điểm danh.
+
 ## Tiêu đề Đại hội Đoàn/Hội (15/11/2026)
 
 - [Tiêu đề Đại hội và thẻ đại biểu V85](huong-dan/TIEU-DE-DAI-HOI-DOAN-HOI-V85.md): tiêu đề mặc định theo loại Đoàn/Hội, BTC chỉ nhập tên đơn vị/kỳ Đại hội; thẻ online và bản in hiện hai dòng, tương thích tên Đại hội cũ, không cần migration.

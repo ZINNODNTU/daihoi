@@ -13,7 +13,7 @@ export default async function DelegatesPage({params}:{params:Promise<{id:string}
   supabase.from("attendance_sessions")
    .select("id,congress_id,name,status,starts_at,ends_at,qr_policy")
    .eq("congress_id",id).order("created_at",{ascending:false}),
-  supabase.from("congresses").select("id,slug").eq("id",id).maybeSingle()
+  supabase.from("congresses").select("id,slug,kind").eq("id",id).maybeSingle()
  ]);
  const canManage=!!user&&await hasCongressAbility(supabase,user.id,id,"delegates.write");
  if(delegates.error)return <>
@@ -26,6 +26,7 @@ export default async function DelegatesPage({params}:{params:Promise<{id:string}
  return <>
   <DelegateAdminTabs congressId={id} active="delegates" canManage={canManage}/>
   <DelegatesClient congressId={id} congressCode={congress.data?.slug||id}
+    congressKind={congress.data?.kind==="hoi_sinh_vien"?"hoi_sinh_vien":"doan"}
    delegates={(delegates.data??[]) as Delegate[]}
    sessions={(sessions.data??[]) as AttendanceSession[]}
    canManage={canManage}/>

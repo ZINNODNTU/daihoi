@@ -3,7 +3,7 @@ import {ChangeEvent,FormEvent,Fragment,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
 import Image from "next/image";
 import {QRCodeSVG} from "qrcode.react";
-import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,Camera,UserRound,CheckSquare2,ChevronDown,ChevronRight,Layers3} from "lucide-react";
+import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,Camera,CheckSquare2,ChevronDown,ChevronRight,Layers3} from "lucide-react";
 import {DelegateBarcode} from "@/components/delegate-barcode";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
 import type {Delegate,AttendanceSession} from "@/lib/types";
@@ -12,8 +12,10 @@ import {normalizeBirthDate,normalizeGender} from "@/lib/delegate-demographics";
 import {DELEGATE_IMPORT_COLUMNS,delegateImportRow,splitDelegateImportBatches,selectDelegateTransfer} from "@/lib/delegate-transfer";
 import {DELEGATE_ROSTER_HEADERS,DELEGATE_ROSTER_SUBHEADERS,parseDelegateImportSheet,type DelegateUploadRow} from "@/lib/delegate-roster-import";
 import {groupDelegatesByUnit} from "@/lib/delegate-unit-groups";
+import {DelegatePortrait} from "@/components/delegate-portrait";
+import type {CongressKind} from "@/components/brand-mark";
 type Props={
- congressId:string;congressCode:string;delegates:Delegate[];canManage:boolean;
+ congressId:string;congressCode:string;congressKind:CongressKind;delegates:Delegate[];canManage:boolean;
  sessions:AttendanceSession[];
 };
 type Row=DelegateUploadRow;
@@ -65,7 +67,7 @@ function saveSvg(id:string,name:string){
  const url=URL.createObjectURL(blob),a=document.createElement("a");
  a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
-export function DelegatesClient({congressId,congressCode,delegates,canManage,sessions}:Props){
+export function DelegatesClient({congressId,congressCode,congressKind,delegates,canManage,sessions}:Props){
  const router=useRouter();
  const [search,setSearch]=useState(""),[open,setOpen]=useState(false);
  const [collapsedUnitKeys,setCollapsedUnitKeys]=useState<Set<string>>(()=>new Set());
@@ -365,7 +367,8 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#dae7ef] bg-[#f5f9fc] p-3 md:col-span-2">
      {pendingPhotoPreview?<Image src={pendingPhotoPreview} alt="Ảnh đại biểu đã căn chỉnh" unoptimized width={66} height={88}
        className="h-[88px] w-[66px] rounded-lg border border-[#d5e1e8] object-cover"/>:
-       <div className="flex h-[88px] w-[66px] items-center justify-center rounded-lg border border-dashed border-[#b8cedd] bg-white text-[#809aaf]"><UserRound size={27}/></div>}
+       <DelegatePortrait delegateId="" fullName="Đại biểu mới" photoPath={null} kind={congressKind}
+        width={66} height={88} className="h-[88px] w-[66px] rounded-lg border border-[#d5e1e8]"/>}
      <div className="min-w-0 flex-1"><p className="text-sm font-bold text-[#365c72]">Ảnh chân dung đại biểu</p>
       <p className="mt-1 text-xs leading-5 text-[#728c9e]">Tự xóa phông sang nền trắng, kéo căn khuôn mặt và crop ảnh 3:4.</p>
       <button type="button" className="btn btn-secondary mt-2 !min-h-9 !text-xs"
@@ -418,10 +421,9 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
      </td></tr>
      {!collapsedUnitKeys.has(group.key)&&group.delegates.map(d=><tr key={d.id}>
      {canManage&&<td><input type="checkbox" aria-label={"Chọn xuất đại biểu "+d.full_name} checked={selectedIds.has(d.id)} onChange={()=>selectOne(d.id)} disabled={busy} className="h-4 w-4 accent-[#167aa3]"/></td>}
-     <td>{d.photo_path?<Image unoptimized src={"/api/delegates/"+d.id+"/photo"}
-      alt={"Ảnh "+d.full_name} width={40} height={54} loading="lazy"
-      className="h-[54px] w-10 rounded-lg border border-[#d7e4ec] bg-white object-cover"/>:
-      <div className="flex h-[54px] w-10 items-center justify-center rounded-lg bg-[#f0f5f8] text-[#9aafbc]"><UserRound size={22}/></div>}</td>
+     <td><DelegatePortrait delegateId={d.id} fullName={d.full_name} photoPath={d.photo_path}
+       kind={congressKind} width={40} height={54}
+       className="h-[54px] w-10 rounded-lg border border-[#d7e4ec]"/></td>
      <td className="font-bold text-[#006d9e]">{d.code}</td><td className="font-bold">{d.full_name}</td>
      <td><span className="font-semibold">{d.student_id||"—"}</span><span className="block break-all text-[11px] text-[#627c8a]">{d.login_email||""}</span></td>
      <td className="hide-mobile">{d.unit||"Chưa cập nhật"}<span className="block text-[11px] text-[#627c8a]">{d.position||""}</span>
@@ -459,10 +461,9 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       {group.delegates.map(d=><article key={d.id} className="mobile-record">
      {canManage&&<label className="mb-3 inline-flex items-center gap-2 rounded-lg border border-[#d4e5ee] bg-white px-3 py-2 text-[11px] font-bold text-[#2d7797]"><input type="checkbox" checked={selectedIds.has(d.id)} onChange={()=>selectOne(d.id)} disabled={busy} aria-label={"Chọn xuất đại biểu "+d.full_name} className="h-4 w-4 accent-[#167aa3]"/> Chọn để xuất</label>}
      <div className="flex items-start justify-between gap-3">
-      {d.photo_path?<Image unoptimized src={"/api/delegates/"+d.id+"/photo"}
-       alt={"Ảnh "+d.full_name} width={54} height={72} loading="lazy"
-       className="h-[72px] w-[54px] shrink-0 rounded-lg border border-[#d6e6ec] bg-white object-cover"/>:
-       <div className="flex h-[72px] w-[54px] shrink-0 items-center justify-center rounded-lg bg-[#f0f5f8] text-[#9aafbc]"><UserRound size={26}/></div>}
+      <DelegatePortrait delegateId={d.id} fullName={d.full_name} photoPath={d.photo_path}
+        kind={congressKind} width={54} height={72}
+        className="h-[72px] w-[54px] rounded-lg border border-[#d6e6ec]"/>
       <div className="min-w-0 flex-1"><p className="text-[11px] font-semibold tracking-wider text-[#007eb8]">{d.code}</p><h3 className="mobile-record-title mt-1">{d.full_name}</h3></div>
       <span className="badge badge-gray shrink-0">{kindLabel(d.delegate_type)}</span>
      </div>
@@ -525,9 +526,10 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
     <p className="text-xs tracking-widest font-semibold text-[#007eae]">THẺ ĐẠI BIỂU ĐIỆN TỬ</p>
     <p className="helper mt-2">Đại hội: <strong>{congressCode.toUpperCase()}</strong></p>
     <div className="mt-4 flex items-start gap-4">
-     {delegates.find(d=>d.id===showCard.id)?.photo_path&&<Image unoptimized
-      src={"/api/delegates/"+showCard.id+"/photo"} width={90} height={120}
-      alt={"Ảnh "+showCard.name} className="h-[120px] w-[90px] shrink-0 rounded-lg border border-[#dfe9ee] bg-white object-cover"/>}
+     <DelegatePortrait delegateId={showCard.id} fullName={showCard.name}
+      photoPath={delegates.find(d=>d.id===showCard.id)?.photo_path}
+      kind={congressKind} width={90} height={120}
+      className="h-[120px] w-[90px] rounded-lg border border-[#dfe9ee]"/>
      <h3 className="text-xl font-semibold mt-2">{showCard.name}</h3>
     </div>
     <p className="text-[#4d6880] text-sm mt-1">Mã định danh đại biểu: <strong>{showCard.code}</strong></p>

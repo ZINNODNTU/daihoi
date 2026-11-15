@@ -2,10 +2,10 @@
 
 import {useEffect,useRef,useState} from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {BrandMark,type CongressKind} from "@/components/brand-mark";
+import {DelegatePortrait} from "@/components/delegate-portrait";
 import {delegateTheme} from "@/lib/delegate-brand-theme";
-import {CheckCircle2,Clock3,IdCard,LoaderCircle,ShieldCheck,UserRound} from "lucide-react";
+import {CheckCircle2,Clock3,IdCard,LoaderCircle,ShieldCheck} from "lucide-react";
 
 type Result={ok:true;already?:boolean;sessionName:string;
  delegate:{id:string;code:string;full_name:string;unit:string};checkin?:{checked_in_at:string}};
@@ -14,7 +14,7 @@ type Props={sessionId:string;token:string;sessionName:string;congressName:string
 type State="processing"|"done"|"failed";
 export function SelfCheckinClient({sessionId,token,sessionName,congressName,kind,delegate}:Props){
  const theme=delegateTheme(kind);
- const [photoFailed,setPhotoFailed]=useState(false);
+
  const [state,setState]=useState<State>("processing");
  const [data,setData]=useState<Result|null>(null);
  const [error,setError]=useState("");
@@ -58,11 +58,9 @@ export function SelfCheckinClient({sessionId,token,sessionName,congressName,kind
     </div>
     <div className="p-5 sm:p-8">
      <div className={"flex items-center gap-4 rounded-[17px] border p-3.5 "+theme.border+" "+theme.tint}>
-      {delegate.photo_path&&!photoFailed?<Image unoptimized
-       src={"/api/delegates/"+delegate.id+"/photo?w=96"} width={72} height={96}
-       onError={()=>setPhotoFailed(true)}
-       alt={"Ảnh "+delegate.full_name} className="h-24 w-[72px] shrink-0 rounded-[10px] border border-white object-cover"/>:
-       <div className="flex h-24 w-[72px] shrink-0 items-center justify-center rounded-[10px] bg-white text-[#91a9b7]"><UserRound size={34}/></div>}
+      <DelegatePortrait delegateId={delegate.id} fullName={delegate.full_name}
+        photoPath={delegate.photo_path} kind={kind} width={72} height={96}
+        className="h-24 w-[72px] rounded-[10px] border border-white"/>
       <div className="min-w-0">
        <p className={"text-[10px] font-extrabold uppercase tracking-[.08em] "+theme.eyebrow}>TÀI KHOẢN ĐẠI BIỂU</p>
        <h2 className="mt-1 break-words text-[17px] font-extrabold leading-6 text-[#243e52]">{delegate.full_name}</h2>

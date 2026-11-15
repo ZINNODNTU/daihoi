@@ -1,12 +1,14 @@
  "use client";
 
- import Image from "next/image";
+
  import Link from "next/link";
  import {Armchair,CheckCircle2,Clock3,MapPin,Users,UserRound,LayoutGrid} from "lucide-react";
  import {classifySeat,computeLiveSummary,type LiveDashboardData,type LiveCheckin,type LiveSeatState} from "@/lib/attendance-live";
  import {rowLabelAt,seatGridSizeValid} from "@/lib/seating";
 import {projectAttendanceSeats,projectedSeatCode} from "@/lib/attendance-seat-projection";
  import {displayTime} from "@/lib/attendance-report";
+import {DelegatePortrait} from "@/components/delegate-portrait";
+import type {CongressKind} from "@/components/brand-mark";
  import {useMemo} from "react";
 
  const colors:Record<LiveSeatState,string>={
@@ -16,7 +18,7 @@ import {projectAttendanceSeats,projectedSeatCode} from "@/lib/attendance-seat-pr
   blocked:"border-[#536e7a] bg-[#42606a] text-[#a8c2cb]"
  };
 
-export function ProjectionWelcome({data,congressName,compact=false,featured}:{data:LiveDashboardData|null;congressName:string;compact?:boolean;featured?:LiveCheckin|null}){
+export function ProjectionWelcome({data,congressName,compact=false,featured,congressKind="doan"}:{data:LiveDashboardData|null;congressName:string;compact?:boolean;featured?:LiveCheckin|null;congressKind?:CongressKind}){
   const latest=featured||data?.checkins[0]; const person=latest?data?.delegates.find(x=>x.id===latest.delegate_id):null;
  const seat=person?data?.seats.find(s=>
   data.assignments.some(a=>a.seat_id===s.id&&a.delegate_id===person.id)):null;
@@ -55,13 +57,9 @@ export function ProjectionWelcome({data,congressName,compact=false,featured}:{da
     <div className="projection-portrait relative mx-auto w-[132px] sm:w-[150px] xl:w-[172px]">
      <div aria-hidden="true" className="absolute -inset-2 rounded-[22px] border border-[#dfbc7b]/30"/>
      <div className="relative aspect-[3/4] overflow-hidden rounded-[16px] border-[4px] border-[#e9d49f] bg-[#e8f1f5] shadow-[0_18px_32px_rgba(0,0,0,.25)]">
-      {person.photo_path?<Image unoptimized
-       src={"/api/delegates/"+person.id+"/photo?w=160"}
-       width={172} height={228} loading="eager" fetchPriority="high"
-       alt={"Ảnh chân dung "+person.full_name} className="h-full w-full object-cover"/>:
-       <span className="flex h-full w-full items-center justify-center text-[#9db2be]">
-        <UserRound size={50} strokeWidth={1.4}/>
-       </span>}
+      <DelegatePortrait delegateId={person.id} fullName={person.full_name}
+        photoPath={person.photo_path} kind={congressKind} width={172} height={228}
+        priority className="h-full w-full"/>
      </div>
     </div>
     <div className="min-w-0 text-center sm:text-left">
@@ -93,8 +91,8 @@ export function ProjectionWelcome({data,congressName,compact=false,featured}:{da
 }
 
 // FIFO queue is visible even while the projector is greeting an earlier arrival.
-export function ProjectionArrivalQueue({data,waiting}:{
- data:LiveDashboardData|null;waiting:LiveCheckin[]
+export function ProjectionArrivalQueue({data,waiting,congressKind="doan"}:{
+ data:LiveDashboardData|null;waiting:LiveCheckin[];congressKind?:CongressKind
 }){
  const delegates=new Map((data?.delegates||[]).map(person=>[person.id,person]));
  const assigned=new Map((data?.assignments||[]).map(row=>[row.delegate_id,row.seat_id]));
@@ -112,7 +110,9 @@ export function ProjectionArrivalQueue({data,waiting}:{
      const seat=seats.get(assigned.get(checkin.delegate_id)||"")||"Chưa phân";
      return <div key={checkin.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.06] p-2.5">
       <span className="w-5 shrink-0 text-center text-[12px] font-black text-[#eed29c]">{i+1}</span>
-      {person?.photo_path?<Image unoptimized loading="lazy" src={"/api/delegates/"+person.id+"/photo?w=96"} width={48} height={64} alt={"Ảnh "+person.full_name} className="h-14 w-11 shrink-0 rounded-lg border border-white/15 object-cover"/>:
+      {person?<DelegatePortrait delegateId={person.id} fullName={person.full_name}
+        photoPath={person.photo_path} kind={congressKind} width={48} height={64}
+        className="h-14 w-11 rounded-lg border border-white/15"/>:
        <span className="flex h-14 w-11 shrink-0 items-center justify-center rounded-lg bg-white/10"><UserRound size={21}/></span>}
       <div className="min-w-0 flex-1">
        <p className="break-words text-[13px] font-extrabold leading-5 text-white">{person?.full_name||"Đại biểu"}</p>
