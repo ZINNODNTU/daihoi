@@ -259,6 +259,31 @@ export function sortBchCandidates(items:BchCandidate[]){
  return [...items].sort((a,b)=>a.display_order-b.display_order||
   a.full_name.localeCompare(b.full_name,"vi")||a.id.localeCompare(b.id));
 }
+/** Vietnamese BCH personnel sort: last word of full name (given name), then
+ * middle names and surname. Does not mutate the existing displayed order. */
+export function sortBchCandidatesByVietnameseName<T extends Pick<BchCandidate,"id"|"full_name">>(
+ items:readonly T[]
+):T[]{
+ const collator=new Intl.Collator("vi",{sensitivity:"variant",numeric:true});
+ const parts=(name:string)=>{
+  const words=name.trim().split(/\s+/).filter(Boolean);
+  return {
+   given:words.at(-1)||"",
+   middle:words.slice(1,-1).join(" "),
+   family:words.length>1?words[0]:""
+  };
+ };
+ const keyed=items.map(item=>({item,...parts(item.full_name)}));
+ keyed.sort((a,b)=>
+  collator.compare(a.given,b.given)||
+  collator.compare(a.middle,b.middle)||
+  collator.compare(a.family,b.family)||
+  collator.compare(a.item.full_name.trim().replace(/\s+/g," "),b.item.full_name.trim().replace(/\s+/g," "))||
+  a.item.id.localeCompare(b.item.id)
+ );
+ return keyed.map(({item})=>item);
+}
+
 /** Validate reorder payload before invoking the all-or-nothing SQL RPC. */
 export function validateBchReorder(ids:unknown):ids is string[]{
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -8,7 +8,7 @@ import {
  Plus,Search,Trash2,UserRoundPlus,Users,X,GripVertical,ArrowUp,ArrowDown,ClipboardList,Upload
 } from "lucide-react";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
-import {BCH_IMPORT_COLUMNS,parseBchImportMatrix,sortBchCandidates,validateBchInput,type BchCandidate} from "@/lib/bch-candidates";
+import {BCH_IMPORT_COLUMNS,parseBchImportMatrix,sortBchCandidates,sortBchCandidatesByVietnameseName,validateBchInput,type BchCandidate} from "@/lib/bch-candidates";
 
 type DelegateOption={id:string;full_name:string;position:string;code:string;photo_path:string|null};
 type PhotoTarget={kind:"form"}|{kind:"existing";candidate:BchCandidate};
@@ -147,8 +147,8 @@ export function BchCandidatesClient({
  ),[sorted,search]);
  const maxOrder=sorted.reduce((max,c)=>Math.max(max,c.display_order),0);
  const canReorder=canManage&&!busy&&!search.trim();
- async function persistOrder(ordered:BchCandidate[]){
-  if(!canReorder||ordered.length!==sorted.length)return;
+ async function persistOrder(ordered:BchCandidate[],method:"manual"|"name"="manual"){
+  if(!canManage||busy||ordered.length!==sorted.length||(method==="manual"&&!!search.trim()))return;
   const previous=candidates;
   setCandidates(ordered.map((item,index)=>({...item,display_order:index+1})));
   setBusy(true);setError("");setNotice("");
@@ -159,11 +159,22 @@ export function BchCandidatesClient({
    });
    const body=await response.json();
    if(!response.ok)throw new Error(body.error||"Không lưu được thứ tự.");
-   setNotice("Đã lưu thứ tự nhân sự BCH. File Excel và trang đại biểu sẽ theo thứ tự mới.");
+   setNotice(method==="name"?"Đã sắp xếp BCH theo tên A–Z tiếng Việt và lưu thứ tự. Trang đại biểu và file Excel sẽ theo thứ tự này.":"Đã lưu thứ tự nhân sự BCH. File Excel và trang đại biểu sẽ theo thứ tự mới.");
   }catch(err){
    setCandidates(previous);
    setError(err instanceof Error?err.message:"Không lưu được thứ tự; đã khôi phục thứ tự trước đó.");
   }finally{setBusy(false);setDragId(null);}
+ }
+ function alphabetizeByName(){
+  if(!canManage||busy||sorted.length<2)return;
+  const ordered=sortBchCandidatesByVietnameseName(sorted);
+  if(ordered.every((item,index)=>item.id===sorted[index].id)){
+   setError("");
+   setNotice("Danh sách nhân sự BCH hiện đã đúng thứ tự A–Z theo tên tiếng Việt.");
+   return;
+  }
+  setSearch("");
+  void persistOrder(ordered,"name");
  }
  function moveCandidate(id:string,delta:number){
   if(!canReorder)return;
@@ -521,10 +532,14 @@ export function BchCandidatesClient({
      <h2 className="text-[16px] font-extrabold text-[#294f68]">Bảng trích ngang nhân sự</h2>
      <p className="mt-1 text-xs text-[#8396a4]">Tổng cộng {sorted.length} người · Hiển thị {visible.length} kết quả</p>
       {canManage&&<p className="mt-1 text-[11px] text-[#4e8197]">
-       {search?"Xóa bộ lọc tìm kiếm để sắp xếp thứ tự.":"Kéo thả hàng để sắp xếp; trên điện thoại dùng nút Lên / Xuống."}
+       {search?"Xóa bộ lọc tìm kiếm để sắp xếp thứ tự.":"Kéo thả hàng để sắp xếp thủ công hoặc chọn Sắp xếp theo tên A–Z; trên điện thoại dùng nút Lên / Xuống."}
       </p>}
     </div>
-    <div className="relative w-full sm:w-[305px]">
+    {canManage&&<button type="button" className="btn btn-secondary shrink-0 justify-center" disabled={busy||sorted.length<2}
+      onClick={alphabetizeByName} title="Xếp theo tên gọi (từ cuối của họ tên), thứ tự bảng chữ cái tiếng Việt và lưu lại">
+      <ArrowDown size={16}/> Sắp xếp theo tên A–Z
+     </button>}
+     <div className="relative w-full sm:w-[305px]">
      <Search size={16} className="absolute left-3 top-3 text-[#93a6b2]"/>
      <input className="field !pl-10" value={search} onChange={e=>setSearch(e.target.value)}
       placeholder="Tìm họ tên, quê quán, chức vụ..." aria-label="Tìm nhân sự BCH"/>
