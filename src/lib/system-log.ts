@@ -25,7 +25,7 @@ export type SystemLogInput={
 const CONTEXT_KEYS=new Set([
  "operation","errorName","dbCode","httpMethod","endpoint","component",
  "reason","sessionId","filename","line","column","attempt","service",
- "targetId","changedCount","ability","allowed","hasResult","candidateId","affectedCandidates",
+ "targetId","sourceId","changedCount","ability","allowed","hasResult","candidateId","affectedCandidates",
  "actingAdminId","actingTargetId"
 ]);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

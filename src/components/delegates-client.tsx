@@ -3,7 +3,7 @@ import {ChangeEvent,FormEvent,Fragment,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
 import Image from "next/image";
 import {QRCodeSVG} from "qrcode.react";
-import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,Camera,CheckSquare2,ChevronDown,ChevronRight,Layers3} from "lucide-react";
+import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,Camera,CheckSquare2,ChevronDown,ChevronRight,Layers3,Link2,LoaderCircle} from "lucide-react";
 import {DelegateBarcode} from "@/components/delegate-barcode";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
 import type {Delegate,AttendanceSession} from "@/lib/types";
@@ -20,6 +20,8 @@ type Props={
 };
 type Row=DelegateUploadRow;
 type PhotoTarget={kind:"new"}|{kind:"existing";delegate:Delegate};
+type PhotoLinkOption={id:string;congressName:string};
+type PhotoLinkDialog={delegate:Delegate;options:PhotoLinkOption[];selected:string;loading:boolean;error:string};
 type Card={
  id:string;name:string;code:string;barcodeCode:string;token:string;
  scope:"fixed"|"session";sessionName?:string;startsAt?:string|null;endsAt?:string|null;
@@ -77,6 +79,7 @@ export function DelegatesClient({congressId,congressCode,congressKind,delegates,
  const [cardSession,setCardSession]=useState("");
  const [uploadRows,setUploadRows]=useState<Row[]|null>(null);
  const [photoTarget,setPhotoTarget]=useState<PhotoTarget|null>(null);
+  const [photoLink,setPhotoLink]=useState<PhotoLinkDialog|null>(null);
  const [pendingPhoto,setPendingPhoto]=useState<Blob|null>(null);
  const [demographicsTarget,setDemographicsTarget]=useState<Delegate|null>(null);
  const [editGender,setEditGender]=useState("");
@@ -95,6 +98,43 @@ export function DelegatesClient({congressId,congressCode,congressKind,delegates,
   const body=await response.json() as {error?:string;unchanged?:boolean};
   if(!response.ok)throw new Error(body.error||"Không lưu được ảnh đại biểu.");
   return body;
+ }
+ async function openPhotoLink(delegate:Delegate){
+  if(!canManage||!delegate.student_id)return;
+  setPhotoLink({delegate,options:[],selected:"",loading:true,error:""});
+  try{
+   const q=new URLSearchParams({congressId,delegateId:delegate.id});
+   const response=await fetch("/api/delegates/photo-links?"+q.toString(),
+    {credentials:"same-origin",cache:"no-store"});
+   const result=await response.json() as {error?:string;options?:PhotoLinkOption[]};
+   if(!response.ok)throw new Error(result.error||"Không tra cứu được ảnh đã có.");
+   const options=result.options||[];
+   setPhotoLink(current=>current?.delegate.id===delegate.id?{...current,options,
+    selected:options.length===1?options[0].id:"",loading:false}:current);
+  }catch(e){
+   setPhotoLink(current=>current?.delegate.id===delegate.id?{...current,loading:false,
+    error:e instanceof Error?e.message:"Không tải được ảnh đã có."}:current);
+  }
+ }
+ async function confirmPhotoLink(){
+  if(!photoLink?.selected||busy)return;
+  const {delegate,selected}=photoLink;
+  setBusy(true);setError("");setSuccess("");
+  try{
+   const response=await fetch("/api/delegates/photo-links",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    credentials:"same-origin",body:JSON.stringify({congressId,delegateId:delegate.id,sourceId:selected})
+   });
+   const result=await response.json() as {ok?:boolean;error?:string};
+   if(!response.ok||!result.ok)throw new Error(result.error||"Không liên kết được ảnh.");
+   setPhotoLink(null);
+   setSuccess("Đã liên kết ảnh cho "+delegate.full_name+
+    " từ Đại hội khác mà không tạo bản sao mới trong Storage.");
+   router.refresh();
+  }catch(e){
+   setPhotoLink(current=>current?.delegate.id===delegate.id?{...current,
+    error:e instanceof Error?e.message:"Không thể liên kết ảnh."}:current);
+  }finally{setBusy(false);}
  }
  async function photoSaved(blob:Blob){
   if(!photoTarget)return;
@@ -441,7 +481,11 @@ export function DelegatesClient({congressId,congressCode,congressKind,delegates,
        onClick={()=>setPhotoTarget({kind:"existing",delegate:d})} disabled={busy}>
        <Camera size={15}/>{d.photo_path?"Sửa ảnh":"Thêm ảnh"}
       </button>}
-      <button className="btn btn-secondary !min-h-9 !px-2.5 !text-xs" disabled={busy} onClick={()=>void openCard(d)}>
+      {canManage&&d.student_id&&<button type="button"
+        className="btn btn-secondary !min-h-9 !px-2.5 !text-xs"
+        disabled={busy} onClick={()=>void openPhotoLink(d)}
+        title="Dùng lại ảnh từ Đại hội khác cùng MSSV"><Link2 size={15}/> {d.photo_path?"Dùng ảnh khác":"Liên kết ảnh cũ"}</button>}
+       <button className="btn btn-secondary !min-h-9 !px-2.5 !text-xs" disabled={busy} onClick={()=>void openCard(d)}>
        <ScanBarcode size={15}/> QR / Barcode</button></div></td></tr>)}
      </Fragment>)}
     {!filtered.length&&<tr><td colSpan={canManage?10:9} className="helper text-center py-9!">Không tìm thấy đại biểu.</td></tr>}
@@ -475,7 +519,10 @@ export function DelegatesClient({congressId,congressCode,congressKind,delegates,
        onClick={()=>openDemographics(d)}>Sửa hồ sơ / chức vụ</button>}
       {canManage&&<button type="button" className="btn btn-secondary" disabled={busy}
        onClick={()=>setPhotoTarget({kind:"existing",delegate:d})}><Camera size={17}/>{d.photo_path?"Sửa ảnh":"Thêm ảnh"}</button>}
-      <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>void openCard(d)}>
+      {canManage&&d.student_id&&<button type="button"
+        className="btn btn-secondary" disabled={busy} onClick={()=>void openPhotoLink(d)}>
+        <Link2 size={17}/> {d.photo_path?"Dùng ảnh khác":"Liên kết ảnh cũ"}</button>}
+       <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>void openCard(d)}>
        <ScanBarcode size={17}/> Xem QR / Barcode</button></div>
     </article>)}
       </div>}
@@ -560,6 +607,56 @@ export function DelegatesClient({congressId,congressCode,congressKind,delegates,
     </div>
    </div>
   </div>}
+   {photoLink&&canManage&&<div role="presentation"
+     className="fixed inset-0 z-[75] flex items-center justify-center overflow-y-auto bg-[#122b42]/65 p-3 sm:p-5"
+     onClick={event=>{if(event.target===event.currentTarget&&!busy)setPhotoLink(null);}}>
+     <div role="dialog" aria-modal="true" aria-label={"Liên kết ảnh đã có cho "+photoLink.delegate.full_name}
+      className="w-full max-w-[490px] rounded-[20px] border border-[#d9e5ed] bg-white p-5 shadow-2xl sm:p-7">
+      <div className="flex items-start justify-between gap-3">
+       <div><p className="text-[11px] font-extrabold uppercase tracking-[.1em] text-[#1a829c]">DÙNG CHUNG ẢNH HỒ SƠ</p>
+        <h2 className="mt-1 text-[19px] font-extrabold text-[#213f55]">Liên kết ảnh đã có</h2>
+        <p className="mt-1 text-xs leading-5 text-[#6b8699]">{photoLink.delegate.full_name}
+         {" · MSSV "}{photoLink.delegate.student_id}</p></div>
+       <button type="button" aria-label="Đóng liên kết ảnh" disabled={busy}
+        className="rounded-lg border border-[#dae7ed] p-2 text-[#537084] hover:bg-[#f1f7fa]"
+        onClick={()=>setPhotoLink(null)}><X size={18}/></button>
+      </div>
+      <p className="mt-4 rounded-xl bg-[#f1f8fb] px-4 py-3 text-[12px] leading-6 text-[#426c81]">
+       Chọn ảnh từ hồ sơ cùng MSSV, họ tên và thông tin định danh tại Đại hội khác.
+       {photoLink.delegate.photo_path?" Ảnh đang dùng sẽ được thay bằng liên kết đã chọn.":""}
+       Chỉ liên kết ảnh có sẵn, không tải lên tệp mới hoặc tạo bản sao trong Supabase Storage.
+      </p>
+      {photoLink.loading?<div role="status" className="flex items-center gap-2 py-8 text-sm text-[#5d8296]">
+       <LoaderCircle size={18} className="animate-spin"/> Đang kiểm tra ảnh có thể liên kết...</div>:
+       <div className="mt-4 space-y-2">
+        {photoLink.options.length?<fieldset className="space-y-2">
+         <legend className="mb-2 text-[12px] font-bold text-[#375f74]">Ảnh có thể dùng lại ({photoLink.options.length})</legend>
+         {photoLink.options.map(source=><label key={source.id}
+          className={"flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-left text-[12px] leading-5 "+(photoLink.selected===source.id?
+           "border-[#5da3bd] bg-[#edf8fd]":"border-[#dce8ee] bg-white hover:bg-[#f8fbfd]")}>
+          <input type="radio" name="sourceDelegatePhoto" value={source.id}
+           checked={photoLink.selected===source.id} disabled={busy}
+           onChange={()=>setPhotoLink(current=>current?{...current,selected:source.id,error:""}:current)}
+           className="mt-1 h-4 w-4 shrink-0 accent-[#087fa9]"/>
+          <span><strong className="block font-semibold text-[#224b63]">{source.congressName}</strong>
+           <span className="text-[11px] text-[#7390a0]">Dùng lại tệp ảnh hiện có · không chiếm thêm dung lượng</span></span>
+         </label>)}</fieldset>:
+         <p className="rounded-lg border border-[#e1e9ec] bg-[#f8fafb] p-4 text-[12px] leading-6 text-[#6b8492]">
+          Chưa tìm thấy ảnh phù hợp ở Đại hội khác. Hãy kiểm tra MSSV, họ tên,
+          ngày sinh, tài khoản hoặc quyền xem Đại hội nguồn; nếu chưa có ảnh nguồn, chọn “Thêm ảnh”.</p>}
+       </div>}
+      {photoLink.error&&<p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-[12px] text-red-700">{photoLink.error}</p>}
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+       <button type="button" className="btn btn-secondary" disabled={busy}
+        onClick={()=>setPhotoLink(null)}>Hủy</button>
+       <button type="button" className="btn btn-primary"
+        disabled={busy||photoLink.loading||!photoLink.selected}
+        onClick={()=>void confirmPhotoLink()}>
+        {busy?<LoaderCircle size={15} className="animate-spin"/>:<Link2 size={16}/>}
+        {busy?"Đang liên kết...":"Xác nhận dùng lại ảnh"}</button>
+      </div>
+     </div>
+    </div>}
    {photoTarget&&<DelegatePhotoEditor name={photoTarget.kind==="new"?"Đại biểu mới":photoTarget.delegate.full_name}
     initialPhotoUrl={photoTarget.kind==="new"?pendingPhotoPreview:
       photoTarget.delegate.photo_path?"/api/delegates/"+photoTarget.delegate.id+"/photo":null}

@@ -61,6 +61,8 @@ const mocks={
   hasCongressAbility:async()=>state.staff},
  "@/lib/supabase/admin":{createAdminClient:()=>mockDb},
  "@/lib/portrait-policy":policy,
+  "@/lib/delegate-photo-reuse":{normalizePortraitStudentId:v=>String(v||"").trim().toUpperCase(),
+   isVerifiedReusedDelegatePortrait:()=>false},
  "@/lib/portrait-storage":{
   readPortrait:async(path,width)=>{state.files.push({path,width});return Buffer.from([255,216,255,217]);},
   getPortraitWidth:w=>w==="96"?96:w==="160"?160:600,

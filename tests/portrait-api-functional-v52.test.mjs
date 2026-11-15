@@ -66,6 +66,8 @@ const common={
   getPortraitWidth:value=>value==="96"?96:value==="160"?160:600
  },
  "@/lib/portrait-policy":policy,
+  "@/lib/delegate-photo-reuse":{normalizePortraitStudentId:v=>String(v||"").trim().toUpperCase(),
+   isVerifiedReusedDelegatePortrait:()=>false},
  "@/lib/portrait-upload":{preparePortrait:async()=>({bytes:Buffer.from([255,216,255,217]),digest:"digest"}),
   savePortraitObject:async({commit})=>{await commit(true);return {changed:true,size:4};},
   PortraitError:class PortraitError extends Error{constructor(message,status){super(message);this.status=status;}}

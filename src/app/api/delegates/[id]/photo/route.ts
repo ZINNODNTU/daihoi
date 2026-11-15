@@ -6,6 +6,7 @@ import {
  delegatePortraitKey,sharedPortraitKey,isAuthorizedDelegatePhotoKey,isLinkedDelegatePortraitKey
 } from "@/lib/portrait-policy";
 import {preparePortrait,savePortraitObject,PortraitError} from "@/lib/portrait-upload";
+import {isVerifiedReusedDelegatePortrait,normalizePortraitStudentId} from "@/lib/delegate-photo-reuse";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -19,7 +20,8 @@ async function authorize(delegateId:string,level:"viewer"|"admin"){
  const {supabase,user}=level==="viewer"?await getPortalViewerAuth():await getAuth();
  if(!user)return {error:fail("Cần đăng nhập.",401)} as const;
  const {data:delegate,error}=await createAdminClient().from("delegates")
-  .select("id,congress_id,photo_path,auth_user_id,is_active").eq("id",delegateId).maybeSingle();
+  .select("id,congress_id,student_id,full_name,birth_date,photo_path,auth_user_id,is_active")
+   .eq("id",delegateId).maybeSingle();
  if(error||!delegate)return {error:fail("Không tìm thấy đại biểu.",404)} as const;
  if(!(delegate.auth_user_id===user.id&&delegate.is_active)&&
   !(await hasCongressAbility(supabase,user.id,delegate.congress_id,
@@ -35,15 +37,29 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
   if("error" in checked)return checked.error;
   const photo=checked.delegate;
   if(!isAuthorizedDelegatePhotoKey(photo.photo_path,photo.congress_id,id,photo.auth_user_id)){
-   // Legacy account-linking copied an original congress portrait key to
-   // another congress. Verify the source profile has the SAME Auth owner.
-   if(!photo.auth_user_id||!photo.photo_path)return fail("Đại biểu chưa có ảnh hợp lệ.",404);
-   const {data:sources,error}=await createAdminClient().from("delegates")
-    .select("id,congress_id,auth_user_id,photo_path")
-    .eq("auth_user_id",photo.auth_user_id).eq("photo_path",photo.photo_path)
-    .eq("is_active",true).limit(100);
-   if(error||!isLinkedDelegatePortraitKey(photo.photo_path,photo.auth_user_id,sources||[]))
-    return fail("Đại biểu chưa có ảnh hợp lệ.",404);
+   if(!photo.photo_path)return fail("Đại biểu chưa có ảnh hợp lệ.",404);
+   const admin=createAdminClient();
+   let permitted=false;
+   if(photo.auth_user_id){
+    // Legacy V45: same verified Supabase Auth owner, across congresses.
+    const {data:sources,error}=await admin.from("delegates")
+     .select("id,congress_id,auth_user_id,photo_path")
+     .eq("auth_user_id",photo.auth_user_id).eq("photo_path",photo.photo_path)
+     .eq("is_active",true).limit(100);
+    if(error)return fail("Không thể xác minh quyền xem ảnh.",503);
+    permitted=isLinkedDelegatePortraitKey(photo.photo_path,photo.auth_user_id,sources||[]);
+   }
+   if(!permitted&&normalizePortraitStudentId(photo.student_id)){
+    // Explicit BTC link: must resolve to an original active image owner and
+    // pass student ID, normalized full name, birth-date and Auth account guards.
+    const {data:sources,error}=await admin.from("delegates")
+     .select("id,congress_id,student_id,full_name,birth_date,auth_user_id,photo_path,is_active")
+     .eq("student_id",normalizePortraitStudentId(photo.student_id))
+     .eq("photo_path",photo.photo_path).eq("is_active",true).limit(101);
+    if(error||!sources||sources.length>100)return fail("Không thể xác minh ảnh liên kết.",503);
+    permitted=isVerifiedReusedDelegatePortrait(photo,sources);
+   }
+   if(!permitted)return fail("Đại biểu chưa có ảnh hợp lệ.",404);
   }
   const width=getPortraitWidth(new URL(request.url).searchParams.get("w"));
   const bytes=await readPortrait(photo.photo_path!,width);
