@@ -1,9 +1,9 @@
 "use client";
-import {ChangeEvent,FormEvent,useEffect,useMemo,useState} from "react";
+import {ChangeEvent,FormEvent,Fragment,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
 import Image from "next/image";
 import {QRCodeSVG} from "qrcode.react";
-import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,Camera,UserRound,CheckSquare2} from "lucide-react";
+import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,Camera,UserRound,CheckSquare2,ChevronDown,ChevronRight,Layers3} from "lucide-react";
 import {DelegateBarcode} from "@/components/delegate-barcode";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
 import type {Delegate,AttendanceSession} from "@/lib/types";
@@ -11,6 +11,7 @@ import {displayTime} from "@/lib/attendance-report";
 import {normalizeBirthDate,normalizeGender} from "@/lib/delegate-demographics";
 import {DELEGATE_IMPORT_COLUMNS,delegateImportRow,splitDelegateImportBatches,selectDelegateTransfer} from "@/lib/delegate-transfer";
 import {DELEGATE_ROSTER_HEADERS,DELEGATE_ROSTER_SUBHEADERS,parseDelegateImportSheet,type DelegateUploadRow} from "@/lib/delegate-roster-import";
+import {groupDelegatesByUnit} from "@/lib/delegate-unit-groups";
 type Props={
  congressId:string;congressCode:string;delegates:Delegate[];canManage:boolean;
  sessions:AttendanceSession[];
@@ -31,6 +32,31 @@ function parseKind(value:string):Row["delegate_type"]{
  return str.includes("dự")||str==="alternate"?"alternate":
    str.includes("khách")||str==="guest"?"guest":"official";
 }
+type UnitGroupHeadingProps={
+ label:string;count:number;total:number;collapsed:boolean;selectedCount:number;
+ canManage:boolean;onToggle:()=>void;onSelect:()=>void;
+};
+function UnitGroupHeading({label,count,total,collapsed,selectedCount,canManage,onToggle,onSelect}:UnitGroupHeadingProps){
+ const allSelected=count>0&&selectedCount===count;
+ return <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+  <button type="button" onClick={onToggle} aria-expanded={!collapsed}
+   aria-label={(collapsed?"Mở":"Thu gọn")+" đơn vị "+label}
+   className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-1 text-left text-[13px] font-bold text-[#214e6b] hover:text-[#007eb8]">
+   {collapsed?<ChevronRight size={17} className="shrink-0 text-[#65879b]"/>:
+    <ChevronDown size={17} className="shrink-0 text-[#65879b]"/>}
+   <span className="min-w-0 break-words">{label}</span>
+   <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#32728f] ring-1 ring-[#d4e4ec]">
+    {count===total?count:count+"/"+total} đại biểu
+   </span>
+  </button>
+  {canManage&&<label className="inline-flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-[11px] font-semibold text-[#3b7088] hover:bg-white">
+   <input type="checkbox" checked={allSelected} onChange={onSelect}
+    aria-label={"Chọn tất cả đại biểu thuộc đơn vị "+label}
+    className="h-4 w-4 accent-[#007fae]"/>
+   Chọn nhóm{selectedCount?" ("+selectedCount+"/"+count+")":""}
+  </label>}
+ </div>;
+}
 function saveSvg(id:string,name:string){
  const svg=document.getElementById(id);
  if(!svg)return;
@@ -42,6 +68,7 @@ function saveSvg(id:string,name:string){
 export function DelegatesClient({congressId,congressCode,delegates,canManage,sessions}:Props){
  const router=useRouter();
  const [search,setSearch]=useState(""),[open,setOpen]=useState(false);
+ const [collapsedUnitKeys,setCollapsedUnitKeys]=useState<Set<string>>(()=>new Set());
   const [selectedIds,setSelectedIds]=useState<Set<string>>(()=>new Set());
  const [error,setError]=useState(""),[success,setSuccess]=useState(""),[busy,setBusy]=useState(false);
  const [showCard,setShowCard]=useState<Card|null>(null);
@@ -93,6 +120,12 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   [d.full_name,d.code,d.unit,d.student_id,d.position,d.login_email,d.barcode_code].join(" ").toLocaleLowerCase("vi")
    .includes(search.toLocaleLowerCase("vi"))
  ),[delegates,search]);
+ const unitGroups=useMemo(()=>groupDelegatesByUnit(filtered),[filtered]);
+ const fullUnitCounts=useMemo(()=>new Map(groupDelegatesByUnit(delegates).map(group=>[
+  group.key,group.delegates.length
+ ])),[delegates]);
+ const unitCount=fullUnitCounts.size;
+ const allUnitsCollapsed=unitGroups.length>0&&unitGroups.every(group=>collapsedUnitKeys.has(group.key));
  const selectedCount=delegates.filter(d=>selectedIds.has(d.id)).length;
  const filteredIds=filtered.map(d=>d.id);
  const filteredAllSelected=filteredIds.length>0&&filteredIds.every(id=>selectedIds.has(id));
@@ -105,6 +138,24 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   setSelectedIds(previous=>{
    const next=new Set(previous);
    for(const id of filteredIds){if(filteredAllSelected)next.delete(id);else next.add(id);}
+   return next;
+  });
+ }
+ function toggleUnit(key:string){
+  setCollapsedUnitKeys(previous=>{
+   const next=new Set(previous);
+   if(next.has(key))next.delete(key);else next.add(key);
+   return next;
+  });
+ }
+ function toggleAllUnits(){
+  setCollapsedUnitKeys(allUnitsCollapsed?new Set():new Set(unitGroups.map(group=>group.key)));
+ }
+ function selectUnit(ids:readonly string[]){
+  setSelectedIds(previous=>{
+   const everySelected=ids.every(id=>previous.has(id));
+   const next=new Set(previous);
+   for(const id of ids){if(everySelected)next.delete(id);else next.add(id);}
    return next;
   });
  }
@@ -341,16 +392,31 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
   <div className="card overflow-hidden">
    <div className="p-4 sm:p-5 flex items-center justify-between flex-wrap gap-3">
     <h2 className="font-semibold flex flex-wrap gap-2 items-center"><Users size={20} className="text-[#007eae]"/>Danh sách
-    {canManage&&<span className="rounded-full bg-[#edf6f9] px-2.5 py-1 text-[11px] font-semibold text-[#2a718d]">{selectedCount} đã chọn</span>}</h2>
-    <div className="relative w-full sm:w-[300px]"><Search size={18} className="absolute left-3 top-3 text-[#90a5b8]"/>
-     <input value={search} onChange={e=>setSearch(e.target.value)} className="field pl-10!"
+    {canManage&&<span className="rounded-full bg-[#edf6f9] px-2.5 py-1 text-[11px] font-semibold text-[#2a718d]">{selectedCount} đã chọn</span>}
+     <span className="rounded-full bg-[#eff5f9] px-2.5 py-1 text-[11px] font-semibold text-[#4d758b]">{unitCount} đơn vị</span></h2>
+    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+      <button type="button" onClick={toggleAllUnits} disabled={!unitGroups.length}
+       className="btn btn-secondary !min-h-10 !text-xs" aria-label={allUnitsCollapsed?"Mở tất cả đơn vị":"Thu gọn tất cả đơn vị"}>
+       <Layers3 size={15}/>{allUnitsCollapsed?"Mở tất cả":"Thu gọn tất cả"}</button>
+      <div className="relative min-w-0 flex-1 sm:w-[300px] sm:flex-none"><Search size={18} className="absolute left-3 top-3 text-[#90a5b8]"/>
+     <input value={search} onChange={e=>{setSearch(e.target.value);setCollapsedUnitKeys(new Set());}} className="field pl-10!"
       placeholder="MSSV, họ tên, đơn vị, chức vụ..."/></div>
    </div>
-   <div className="table-wrap desktop-table"><table className="data"><thead><tr>
+   </div>
+    <div className="table-wrap desktop-table"><table className="data"><thead><tr>
     {canManage&&<th><label className="inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold"><input type="checkbox" aria-label="Chọn tất cả đại biểu đang hiển thị" checked={filteredAllSelected} onChange={selectFiltered} disabled={busy||!filteredIds.length} className="h-4 w-4 accent-[#167aa3]"/>Chọn{filteredSomeSelected&&!filteredAllSelected?" *":""}</label></th>}
      <th>Ảnh</th><th>Mã đại biểu</th><th>Họ tên</th><th>MSSV / Email</th><th className="hide-mobile">Đơn vị / Chức vụ</th><th>Vai trò</th><th>Giới tính / Ngày sinh</th><th>Tài khoản</th><th>Ảnh / Thẻ</th>
    </tr></thead><tbody>
-    {filtered.map(d=><tr key={d.id}>
+    {unitGroups.map(group=><Fragment key={group.key}>
+     <tr className="bg-[#eff6fa]"><td colSpan={canManage?10:9} className="!border-b !border-[#d8e6ee] !px-4 !py-2.5">
+      <UnitGroupHeading label={group.label} count={group.delegates.length}
+       total={fullUnitCounts.get(group.key)||group.delegates.length}
+       collapsed={collapsedUnitKeys.has(group.key)}
+       selectedCount={group.delegates.filter(d=>selectedIds.has(d.id)).length}
+       canManage={canManage} onToggle={()=>toggleUnit(group.key)}
+       onSelect={()=>selectUnit(group.delegates.map(d=>d.id))}/>
+     </td></tr>
+     {!collapsedUnitKeys.has(group.key)&&group.delegates.map(d=><tr key={d.id}>
      {canManage&&<td><input type="checkbox" aria-label={"Chọn xuất đại biểu "+d.full_name} checked={selectedIds.has(d.id)} onChange={()=>selectOne(d.id)} disabled={busy} className="h-4 w-4 accent-[#167aa3]"/></td>}
      <td>{d.photo_path?<Image unoptimized src={"/api/delegates/"+d.id+"/photo"}
       alt={"Ảnh "+d.full_name} width={40} height={54} loading="lazy"
@@ -375,11 +441,22 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       </button>}
       <button className="btn btn-secondary !min-h-9 !px-2.5 !text-xs" disabled={busy} onClick={()=>void openCard(d)}>
        <ScanBarcode size={15}/> QR / Barcode</button></div></td></tr>)}
+     </Fragment>)}
     {!filtered.length&&<tr><td colSpan={canManage?10:9} className="helper text-center py-9!">Không tìm thấy đại biểu.</td></tr>}
    </tbody></table></div>
   </div>
   <div className="mobile-cards px-3 pb-4">
-    {filtered.map(d=><article key={d.id} className="mobile-record">
+    {unitGroups.map(group=><section key={group.key} className="mb-4 overflow-hidden rounded-xl border border-[#dce8ef] bg-[#f8fbfd]">
+      <div className="border-b border-[#dce8ef] bg-[#eff6fa] px-3 py-2.5">
+       <UnitGroupHeading label={group.label} count={group.delegates.length}
+        total={fullUnitCounts.get(group.key)||group.delegates.length}
+        collapsed={collapsedUnitKeys.has(group.key)}
+        selectedCount={group.delegates.filter(d=>selectedIds.has(d.id)).length}
+        canManage={canManage} onToggle={()=>toggleUnit(group.key)}
+        onSelect={()=>selectUnit(group.delegates.map(d=>d.id))}/>
+      </div>
+      {!collapsedUnitKeys.has(group.key)&&<div className="space-y-2 p-2.5">
+      {group.delegates.map(d=><article key={d.id} className="mobile-record">
      {canManage&&<label className="mb-3 inline-flex items-center gap-2 rounded-lg border border-[#d4e5ee] bg-white px-3 py-2 text-[11px] font-bold text-[#2d7797]"><input type="checkbox" checked={selectedIds.has(d.id)} onChange={()=>selectOne(d.id)} disabled={busy} aria-label={"Chọn xuất đại biểu "+d.full_name} className="h-4 w-4 accent-[#167aa3]"/> Chọn để xuất</label>}
      <div className="flex items-start justify-between gap-3">
       {d.photo_path?<Image unoptimized src={"/api/delegates/"+d.id+"/photo"}
@@ -400,6 +477,8 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
       <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>void openCard(d)}>
        <ScanBarcode size={17}/> Xem QR / Barcode</button></div>
     </article>)}
+      </div>}
+     </section>)}
     {!filtered.length&&<div className="rounded-xl bg-[#f6fafb] p-7 text-center text-sm text-[#718795]">Không tìm thấy đại biểu phù hợp.</div>}
    </div>
    {demographicsTarget&&canManage&&<div role="presentation"
