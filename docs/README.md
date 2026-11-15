@@ -6,7 +6,7 @@
 
 ## Nhập hồ sơ đại biểu theo mẫu Nam/Nữ (15/11/2026)
 
-- [Mẫu nhập hồ sơ đại biểu V78](huong-dan/MAU-NHAP-HO-SO-DAI-BIEU-V78.md): mẫu Excel 13 cột với ngày sinh NAM/NỮ, suy ra giới tính tự động, dữ liệu trích ngang, kiểm tra trùng và migration Supabase cần áp dụng.
+- [Mẫu nhập hồ sơ đại biểu V78](huong-dan/MAU-NHAP-HO-SO-DAI-BIEU-V78.md): mẫu Excel 13 cột với ngày sinh NAM/NỮ, suy ra giới tính tự động, chỉ lưu các trường hồ sơ đại biểu cũ, không thêm trường hay migration Supabase mới.
 
 ## Cập nhật tài khoản và chế độ khách (14/11/2026)
 

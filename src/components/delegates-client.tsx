@@ -12,20 +12,10 @@ import {normalizeBirthDate,normalizeGender} from "@/lib/delegate-demographics";
 import {DELEGATE_IMPORT_COLUMNS,delegateImportRow,splitDelegateImportBatches,selectDelegateTransfer} from "@/lib/delegate-transfer";
 import {DELEGATE_ROSTER_HEADERS,DELEGATE_ROSTER_SUBHEADERS,parseDelegateImportSheet,type DelegateUploadRow} from "@/lib/delegate-roster-import";
 type Props={
- congressId:string;congressCode:string;delegates:Delegate[];canManage:boolean;rosterReady:boolean;
+ congressId:string;congressCode:string;delegates:Delegate[];canManage:boolean;
  sessions:AttendanceSession[];
 };
 type Row=DelegateUploadRow;
-const ROSTER_EDIT_FIELDS=[
- {key:"hometown",label:"Quê quán",max:240},
- {key:"religion",label:"Tôn giáo",max:120},
- {key:"ethnicity",label:"Dân tộc",max:100},
- {key:"union_join_date",label:"Ngày vào Đoàn",max:10},
- {key:"phone_number",label:"Số điện thoại",max:24},
- {key:"class_name",label:"Lớp",max:120},
- {key:"profile_notes",label:"Ghi chú (Đảng viên)",max:500}
-] as const;
-type RosterFieldKey=(typeof ROSTER_EDIT_FIELDS)[number]["key"];
 type PhotoTarget={kind:"new"}|{kind:"existing";delegate:Delegate};
 type Card={
  id:string;name:string;code:string;barcodeCode:string;token:string;
@@ -49,7 +39,7 @@ function saveSvg(id:string,name:string){
  const url=URL.createObjectURL(blob),a=document.createElement("a");
  a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
-export function DelegatesClient({congressId,congressCode,delegates,canManage,rosterReady,sessions}:Props){
+export function DelegatesClient({congressId,congressCode,delegates,canManage,sessions}:Props){
  const router=useRouter();
  const [search,setSearch]=useState(""),[open,setOpen]=useState(false);
   const [selectedIds,setSelectedIds]=useState<Set<string>>(()=>new Set());
@@ -64,10 +54,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ros
  const [editBirthDate,setEditBirthDate]=useState("");
  const [editUnit,setEditUnit]=useState("");
  const [editPosition,setEditPosition]=useState("");
- const [editExtra,setEditExtra]=useState({
-  hometown:"",religion:"",ethnicity:"",union_join_date:"",
-  phone_number:"",class_name:"",profile_notes:""
- });
+
  const [pendingPhotoPreview,setPendingPhotoPreview]=useState<string|null>(null);
  useEffect(()=>()=>{if(pendingPhotoPreview)URL.revokeObjectURL(pendingPhotoPreview);},[pendingPhotoPreview]);
  async function uploadPhoto(delegateId:string,photo:Blob){
@@ -113,9 +100,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ros
  const existingStudentIds=new Set(delegates.map(d=>d.student_id?.toUpperCase()).filter(Boolean));
  const importableRows=uploadRows?.filter(row=>!row.student_id||!existingStudentIds.has(row.student_id.toUpperCase()))||[];
  const skippedImportCount=uploadRows?uploadRows.length-importableRows.length:0;
- const importNeedsRoster=!!uploadRows?.some(row=>
-  row.hometown||row.religion||row.ethnicity||row.union_join_date||
-  row.phone_number||row.class_name||row.profile_notes);
+
  function selectFiltered(){
   setSelectedIds(previous=>{
    const next=new Set(previous);
@@ -181,9 +166,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ros
    position:String(form.get("position")||"").trim(),
    delegate_type:parseKind(String(form.get("delegate_type")||"official")),
     gender:String(form.get("gender")||""),
-    birth_date:String(form.get("birth_date")||""),
-     ...(rosterReady?Object.fromEntries(ROSTER_EDIT_FIELDS.map(field=>[
-      field.key,String(form.get(field.key)||"")])):{})}],pendingPhoto);
+    birth_date:String(form.get("birth_date")||"")}],pendingPhoto);
  }
  async function handleFile(e:ChangeEvent<HTMLInputElement>){
   const file=e.target.files?.[0];if(!file)return;
@@ -251,12 +234,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ros
   setEditBirthDate(delegate.birth_date||"");
   setEditUnit(delegate.unit||"");
   setEditPosition(delegate.position||"");
-  setEditExtra({
-   hometown:delegate.hometown||"",religion:delegate.religion||"",
-   ethnicity:delegate.ethnicity||"",union_join_date:delegate.union_join_date||"",
-   phone_number:delegate.phone_number||"",class_name:delegate.class_name||"",
-   profile_notes:delegate.profile_notes||""
-  });
+
   setError("");
  }
  async function updateDemographics(e:FormEvent<HTMLFormElement>){
@@ -267,8 +245,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ros
    const response=await fetch("/api/delegates",{
     method:"PATCH",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({congressId,delegateId:demographicsTarget.id,
-     gender:editGender,birth_date:editBirthDate,unit:editUnit,position:editPosition,
-     ...(rosterReady?editExtra:{})})
+     gender:editGender,birth_date:editBirthDate,unit:editUnit,position:editPosition})
    });
    const result=await response.json();
    if(!response.ok)throw new Error(result.error||"Không cập nhật được hồ sơ.");
@@ -318,18 +295,14 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ros
   </div>
   <p className="w-full text-[10px] leading-5 text-[#7d95a5]">Chỉ xuất các trường hồ sơ có thể nhập lại. Không xuất mật khẩu, mã QR, ảnh hay ghế; ảnh sẽ được liên kết theo tài khoản khi cấp tài khoản tại Đại hội nhận.</p>
  </section>}
- {!rosterReady&&canManage&&<p role="alert" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-900">
-     Đang chờ migration <code>upgrade-delegate-roster-v78.sql</code> trên Supabase.
-     File mẫu vẫn tải được; không thể lưu các cột Quê quán, Tôn giáo, Dân tộc, Ngày vào Đoàn, SĐT, Lớp, Ghi chú cho tới khi cập nhật cơ sở dữ liệu.
-    </p>}
-   {error&&<p role="alert" className="bg-red-50 text-red-700 p-3 rounded-xl mb-5">{error}</p>}
+ {error&&<p role="alert" className="bg-red-50 text-red-700 p-3 rounded-xl mb-5">{error}</p>}
   {success&&<p role="status" className="bg-green-50 text-green-700 p-3 rounded-xl mb-5">{success}</p>}
   {uploadRows&&<div className="card p-5 mb-5">
    <p className="font-bold">Đã đọc {uploadRows.length} dòng · Có thể thêm {importableRows.length} đại biểu</p>
     {skippedImportCount>0&&<p className="mt-2 rounded-lg border border-[#e7d6ae] bg-[#fff9ec] px-3 py-2 text-xs text-[#88642e]">Đã bỏ qua {skippedImportCount} MSSV có sẵn tại Đại hội hiện tại, tránh nhập trùng. Chỉ các dòng mới được thêm.</p>}
-   <p className="helper my-3">Mẫu hai dòng tiêu đề: nhập ngày sinh vào cột NAM hoặc NỮ để tự nhận giới tính. Mã đại biểu được cấp tự động; giữ các cột quê quán, tôn giáo, dân tộc, ngày vào Đoàn, chức vụ, SĐT, lớp và ghi chú.</p>
-   <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Quê quán</th><th>Ngày vào Đoàn</th><th>Lớp / Đơn vị</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.gender==="male"?"Nam":r.gender==="female"?"Nữ":r.gender||"—"}</td><td>{birthLabel(r.birth_date||null)}</td><td>{r.hometown||"—"}</td><td>{birthLabel(r.union_join_date||null)}</td><td>{r.class_name||r.unit||"—"}</td></tr>)}</tbody></table></div>
-   <div className="flex gap-2"><button type="button" className="btn btn-primary" onClick={()=>void save(importableRows)} disabled={busy||!importableRows.length||(!rosterReady&&importNeedsRoster)}>Xác nhận nhập</button>
+   <p className="helper my-3">Mẫu hai dòng tiêu đề: nhập ngày sinh vào cột NAM hoặc NỮ để tự nhận giới tính. Hệ thống chỉ lấy MSSV, họ tên, đơn vị/chức vụ, giới tính và ngày sinh; các cột thông tin khác trong file được bỏ qua.</p>
+   <div className="mb-4 max-h-52 overflow-auto rounded-lg border border-[#d4e5ed]"><table className="data"><thead><tr><th>MSSV</th><th>Họ tên</th><th>Đơn vị</th><th>Chức vụ</th><th>Giới tính</th><th>Ngày sinh</th></tr></thead><tbody>{uploadRows.slice(0,5).map((r,i)=><tr key={i}><td>{r.student_id||"—"}</td><td>{r.full_name}</td><td>{r.unit||"—"}</td><td>{r.position||"—"}</td><td>{r.gender==="male"?"Nam":r.gender==="female"?"Nữ":r.gender||"—"}</td><td>{birthLabel(r.birth_date||null)}</td></tr>)}</tbody></table></div>
+   <div className="flex gap-2"><button type="button" className="btn btn-primary" onClick={()=>void save(importableRows)} disabled={busy||!importableRows.length}>Xác nhận nhập</button>
     <button className="btn btn-secondary" onClick={()=>setUploadRows(null)}>Hủy</button></div>
   </div>}
   {open&&canManage&&<div className="card p-6 mb-6"><h2 className="section-title mb-5">Thêm đại biểu</h2>
@@ -362,15 +335,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ros
       <input name="birth_date" type="date" min="1900-01-01" className="field"/>
       <span className="helper">Không bắt buộc; dùng để thống kê độ tuổi thực tế.</span>
      </label>
-     {rosterReady&&<div className="grid gap-3 md:col-span-2 md:grid-cols-2">
-       {ROSTER_EDIT_FIELDS.map(field=><label key={field.key} className="block">
-        <span className="label">{field.label}</span>
-        <input className="field" name={field.key}
-         type={field.key==="union_join_date"?"date":"text"}
-         maxLength={field.max} placeholder={field.key==="union_join_date"?"dd/mm/yyyy":field.label}/>
-       </label>)}
-      </div>}
-      <button disabled={busy} className="btn btn-primary md:col-span-2">Lưu đại biểu</button>
+     <button disabled={busy} className="btn btn-primary md:col-span-2">Lưu đại biểu</button>
    </form>
   </div>}
   <div className="card overflow-hidden">
@@ -463,15 +428,7 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ros
       <label className="block"><span className="label">Ngày tháng năm sinh</span>
        <input className="field" type="date" min="1900-01-01" value={editBirthDate}
         onChange={e=>setEditBirthDate(e.target.value)}/></label>
-      {rosterReady&&<div className="grid gap-3 sm:grid-cols-2">
-        {ROSTER_EDIT_FIELDS.map(field=><label key={field.key} className="block">
-         <span className="label">{field.label}</span>
-         <input className="field" type={field.key==="union_join_date"?"date":"text"}
-          maxLength={field.max} value={editExtra[field.key]}
-          onChange={e=>setEditExtra(prev=>({...prev,[field.key]:e.target.value}))}/>
-        </label>)}
-       </div>}
-       <p className="text-xs leading-6 text-[#748d9c]">Đơn vị và chức vụ được đồng bộ trên hồ sơ và thẻ đại biểu; giới tính và ngày sinh phục vụ thống kê.</p>
+      <p className="text-xs leading-6 text-[#748d9c]">Đơn vị và chức vụ được đồng bộ trên hồ sơ và thẻ đại biểu; giới tính và ngày sinh phục vụ thống kê.</p>
       {error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
       <div className="flex flex-wrap justify-end gap-2">
        <button type="button" className="btn btn-secondary" disabled={busy}

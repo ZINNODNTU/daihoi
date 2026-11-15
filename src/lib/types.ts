@@ -5,8 +5,6 @@ export type Congress={
 export type Delegate={
  id:string;congress_id:string;code:string;full_name:string;unit:string;student_id:string|null;position:string;login_email:string|null;auth_user_id:string|null;photo_path?:string|null;
  delegate_type:"official"|"alternate"|"guest";gender:"male"|"female"|"other"|null;birth_date:string|null;qr_version:number;barcode_code:string;is_active:boolean;
-  hometown?:string|null;religion?:string|null;ethnicity?:string|null;union_join_date?:string|null;
-  phone_number?:string|null;class_name?:string|null;profile_notes?:string|null;
 };
 export type AttendanceSession={
  id:string;congress_id:string;name:string;status:"open"|"closed";

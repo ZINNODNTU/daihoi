@@ -12,9 +12,7 @@ export const DELEGATE_ROSTER_SUBHEADERS=[
 export type DelegateUploadRow={
  full_name:string;student_id:string;unit:string;position:string;
  delegate_type:"official"|"alternate"|"guest";gender:string;birth_date:string;
- hometown?:string;religion?:string;ethnicity?:string;union_join_date?:string;
- phone_number?:string;class_name?:string;profile_notes?:string;
-};
+ };
 
 const text=(value:unknown):string=>{
  if(value===null||value===undefined)return "";
@@ -35,7 +33,6 @@ function kind(value:string):DelegateUploadRow["delegate_type"]{
  if(normalized.includes("dukhuyet")||normalized==="alternate")return "alternate";
  return "official";
 }
-const phonePattern=/^[0-9+ ().-]*$/;
 const mssvPattern=/^[A-Za-z0-9][A-Za-z0-9._-]{3,31}$/;
 const limit=(value:string,max:number,field:string,line:number)=>{
  if(value.length>max||/[\u0000-\u001f\u007f]/.test(value))
@@ -93,23 +90,9 @@ export function parseDelegateImportSheet(matrix:readonly (readonly unknown[])[])
    try{gender=normalizeGender(genderText)||"";}catch{throw new Error("Dòng "+line+": giới tính không hợp lệ.");}
    birth_date=parseDate(field(row,["ngaysinh","ngaythangnamsinh","birthdate","dateofbirth","dob"]),line,"Ngày sinh");
   }
-  const hometown=limit(field(row,["quequan","hometown"]),240,"Quê quán",line);
-  const religion=limit(field(row,["tongiao","religion"]),120,"Tôn giáo",line);
-  const ethnicity=limit(field(row,["dantoc","ethnicity"]),100,"Dân tộc",line);
-  const union_join_date=parseDate(field(row,["ngayvaodoan","ngaygiaphapdoan","unionjoindate"]),line,"Ngày vào Đoàn");
-  if(union_join_date&&union_join_date<"1931-03-26")
-   throw new Error("Dòng "+line+": ngày vào Đoàn không hợp lệ.");
-  if(union_join_date&&birth_date&&union_join_date<birth_date)
-   throw new Error("Dòng "+line+": ngày vào Đoàn không thể trước ngày sinh.");
-  const class_name=limit(field(row,["lop","class","classname"]),120,"Lớp",line);
   const position=limit(field(row,["chucvudonvicongtac","chucvuhientai","chucvu","chucdanh","position"]),160,"Chức vụ",line);
-  const unit=limit(field(row,["donvi","unit","chidoan"])||class_name,200,"Đơn vị",line);
-  const phone_number=limit(field(row,["sodienthoai","dienthoai","phone","phonenumber"]),24,"Số điện thoại",line);
-  if(phone_number&&!phonePattern.test(phone_number))
-   throw new Error("Dòng "+line+": số điện thoại chỉ được chứa số, dấu +, dấu cách hoặc dấu phân cách.");
-  const profile_notes=limit(field(row,["ghichu","ghichudangvien","notes"]),500,"Ghi chú",line);
-  parsed.push({full_name,student_id,unit,position,delegate_type:role,gender,birth_date,
-   hometown,religion,ethnicity,union_join_date,phone_number,class_name,profile_notes});
+  const unit=limit(field(row,["donvi","unit","chidoan","lop","classname"]),200,"Đơn vị",line);
+  parsed.push({full_name,student_id,unit,position,delegate_type:role,gender,birth_date});
   if(parsed.length>250)throw new Error("Mỗi lần nhập tối đa 250 đại biểu. Hãy chia tệp.");
  }
  if(!parsed.length)throw new Error("Tệp chưa có hồ sơ đại biểu.");
