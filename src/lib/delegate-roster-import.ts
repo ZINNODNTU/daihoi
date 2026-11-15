@@ -2,11 +2,10 @@ import {normalizeBirthDate,normalizeGender} from "./delegate-demographics.ts";
 
 export const DELEGATE_ROSTER_HEADERS=[
  "STT","HỌ VÀ TÊN","MSSV","NGÀY THÁNG NĂM SINH (dd/mm/yyyy)",
- "","QUÊ QUÁN","TÔN GIÁO","DÂN TỘC","NGÀY VÀO ĐOÀN",
- "CHỨC VỤ – ĐƠN VỊ CÔNG TÁC","SỐ ĐIỆN THOẠI","LỚP","GHI CHÚ (ĐẢNG VIÊN)"
+ "","CHỨC VỤ","ĐƠN VỊ"
 ] as const;
 export const DELEGATE_ROSTER_SUBHEADERS=[
- "","","","NAM","NỮ","","","","","","","",""
+ "","","","NAM","NỮ","",""
 ] as const;
 
 export type DelegateUploadRow={

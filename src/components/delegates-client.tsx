@@ -216,14 +216,14 @@ export function DelegatesClient({congressId,congressCode,delegates,canManage,ses
    });
    const sub=DELEGATE_ROSTER_SUBHEADERS.map((label,index)=>
     index===3||index===4?{value:label,type:String,...style,height:25}:null);
-   const empty=Array.from({length:50},()=>Array.from({length:13},()=>({
+   const empty=Array.from({length:50},()=>Array.from({length:DELEGATE_ROSTER_HEADERS.length},()=>({
     value:"",type:String,borderColor:"#D5E1E9",borderStyle:"thin" as const,
     fontFamily:"Times New Roman",height:22
    })));
-   const widths=[7,28,18,17,17,21,16,14,19,33,20,16,25].map(width=>({width}));
+   const widths=[7,30,20,18,18,28,34].map(width=>({width}));
    await writeExcelFile([{sheet:"Danh sach dai bieu",stickyRowsCount:2,
-    columns:widths,data:[top,sub,...empty] as unknown as (string|number)[][]}]).toFile("mau-ho-so-dai-bieu-NAM-NU.xlsx");
-   setSuccess("Đã tải mẫu trích ngang đại biểu. Điền ngày sinh đúng cột NAM hoặc NỮ từ dòng 3.");
+    columns:widths,data:[top,sub,...empty] as unknown as (string|number)[][]}]).toFile("mau-nhap-dai-bieu-chuc-vu-don-vi-NAM-NU.xlsx");
+   setSuccess("Đã tải mẫu 7 cột: STT, Họ tên, MSSV, Ngày sinh NAM/NỮ, Chức vụ, Đơn vị. Điền dữ liệu từ dòng 3.");
   }catch(error){
    setError("Không tạo được Excel mẫu: "+(error instanceof Error?error.message:"Lỗi không xác định"));
   }

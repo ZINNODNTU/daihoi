@@ -5,19 +5,20 @@ import {
  DELEGATE_ROSTER_HEADERS,DELEGATE_ROSTER_SUBHEADERS,parseDelegateImportSheet
 } from "../src/lib/delegate-roster-import.ts";
 const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
-const row=(id,name,male,female)=>[
- 1,name,id,male,female,"Đồng Nai","Không","Kinh","26/03/2015",
- "Bí thư Chi đoàn","0900000000","23DTH1","Đảng viên"
+const row=(id,name,male,female,position="Bí thư Chi đoàn",unit="23DTH1")=>[
+ 1,name,id,male,female,position,unit
 ];
+const header=()=>[[...DELEGATE_ROSTER_HEADERS],[...DELEGATE_ROSTER_SUBHEADERS]];
 
-test("Vietnamese roster imports only the seven existing delegate profile fields",()=>{
- const headers=[...DELEGATE_ROSTER_HEADERS];
- headers[2]="MSVV";
- headers[3]="NGÀY THÁNG NĂM SINH\n(17/02/2000)";
- const data=parseDelegateImportSheet([
-  headers,[...DELEGATE_ROSTER_SUBHEADERS],
+test("official 7-column template has separate Chức vụ and Đơn vị, no unnecessary columns",()=>{
+ assert.deepEqual([...DELEGATE_ROSTER_HEADERS],[
+  "STT","HỌ VÀ TÊN","MSSV","NGÀY THÁNG NĂM SINH (dd/mm/yyyy)",
+  "","CHỨC VỤ","ĐƠN VỊ"
+ ]);
+ assert.deepEqual([...DELEGATE_ROSTER_SUBHEADERS],["","","","NAM","NỮ","",""]);
+ const data=parseDelegateImportSheet([...header(),
   row("TEST0001","Nguyễn Văn A",36824,null),
-  row("TEST0002","Trần Thị B",null,38492)
+  row("TEST0002","Trần Thị B",null,38492,"Ủy viên BCH","Khoa CNTT")
  ]);
  assert.equal(data.length,2);
  assert.deepEqual(Object.keys(data[0]).sort(),[
@@ -29,18 +30,16 @@ test("Vietnamese roster imports only the seven existing delegate profile fields"
  assert.equal(data[1].birth_date,"2005-05-20");
  assert.equal(data[0].position,"Bí thư Chi đoàn");
  assert.equal(data[0].unit,"23DTH1");
- assert.equal(data[0].student_id,"TEST0001");
- assert.equal(data[0].hometown,undefined);
- assert.equal(data[0].phone_number,undefined);
+ assert.equal(data[1].position,"Ủy viên BCH");
+ assert.equal(data[1].unit,"Khoa CNTT");
 });
-
-test("date format variations still work and irrelevant columns are not validated",()=>{
- const headers=[[...DELEGATE_ROSTER_HEADERS],[...DELEGATE_ROSTER_SUBHEADERS]];
- const invalidExtra=row("2200000010","Nguyễn Văn A",new Date("2000-12-15T00:00:00Z"),null);
- invalidExtra[8]="not-a-date"; // ignored: union-join date is not a delegate field
- invalidExtra[10]="anything"; // ignored: phone number is not a delegate field
+test("accept MSVV typo, Date objects, text birth dates and missing dates",()=>{
+ const headers=header();
+ headers[0][2]="MSVV";
+ headers[0][3]="NGÀY THÁNG NĂM SINH\n(17/02/2000)";
  const data=parseDelegateImportSheet([
-  ...headers,invalidExtra,
+  ...headers,
+  row("2200000010","Nguyễn Văn A",new Date("2000-12-15T00:00:00Z"),null),
   row("2200000011","Đỗ Thị B",null,"20/04/2003"),
   row("2200000012","Lê Văn C",null,null)
  ]);
@@ -48,29 +47,32 @@ test("date format variations still work and irrelevant columns are not validated
   ["male","2000-12-15"],["female","2003-04-20"],["",""]
  ]);
 });
-
-test("both male and female cells on the same row are rejected",()=>{
- assert.throws(()=>parseDelegateImportSheet([
-  [...DELEGATE_ROSTER_HEADERS],[...DELEGATE_ROSTER_SUBHEADERS],
-  row("TEST0001","Nguyễn Văn A","25/10/2000","20/04/2003")
- ]),/Dòng 3.*chỉ được điền/);
+test("reject simultaneous NAM/NỮ birthdates, invalid date, missing/duplicate student IDs",()=>{
+ assert.throws(()=>parseDelegateImportSheet([...header(),
+  row("TEST0001","Nguyễn Văn A","25/10/2000","20/04/2003")]),/Dòng 3.*chỉ được điền/);
+ assert.throws(()=>parseDelegateImportSheet([...header(),
+  row("TEST0001","Nguyễn Văn A","31/02/2000",null)]),/Dòng 3.*Ngày sinh NAM/);
+ assert.throws(()=>parseDelegateImportSheet([...header(),
+  row("TEST0001","Nguyễn Văn A",36824,null),
+  row("TEST0001","Nguyễn Văn B",null,38492)]),/Dòng 4.*trùng/);
+ assert.throws(()=>parseDelegateImportSheet([...header(),
+  row("","Nguyễn Văn A",36824,null)]),/Dòng 3.*thiếu MSSV/);
 });
-
-test("bad birthdates, repeated MSSV and missing IDs remain blocked",()=>{
- const headers=[[...DELEGATE_ROSTER_HEADERS],[...DELEGATE_ROSTER_SUBHEADERS]];
- assert.throws(()=>parseDelegateImportSheet([
-  ...headers,row("TEST0001","Nguyễn Văn A","31/02/2000",null)
- ]),/Dòng 3.*Ngày sinh NAM/);
- assert.throws(()=>parseDelegateImportSheet([
-  ...headers,row("TEST0001","Nguyễn Văn A",36824,null),
-  row("TEST0001","Nguyễn Văn B",null,38492)
- ]),/Dòng 4.*trùng/);
- assert.throws(()=>parseDelegateImportSheet([
-  ...headers,row("","Nguyễn Văn A",36824,null)
- ]),/Dòng 3.*thiếu MSSV/);
+test("older 13-column roster remains readable, irrelevant source columns discarded",()=>{
+ const oldHeaders=["STT","HỌ VÀ TÊN","MSSV","NGÀY THÁNG NĂM SINH","","QUÊ QUÁN",
+  "TÔN GIÁO","DÂN TỘC","NGÀY VÀO ĐOÀN","CHỨC VỤ – ĐƠN VỊ CÔNG TÁC",
+  "SỐ ĐIỆN THOẠI","LỚP","GHI CHÚ (ĐẢNG VIÊN)"];
+ const data=parseDelegateImportSheet([
+  oldHeaders,["","","","NAM","NỮ","","","","","","","",""],
+  [1,"Lê Văn D","TEST0009","25/10/2000",null,"Đồng Nai","Không","Kinh",
+   "invalid ignored","Phó Bí thư","invalid ignored","22DTH1","Đảng viên"]
+ ]);
+ assert.equal(data[0].unit,"22DTH1");
+ assert.equal(data[0].position,"Phó Bí thư");
+ assert.equal(data[0].gender,"male");
+ assert.equal("hometown" in data[0],false);
 });
-
-test("legacy seven-column cross-congress export can still be imported",()=>{
+test("older flat cross-congress Excel still accepted",()=>{
  const data=parseDelegateImportSheet([
   ["MSSV","Họ tên","Đơn vị","Chức vụ","Vai trò","Giới tính","Ngày sinh"],
   ["00123456","Nguyễn Văn A","22DTH1","Bí thư","Chính thức","Nam","25/10/2000"],
@@ -80,8 +82,7 @@ test("legacy seven-column cross-congress export can still be imported",()=>{
  assert.equal(data[0].gender,"male");
  assert.equal(data[1].delegate_type,"guest");
 });
-
-test("delegate management retains screenshot columns and no extra profile fields",()=>{
+test("UI remains compact with unchanged delegate columns",()=>{
  const page=read("src/app/congresses/[id]/delegates/page.tsx");
  const ui=read("src/components/delegates-client.tsx");
  const api=read("src/app/api/delegates/route.ts");
@@ -92,6 +93,7 @@ test("delegate management retains screenshot columns and no extra profile fields
  assert.match(ui,/columnSpan:2/);
  assert.match(ui,/rowSpan:2/);
  assert.match(ui,/stickyRowsCount:2/);
+ assert.match(ui,/DELEGATE_ROSTER_HEADERS.length/);
  assert.doesNotMatch(ui,/rosterReady|ROSTER_EDIT_FIELDS|editExtra|importNeedsRoster/);
  for(const field of ["hometown","religion","ethnicity","union_join_date","phone_number","class_name","profile_notes"]){
   assert.doesNotMatch(page,new RegExp(field));
