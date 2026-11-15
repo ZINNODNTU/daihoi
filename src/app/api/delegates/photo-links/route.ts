@@ -10,7 +10,7 @@ export const dynamic="force-dynamic";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const headers={"Cache-Control":"private, no-store","Vary":"Cookie"};
 const fail=(error:string,status:number)=>NextResponse.json({error},{status,headers});
-const personFields="id,congress_id,student_id,full_name,birth_date,auth_user_id,photo_path,is_active";
+const personFields="id,congress_id,student_id,full_name,birth_date,unit,position,auth_user_id,photo_path,is_active";
 
 async function getTarget(congressId:string,delegateId:string){
  if(!UUID.test(congressId)||!UUID.test(delegateId))
@@ -79,7 +79,9 @@ export async function GET(request:Request){
   if(congresses?.error)return fail("Không thể đọc tên Đại hội nguồn.",503);
   const labels=new Map((congresses?.data||[]).map(c=>[c.id,c.name]));
   return NextResponse.json({ok:true,options:sources.map(source=>({
-   id:source.id,congressName:labels.get(source.congress_id)||"Đại hội khác"
+   id:source.id,congressName:labels.get(source.congress_id)||"Đại hội khác",
+   fullName:source.full_name,studentId:source.student_id,
+   unit:source.unit||"",position:source.position||"",birthDate:source.birth_date
   }))},{headers});
  }catch{return fail("Không tra cứu được ảnh đại biểu ở Đại hội khác.",503);}
 }

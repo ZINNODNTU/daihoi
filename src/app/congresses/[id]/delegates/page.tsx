@@ -3,6 +3,7 @@ import {notFound} from "next/navigation";
 import {DelegatesClient} from "@/components/delegates-client";
 import {DelegateAdminTabs} from "@/components/delegate-admin-tabs";
 import type {Delegate,AttendanceSession} from "@/lib/types";
+import {availableDelegatePortraitLinks} from "@/lib/delegate-photo-availability";
 export default async function DelegatesPage({params}:{params:Promise<{id:string}>}){
  const {id}=await params;const {supabase,user}=await getAuth();
  if(!user||!(await hasCongressAbility(supabase,user.id,id,"delegates.read")))notFound();
@@ -23,10 +24,13 @@ export default async function DelegatesPage({params}:{params:Promise<{id:string}
    <code className="mx-1">upgrade-delegate-demographics-v15.sql</code> trước khi nhập hoặc chỉnh sửa hồ sơ.
   </section>
  </>;
+ const linkableIds=canManage?await availableDelegatePortraitLinks(
+  supabase,user.id,id,((delegates.data??[]) as Delegate[]).map(d=>({...d,photo_path:d.photo_path??null}))).catch(()=>[]):[];
  return <>
   <DelegateAdminTabs congressId={id} active="delegates" canManage={canManage}/>
   <DelegatesClient congressId={id} congressCode={congress.data?.slug||id}
     congressKind={congress.data?.kind==="hoi_sinh_vien"?"hoi_sinh_vien":"doan"}
+     linkableIds={linkableIds}
    delegates={(delegates.data??[]) as Delegate[]}
    sessions={(sessions.data??[]) as AttendanceSession[]}
    canManage={canManage}/>

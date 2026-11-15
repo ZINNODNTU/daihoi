@@ -1,7 +1,7 @@
 "use client";
 import {useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
-import {CheckCircle2,Download,Eye,EyeOff,FileSpreadsheet,KeyRound,LockKeyhole,Search,ShieldAlert,UserRoundPlus,Users} from "lucide-react";
+import {CheckCircle2,Download,Eye,EyeOff,FileSpreadsheet,KeyRound,LockKeyhole,Search,ShieldAlert,UserRoundPlus,Users,Trash2,AlertTriangle} from "lucide-react";
 import type {Delegate} from "@/lib/types";
 import {DelegateAdminTabs} from "@/components/delegate-admin-tabs";
 import {DEFAULT_DELEGATE_PASSWORD} from "@/lib/delegate-password-policy";
@@ -31,6 +31,10 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
  const [chosen,setChosen]=useState<string[]>([]);
  const [resetChosen,setResetChosen]=useState<string[]>([]);
  const [target,setTarget]=useState<Delegate|null>(null);
+  const [removeTarget,setRemoveTarget]=useState<Delegate|null>(null);
+  const [removeCode,setRemoveCode]=useState("");
+  const [deleteOrphanAuth,setDeleteOrphanAuth]=useState(true);
+  const [removeError,setRemoveError]=useState("");
  const [showDefault,setShowDefault]=useState(false);
  const [issued,setIssued]=useState<Issued[]>([]);
  const filtered=useMemo(()=>delegates.filter(d=>[d.full_name,d.student_id,d.login_email,d.unit]
@@ -112,6 +116,27 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
   }catch(err){
    setError("Đã reset "+resetItems.length+" tài khoản nhưng chưa tạo được Excel. Dùng nút Tải lại Excel lần này trước khi rời trang. "+(err instanceof Error?err.message:""));
   }finally{setBusy(false);}
+ }
+ async function removeAccount(){
+  if(!removeTarget||removeCode!==removeTarget.code||busy)return;
+  setBusy(true);setRemoveError("");setError("");setNotice("");
+  try{
+   const res=await fetch("/api/delegates/accounts/remove",{
+    method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({congressId,delegateId:removeTarget.id,confirmCode:removeCode,deleteOrphanAuth})
+   });
+   const data=await res.json() as {ok?:boolean;error?:string;authDeleted?:boolean;
+    accessRevoked?:boolean;notice?:string};
+   if(!res.ok||!data.ok)throw new Error(data.error||"Không thu hồi được tài khoản.");
+   setResetChosen(old=>old.filter(id=>id!==removeTarget.id));
+   setIssued(old=>old.filter(item=>item.id!==removeTarget.id));
+   setNotice("Đã gỡ tài khoản khỏi hồ sơ "+removeTarget.full_name+
+    ". "+(data.authDeleted?"Tài khoản Supabase Auth không còn sử dụng đã được xóa.":"Tài khoản Auth được giữ lại nếu còn được dùng tại Đại hội khác hoặc có dữ liệu cần bảo toàn.")+
+    (data.notice?" "+data.notice:""));
+   setRemoveTarget(null);setRemoveCode("");
+   router.refresh();
+  }catch(e){setRemoveError(e instanceof Error?e.message:"Không thể thu hồi tài khoản.");}
+  finally{setBusy(false);}
  }
  async function reset(){
   if(!target)return;
@@ -208,6 +233,11 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
       {d.auth_user_id?"Đã cấp":"Chưa cấp"}
      </span>
      {d.auth_user_id&&<button type="button" disabled={busy}
+       onClick={()=>{setRemoveTarget(d);setRemoveCode("");setRemoveError("");setDeleteOrphanAuth(true);}}
+       className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#f0d5d5] bg-[#fff8f6] px-3 text-[11px] font-bold text-[#ad4c50] hover:bg-[#fff1ef]">
+       <Trash2 size={15}/> Xóa tài khoản
+      </button>}
+      {d.auth_user_id&&<button type="button" disabled={busy}
       onClick={()=>{setTarget(d);setShowDefault(false);setError("");}}
       className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#d7e5e8] bg-[#f7fafb] px-3 text-[11px] font-bold text-[#3a6d7d] hover:bg-[#ecf5f7]">
       <KeyRound size={15}/> Reset về mặc định
@@ -216,7 +246,37 @@ export function DelegateAccountsClient({congressId,congressCode,delegates}:{
     {!filtered.length&&<p className="px-5 py-10 text-center text-xs text-[#8198a6]">Không tìm thấy đại biểu phù hợp.</p>}
    </div>
   </section>
-  {target&&<div className="fixed inset-0 z-[100] grid place-items-center bg-[#122b38]/65 p-3 backdrop-blur-[2px]" role="presentation"
+  {removeTarget&&<div role="presentation" className="fixed inset-0 z-[110] grid place-items-center overflow-y-auto bg-[#122b38]/70 p-3"
+    onClick={event=>{if(event.target===event.currentTarget&&!busy)setRemoveTarget(null);}}>
+    <div role="dialog" aria-modal="true" aria-label={"Xóa tài khoản "+removeTarget.full_name}
+     className="w-full max-w-[500px] rounded-[18px] border border-[#f0d3d3] bg-white p-5 shadow-2xl sm:p-7">
+     <div className="flex items-start gap-3"><AlertTriangle className="shrink-0 text-[#b94c54]" size={25}/>
+      <div><h2 className="text-[19px] font-extrabold text-[#72353b]">Thu hồi / xóa tài khoản đại biểu</h2>
+       <p className="mt-1 text-sm font-bold text-[#294e61]">{removeTarget.full_name} · {removeTarget.code}</p></div>
+     </div>
+     <p className="mt-4 rounded-xl border border-[#efdfd8] bg-[#fff9f5] p-4 text-xs leading-6 text-[#8b665d]">
+      Gỡ liên kết và quyền truy cập của hồ sơ tại Đại hội này. Không xóa thông tin đại biểu hay lịch sử điểm danh.
+      Tài khoản đang dùng ở Đại hội khác được giữ nguyên để bảo vệ người dùng.
+     </p>
+     <label className="mt-4 flex cursor-pointer items-start gap-3 text-[12px] leading-6 text-[#385f73]">
+      <input type="checkbox" className="mt-1 h-4 w-4 accent-[#157da1]" checked={deleteOrphanAuth}
+       onChange={event=>setDeleteOrphanAuth(event.target.checked)}/>
+      <span>Thử xóa hẳn tài khoản Supabase Auth <strong>chỉ khi</strong> tài khoản do hệ thống cấp, không còn quyền hoặc dữ liệu ở nơi khác.</span>
+     </label>
+     <label className="mt-4 block"><span className="label">Nhập mã đại biểu để xác nhận: {removeTarget.code}</span>
+      <input className="field mt-2" autoComplete="off" placeholder={removeTarget.code}
+       value={removeCode} onChange={event=>setRemoveCode(event.target.value)}/></label>
+     {removeError&&<p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs leading-6 text-red-700">{removeError}</p>}
+     <div className="mt-5 flex flex-wrap justify-end gap-2">
+      <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>setRemoveTarget(null)}>Hủy</button>
+      <button type="button" className="btn !bg-[#b5414b] !text-white disabled:opacity-40"
+       disabled={busy||removeCode!==removeTarget.code}
+       onClick={()=>void removeAccount()}><Trash2 size={16}/>
+       {busy?"Đang thu hồi...":"Xác nhận xóa tài khoản"}</button>
+     </div>
+    </div>
+   </div>}
+   {target&&<div className="fixed inset-0 z-[100] grid place-items-center bg-[#122b38]/65 p-3 backdrop-blur-[2px]" role="presentation"
    onClick={e=>{if(e.target===e.currentTarget&&!busy)setTarget(null);}}>
    <div role="dialog" aria-modal="true" aria-label={"Reset mật khẩu cho "+target.full_name}
     className="w-full max-w-[480px] rounded-[18px] border border-[#dae6e9] bg-white p-5 shadow-2xl sm:p-7">

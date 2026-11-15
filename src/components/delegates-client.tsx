@@ -3,7 +3,7 @@ import {ChangeEvent,FormEvent,Fragment,useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
 import Image from "next/image";
 import {QRCodeSVG} from "qrcode.react";
-import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,Camera,CheckSquare2,ChevronDown,ChevronRight,Layers3,Link2,LoaderCircle} from "lucide-react";
+import {Download,FileSpreadsheet,Plus,Search,Users,X,Printer,ScanBarcode,Camera,CheckSquare2,ChevronDown,ChevronRight,Layers3,Link2,LoaderCircle,Trash2,AlertTriangle} from "lucide-react";
 import {DelegateBarcode} from "@/components/delegate-barcode";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
 import type {Delegate,AttendanceSession} from "@/lib/types";
@@ -15,12 +15,12 @@ import {groupDelegatesByUnit} from "@/lib/delegate-unit-groups";
 import {DelegatePortrait} from "@/components/delegate-portrait";
 import type {CongressKind} from "@/components/brand-mark";
 type Props={
- congressId:string;congressCode:string;congressKind:CongressKind;delegates:Delegate[];canManage:boolean;
+ congressId:string;congressCode:string;congressKind:CongressKind;delegates:Delegate[];canManage:boolean;linkableIds:string[];
  sessions:AttendanceSession[];
 };
 type Row=DelegateUploadRow;
 type PhotoTarget={kind:"new"}|{kind:"existing";delegate:Delegate};
-type PhotoLinkOption={id:string;congressName:string};
+type PhotoLinkOption={id:string;congressName:string;fullName:string;studentId:string|null;unit:string;position:string;birthDate:string|null};
 type PhotoLinkDialog={delegate:Delegate;options:PhotoLinkOption[];selected:string;loading:boolean;error:string};
 type Card={
  id:string;name:string;code:string;barcodeCode:string;token:string;
@@ -69,7 +69,7 @@ function saveSvg(id:string,name:string){
  const url=URL.createObjectURL(blob),a=document.createElement("a");
  a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
-export function DelegatesClient({congressId,congressCode,congressKind,delegates,canManage,sessions}:Props){
+export function DelegatesClient({congressId,congressCode,congressKind,delegates,canManage,sessions,linkableIds}:Props){
  const router=useRouter();
  const [search,setSearch]=useState(""),[open,setOpen]=useState(false);
  const [collapsedUnitKeys,setCollapsedUnitKeys]=useState<Set<string>>(()=>new Set());
@@ -80,6 +80,10 @@ export function DelegatesClient({congressId,congressCode,congressKind,delegates,
  const [uploadRows,setUploadRows]=useState<Row[]|null>(null);
  const [photoTarget,setPhotoTarget]=useState<PhotoTarget|null>(null);
   const [photoLink,setPhotoLink]=useState<PhotoLinkDialog|null>(null);
+  const [deleteTarget,setDeleteTarget]=useState<Delegate|null>(null);
+  const [deleteCode,setDeleteCode]=useState("");
+  const [deleteError,setDeleteError]=useState("");
+  const linkable=new Set(linkableIds);
  const [pendingPhoto,setPendingPhoto]=useState<Blob|null>(null);
  const [demographicsTarget,setDemographicsTarget]=useState<Delegate|null>(null);
  const [editGender,setEditGender]=useState("");
@@ -135,6 +139,23 @@ export function DelegatesClient({congressId,congressCode,congressKind,delegates,
    setPhotoLink(current=>current?.delegate.id===delegate.id?{...current,
     error:e instanceof Error?e.message:"Không thể liên kết ảnh."}:current);
   }finally{setBusy(false);}
+ }
+ async function removeDelegate(){
+  if(!deleteTarget||deleteCode!==deleteTarget.code||busy)return;
+  setBusy(true);setDeleteError("");
+  try{
+   const result=await fetch("/api/delegates/remove",{
+    method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({congressId,delegateId:deleteTarget.id,confirmCode:deleteCode})
+   });
+   const json=await result.json() as {ok?:boolean;error?:string};
+   if(!result.ok||!json.ok)throw new Error(json.error||"Không xóa được đại biểu.");
+   setSuccess("Đã xóa hồ sơ "+deleteTarget.full_name+" khỏi Đại hội. Tài khoản Auth dùng chung được giữ lại.");
+   setSelectedIds(old=>{const next=new Set(old);next.delete(deleteTarget.id);return next;});
+   setDeleteTarget(null);setDeleteCode("");
+   router.refresh();
+  }catch(e){setDeleteError(e instanceof Error?e.message:"Không thể xóa đại biểu.");}
+  finally{setBusy(false);}
  }
  async function photoSaved(blob:Blob){
   if(!photoTarget)return;
@@ -481,10 +502,13 @@ export function DelegatesClient({congressId,congressCode,congressKind,delegates,
        onClick={()=>setPhotoTarget({kind:"existing",delegate:d})} disabled={busy}>
        <Camera size={15}/>{d.photo_path?"Sửa ảnh":"Thêm ảnh"}
       </button>}
-      {canManage&&d.student_id&&<button type="button"
+      {canManage&&d.student_id&&linkable.has(d.id)&&<button type="button"
         className="btn btn-secondary !min-h-9 !px-2.5 !text-xs"
         disabled={busy} onClick={()=>void openPhotoLink(d)}
         title="Dùng lại ảnh từ Đại hội khác cùng MSSV"><Link2 size={15}/> {d.photo_path?"Dùng ảnh khác":"Liên kết ảnh cũ"}</button>}
+       {canManage&&<button type="button" className="btn btn-secondary !min-h-9 !px-2.5 !text-xs !text-red-700"
+        disabled={busy} onClick={()=>{setDeleteTarget(d);setDeleteCode("");setDeleteError("");}}>
+        <Trash2 size={15}/> Xóa</button>}
        <button className="btn btn-secondary !min-h-9 !px-2.5 !text-xs" disabled={busy} onClick={()=>void openCard(d)}>
        <ScanBarcode size={15}/> QR / Barcode</button></div></td></tr>)}
      </Fragment>)}
@@ -519,9 +543,12 @@ export function DelegatesClient({congressId,congressCode,congressKind,delegates,
        onClick={()=>openDemographics(d)}>Sửa hồ sơ / chức vụ</button>}
       {canManage&&<button type="button" className="btn btn-secondary" disabled={busy}
        onClick={()=>setPhotoTarget({kind:"existing",delegate:d})}><Camera size={17}/>{d.photo_path?"Sửa ảnh":"Thêm ảnh"}</button>}
-      {canManage&&d.student_id&&<button type="button"
+      {canManage&&d.student_id&&linkable.has(d.id)&&<button type="button"
         className="btn btn-secondary" disabled={busy} onClick={()=>void openPhotoLink(d)}>
         <Link2 size={17}/> {d.photo_path?"Dùng ảnh khác":"Liên kết ảnh cũ"}</button>}
+       {canManage&&<button type="button" className="btn btn-secondary !text-red-700"
+        disabled={busy} onClick={()=>{setDeleteTarget(d);setDeleteCode("");setDeleteError("");}}>
+        <Trash2 size={17}/> Xóa đại biểu</button>}
        <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>void openCard(d)}>
        <ScanBarcode size={17}/> Xem QR / Barcode</button></div>
     </article>)}
@@ -607,7 +634,35 @@ export function DelegatesClient({congressId,congressCode,congressKind,delegates,
     </div>
    </div>
   </div>}
-   {photoLink&&canManage&&<div role="presentation"
+   {deleteTarget&&canManage&&<div role="presentation"
+     className="fixed inset-0 z-[85] flex items-center justify-center overflow-y-auto bg-[#122b42]/70 p-4"
+     onClick={event=>{if(event.target===event.currentTarget&&!busy)setDeleteTarget(null);}}>
+     <div role="dialog" aria-modal="true" aria-label={"Xóa đại biểu "+deleteTarget.full_name}
+      className="w-full max-w-[480px] rounded-[18px] border border-[#f0d3d3] bg-white p-5 shadow-2xl sm:p-7">
+      <div className="flex items-start gap-3">
+       <AlertTriangle size={25} className="mt-0.5 shrink-0 text-[#c65353]"/>
+       <div><h2 className="text-[19px] font-extrabold text-[#74363c]">Xóa hồ sơ đại biểu</h2>
+        <p className="mt-1 text-sm font-semibold text-[#2c4b5f]">{deleteTarget.full_name} · {deleteTarget.code}</p></div>
+      </div>
+      <p className="mt-4 rounded-xl bg-[#fff7f4] p-4 text-xs leading-6 text-[#935650]">
+       Thao tác sẽ xóa hồ sơ đại biểu, QR và phân ghế tại Đại hội này. Tài khoản Auth chung
+       tại các Đại hội khác không bị xóa. Hệ thống từ chối xóa nếu đại biểu đã có lịch sử
+       điểm danh, bỏ phiếu hoặc ảnh gốc đang được Đại hội khác liên kết.
+      </p>
+      <label className="mt-4 block"><span className="label">Nhập chính xác mã đại biểu để xác nhận: {deleteTarget.code}</span>
+       <input className="field mt-2" value={deleteCode} onChange={event=>setDeleteCode(event.target.value)}
+        autoComplete="off" placeholder={deleteTarget.code}/></label>
+      {deleteError&&<p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs leading-6 text-red-700">{deleteError}</p>}
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+       <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>setDeleteTarget(null)}>Hủy</button>
+       <button type="button" disabled={busy||deleteCode!==deleteTarget.code}
+        onClick={()=>void removeDelegate()}
+        className="btn !bg-[#b53d45] !text-white disabled:opacity-40"><Trash2 size={16}/>
+        {busy?"Đang xóa...":"Xác nhận xóa đại biểu"}</button>
+      </div>
+     </div>
+    </div>}
+    {photoLink&&canManage&&<div role="presentation"
      className="fixed inset-0 z-[75] flex items-center justify-center overflow-y-auto bg-[#122b42]/65 p-3 sm:p-5"
      onClick={event=>{if(event.target===event.currentTarget&&!busy)setPhotoLink(null);}}>
      <div role="dialog" aria-modal="true" aria-label={"Liên kết ảnh đã có cho "+photoLink.delegate.full_name}
@@ -638,8 +693,17 @@ export function DelegatesClient({congressId,congressCode,congressKind,delegates,
            checked={photoLink.selected===source.id} disabled={busy}
            onChange={()=>setPhotoLink(current=>current?{...current,selected:source.id,error:""}:current)}
            className="mt-1 h-4 w-4 shrink-0 accent-[#087fa9]"/>
-          <span><strong className="block font-semibold text-[#224b63]">{source.congressName}</strong>
-           <span className="text-[11px] text-[#7390a0]">Dùng lại tệp ảnh hiện có · không chiếm thêm dung lượng</span></span>
+          <Image unoptimized width={64} height={80} alt={"Ảnh đã có: "+source.fullName}
+           src={"/api/delegates/photo-links/preview?"+new URLSearchParams({
+            congressId,delegateId:photoLink.delegate.id,sourceId:source.id
+           }).toString()} className="h-20 w-16 shrink-0 rounded-lg border border-[#dce7ee] bg-white object-cover"/>
+          <span className="min-w-0">
+           <strong className="block font-semibold text-[#224b63]">{source.fullName}</strong>
+           <span className="mt-0.5 block break-words text-[#53778d]">{source.congressName}</span>
+           <span className="mt-1 block text-[11px] text-[#7390a0]">{source.studentId} · {source.unit||"Chưa có đơn vị"}
+            {source.position?" · "+source.position:""}{source.birthDate?" · Sinh: "+birthLabel(source.birthDate):""}</span>
+           <span className="mt-1 block text-[11px] font-bold text-[#23849c]">Ảnh gốc có sẵn · không chiếm thêm dung lượng</span>
+          </span>
          </label>)}</fieldset>:
          <p className="rounded-lg border border-[#e1e9ec] bg-[#f8fafb] p-4 text-[12px] leading-6 text-[#6b8492]">
           Chưa tìm thấy ảnh phù hợp ở Đại hội khác. Hãy kiểm tra MSSV, họ tên,
