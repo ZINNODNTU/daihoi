@@ -1,26 +1,40 @@
 import type {BchCandidate} from "./bch-candidates.ts";
 
-/** Immutable public profile snapshot: no vote counts are included. */
+/** Minimal snapshot on the existing congress; no profiles or vote totals copied. */
+export type CongressBchPublication={
+ bch_new_member_ids:string[]|null;
+ bch_new_published_at:string|null;
+};
 export type PublishedNewBch={
  memberCount:number;publishedAt:string;members:BchCandidate[];
 };
+export type BchPublicationStatus={memberCount:number;publishedAt:string};
 
+/** NULL/NULL means unpublished. Partial, duplicated and empty publications fail closed. */
+export function congressBchPublication(
+ congress:CongressBchPublication|null
+):BchPublicationStatus|null{
+ if(!congress)return null;
+ const ids=congress.bch_new_member_ids;
+ const at=congress.bch_new_published_at;
+ if(ids===null&&at===null)return null;
+ if(!Array.isArray(ids)||typeof at!=="string"||!at||
+  ids.length<1||ids.length>500||new Set(ids).size!==ids.length)
+  throw new Error("Danh sách BCH khóa mới đã công bố không hợp lệ.");
+ return {memberCount:ids.length,publishedAt:at};
+}
+
+/** Get the candidate profiles by ID, preserving BTC's published exact order.
+ * Never substitute an automatically re-ranked list after results change. */
 export function mapPublishedNewBch(
- publication:{member_ids:string[];member_count:number;published_at:string}|null,
+ congress:CongressBchPublication|null,
  records:readonly BchCandidate[]
 ):PublishedNewBch|null{
- if(!publication)return null;
- if(!Array.isArray(publication.member_ids)||!Number.isInteger(publication.member_count)||
-  publication.member_count<1||publication.member_count>500||
-  publication.member_ids.length!==publication.member_count||
-  new Set(publication.member_ids).size!==publication.member_count)
-  throw new Error("Danh sách BCH khóa mới đã công bố không hợp lệ.");
+ const status=congressBchPublication(congress);
+ if(!status||!congress)return null;
  const lookup=new Map(records.map(item=>[item.id,item]));
- const members=publication.member_ids.map(id=>lookup.get(id));
+ const members=congress.bch_new_member_ids!.map(id=>lookup.get(id));
  if(members.some(member=>!member))
   throw new Error("Danh sách BCH khóa mới không còn đủ nhân sự. BTC cần công bố lại.");
- return {
-  memberCount:publication.member_count,publishedAt:publication.published_at,
-  members:members as BchCandidate[]
- };
+ return {...status,members:members as BchCandidate[]};
 }

@@ -6,7 +6,7 @@
 
 ## Công bố BCH khóa mới (15/11/2026)
 
-- [BCH khóa mới V83](huong-dan/BCH-KHOA-MOI-V83.md): BTC chốt và công bố chính xác N ủy viên sau kiểm phiếu; đại biểu và khách xem flashcard, chỉ truy cập dữ liệu đã công bố, yêu cầu migration V83.
+- [BCH khóa mới V84](huong-dan/BCH-KHOA-MOI-V84.md): BTC công bố đúng N ủy viên từ dữ liệu ứng viên và kiểm phiếu gốc; lưu ID và thời điểm trên bản ghi Đại hội, không tạo bảng mới; đại biểu và khách xem flashcard sau công bố.
 
 ## Nhập hồ sơ đại biểu theo mẫu Nam/Nữ (15/11/2026)
 

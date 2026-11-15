@@ -3,6 +3,7 @@ import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {selectNewBchMembers,type BchBallotCandidate} from "@/lib/bch-candidates";
 import {writeSystemLog} from "@/lib/system-log";
+import {congressBchPublication} from "@/lib/bch-new-committee-selection";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -27,12 +28,11 @@ export async function GET(request:Request){
  const congressId=new URL(request.url).searchParams.get("congressId")||"";
  const auth=await permitted(congressId,"ballots.read");
  if("error" in auth)return auth.error;
- const {data,error}=await auth.db.from("bch_new_committee_publications")
-  .select("member_count,published_at").eq("congress_id",congressId).maybeSingle();
- if(error)return fail("Chưa đọc được cấu hình công bố BCH khóa mới. Kiểm tra migration V83.",503);
- return NextResponse.json({publication:data?{
-  memberCount:data.member_count,publishedAt:data.published_at
- }:null},{headers:HEADERS});
+ const {data,error}=await auth.db.from("congresses")
+  .select("bch_new_member_ids,bch_new_published_at").eq("id",congressId).maybeSingle();
+ if(error)return fail("Chưa đọc được cấu hình công bố BCH khóa mới. Kiểm tra migration V84.",503);
+ try{return NextResponse.json({publication:congressBchPublication(data)},{headers:HEADERS});}
+ catch{return fail("Danh sách BCH khóa mới đã công bố không hợp lệ.",503);}
 }
 
 /** Only a person permitted to WRITE ballots can officially publish the new BCH.
@@ -72,13 +72,13 @@ export async function POST(request:Request){
   if(members.some((id,index)=>id!==expectedIds[index]))
    return fail("Dữ liệu kiểm phiếu đã thay đổi. Hãy làm mới và xác nhận danh sách.",409);
   // Transactional server-side validation takes the same congress lock as tally RPC.
-  const {data:published,error:publishError}=await auth.db.rpc("publish_bch_new_committee_v83",{
+  const {data:published,error:publishError}=await auth.db.rpc("publish_bch_new_committee_v84",{
    p_congress_id:congressId,p_member_ids:members,
    p_acknowledge_tie:body.acknowledgeTie===true,p_published_by:auth.user.id
   });
   if(publishError){
    if(publishError.code==="PGRST202"||publishError.code==="42883")
-    return fail("Chưa triển khai migration upgrade-bch-new-committee-v83.sql.",503);
+    return fail("Chưa triển khai migration upgrade-bch-new-committee-v84.sql.",503);
    if(publishError.code==="22023")return fail(
     "Kết quả BCH không còn hợp lệ hoặc vừa thay đổi. Hãy làm mới, đối chiếu và công bố lại.",409);
    console.error("[new-bch] publication RPC failed",{code:publishError.code});
@@ -106,9 +106,11 @@ export async function DELETE(request:Request){
  const congressId=typeof body?.congressId==="string"?body.congressId:"";
  const auth=await permitted(congressId,"ballots.write");
  if("error" in auth)return auth.error;
- const {error}=await auth.db.from("bch_new_committee_publications")
-  .delete().eq("congress_id",congressId);
+ const {data,error}=await auth.db.from("congresses")
+  .update({bch_new_member_ids:null,bch_new_published_at:null})
+  .eq("id",congressId).select("id").maybeSingle();
  if(error)return fail("Không thu hồi được BCH khóa mới đã công bố.",503);
+ if(!data)return fail("Đại hội không tồn tại.",404);
  await writeSystemLog({level:"info",source:"api",event:"bch.new_committee_retracted",
   message:"BTC thu hồi danh sách BCH khóa mới đã công bố.",
   actorId:auth.user.id,congressId,context:{operation:"bch.new_committee.retract",
