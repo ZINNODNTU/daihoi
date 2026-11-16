@@ -1,6 +1,6 @@
  "use client";
 
- import {useEffect,useRef,useState} from "react";
+ import {useCallback,useEffect,useLayoutEffect,useRef,useState} from "react";
  import type {PointerEvent as ReactPointerEvent,MutableRefObject} from "react";
  import Image from "next/image";
  import {SwipeableCards} from "@daformat/react-swipeable-cards";
@@ -121,24 +121,39 @@ import {CONGRESS_FORMAL_HEADING,congressShortName,type CongressTitleKind} from "
   return null;
  }
 
- function SwipeSurface({items,active,previewDirection,onPreview,variant}:{
+ function SwipeSurface({items,active,previewDirection,onPreview,variant,minStackHeight,onStackHeightChange}:{
   items:Candidate[];active:number;previewDirection:HorizontalDirection;
   onPreview:(direction:HorizontalDirection)=>void;variant:BchCardVariant;
+   minStackHeight:number;onStackHeightChange:(height:number)=>void;
  }){
   const {dragStateRef}=SwipeableCards.useSwipeableCardsContext();
-  const pointerStart=useRef<{id:number;x:number}|null>(null);
+   const stackRef=useRef<HTMLDivElement>(null);
+   // A shorter next profile must not collapse the document during the swipe.
+   useLayoutEffect(()=>{
+    const stack=stackRef.current;
+    if(!stack)return;
+    const measure=()=>onStackHeightChange(stack.getBoundingClientRect().height);
+    measure();
+    if(typeof ResizeObserver==="undefined")return;
+    const observer=new ResizeObserver(measure);
+    observer.observe(stack);
+    return ()=>observer.disconnect();
+   },[active,onStackHeightChange]);
+  const pointerStart=useRef<{id:number;x:number;y:number}|null>(null);
   const fallback=previewDirection==="right"?items[active-1]:items[active+1];
   const preview=fallback||items[active+1]||items[active-1];
   const candidate=items[active];
   function start(event:ReactPointerEvent<HTMLDivElement>){
    if(!(event.target instanceof Element)||!event.target.closest('[data-swipeable-cards-top-card="true"]'))return;
-   pointerStart.current={id:event.pointerId,x:event.clientX};
+   pointerStart.current={id:event.pointerId,x:event.clientX,y:event.clientY};
   }
   function moving(event:ReactPointerEvent<HTMLDivElement>){
    const start=pointerStart.current;
    if(!start||start.id!==event.pointerId)return;
    const dx=event.clientX-start.x;
-   if(Math.abs(dx)>14){
+   const dy=event.clientY-start.y;
+   // Vertical scrolling should not trigger a card preview.
+   if(Math.abs(dx)>14&&Math.abs(dx)>Math.abs(dy)*1.25){
     if(dx<0&&active<items.length-1)onPreview("left");
     if(dx>0&&active>0)onPreview("right");
    }
@@ -157,7 +172,8 @@ import {CONGRESS_FORMAL_HEADING,congressShortName,type CongressTitleKind} from "
    gesture.draggingId="";
    gesture.element=null;
   }
-  return <SwipeableCards.Cards visibleStackLength={2}
+  return <SwipeableCards.Cards ref={stackRef} visibleStackLength={2}
+    style={minStackHeight?{minHeight:minStackHeight}:undefined}
    onPointerDownCapture={start}
    onPointerMoveCapture={moving}
    onPointerUpCapture={()=>{pointerStart.current=null;}}
@@ -201,6 +217,11 @@ import {CONGRESS_FORMAL_HEADING,congressShortName,type CongressTitleKind} from "
   function BchCandidateSlides({items,variant}:{items:Candidate[];variant:BchCardVariant}){
   const [active,setActive]=useState(0);
   const [previewDirection,setPreviewDirection]=useState<HorizontalDirection>("left");
+  const [minStackHeight,setMinStackHeight]=useState(0);
+  const keepStackHeight=useCallback((height:number)=>{
+   if(Number.isFinite(height)&&height>0)
+    setMinStackHeight(previous=>Math.max(previous,Math.ceil(height)));
+  },[]);
   const pending=useRef<HorizontalDirection|null>(null);
   const current=items[active];
   const canPrevious=active>0;
@@ -251,6 +272,7 @@ import {CONGRESS_FORMAL_HEADING,congressShortName,type CongressTitleKind} from "
    >
     <AdvanceWhenSwipeFinishes pendingRef={pending} onComplete={completed}/>
     <SwipeSurface items={items} active={active} previewDirection={previewDirection} variant={variant}
+     minStackHeight={minStackHeight} onStackHeightChange={keepStackHeight}
      onPreview={setPreviewDirection}/>
     <div className="mt-5 flex items-center justify-between gap-3 px-1" aria-label="Điều hướng thẻ nhân sự">
      <SwipeableCards.SwipeRightButton type="button" disabled={!canPrevious}

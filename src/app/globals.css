@@ -833,8 +833,8 @@
  .projection-welcome--compact .projection-portrait{width:130px;}
 }
 
-/* BCH candidate deck: preserve vertical scrolling on touch devices. */
-.bch-swipe-root{isolation:isolate;}
+/* Keep horizontal card swipes independent of document scroll/scroll anchoring. */
+.bch-swipe-root{isolation:isolate;overflow-anchor:none;}
 .bch-swipe-stack{
  position:relative;display:grid;grid-template-columns:minmax(0,1fr);
  width:100%;min-width:0;overflow:visible;touch-action:pan-y;

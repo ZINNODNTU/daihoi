@@ -33,6 +33,17 @@ test("Mobile touch scrolling is preserved and cards avoid loading every candidat
  assert.match(css,/@media \(prefers-reduced-motion:reduce\)/);
 });
 
+test("Mobile BCH deck reserves its tallest observed card height to prevent scroll jumps",()=>{
+ assert.match(source,/const \[minStackHeight,setMinStackHeight\]=useState\(0\)/);
+ assert.match(source,/Math\.max\(previous,Math\.ceil\(height\)\)/);
+ assert.match(source,/ResizeObserver\(measure\)/);
+ assert.match(source,/style=\{minStackHeight\?\{minHeight:minStackHeight\}:undefined\}/);
+ assert.match(source,/Math\.abs\(dx\)>Math\.abs\(dy\)\*1\.25/);
+ assert.match(css,/\.bch-swipe-root\{[^}]*overflow-anchor:none/);
+ assert.match(css,/\.bch-swipe-stack\{[^}]*touch-action:pan-y/);
+ assert.doesNotMatch(css,/\.bch-swipe-stack\{[^}]*touch-action:none/);
+});
+
 test("The candidate swipe is for profile browsing, never a vote",()=>{
  assert.match(source,/không phải biểu quyết hay đánh giá ứng viên/);
  assert.match(source,/Nhân sự \{active\+1\} \/ \{items.length\}/);
