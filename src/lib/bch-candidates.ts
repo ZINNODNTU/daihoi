@@ -196,6 +196,20 @@ export function validateBchInput(body:unknown,year=currentYear()):Validation{
 export const BCH_IMPORT_COLUMNS=["STT","Họ tên","Năm sinh","Quê quán","Dân tộc",
  "Trình độ","Năm vào Đoàn","Chức vụ hiện tại"] as const;
 export const BCH_IMPORT_MAX_ROWS=200;
+
+/** Single workbook schema for Đoàn and Hội Sinh viên, shared by exports and
+ * the downloadable import template. Export files can be imported unchanged. */
+export function makeBchWorkbookRows(candidates:readonly Pick<BchCandidate,
+ "full_name"|"birth_year"|"hometown"|"ethnicity"|"education_level"|"union_join_year"|"current_position">[]):(string|number)[][]{
+ return [
+  [...BCH_IMPORT_COLUMNS],
+  ...candidates.map((candidate,index)=>[
+   index+1,candidate.full_name,candidate.birth_year,candidate.hometown,
+   candidate.ethnicity,candidate.education_level,candidate.union_join_year,
+   candidate.current_position
+  ])
+ ];
+}
 const columnNames={
  full_name:["hoten","hovaten","fullname"],
  birth_year:["namsinh","birthyear"],

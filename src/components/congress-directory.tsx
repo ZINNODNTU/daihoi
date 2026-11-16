@@ -2,6 +2,7 @@
 import {useMemo,useState} from "react";
 import Link from "next/link";
 import {BrandMark} from "@/components/brand-mark";
+import {congressFullName} from "@/lib/congress-title";
 import {ArrowUpRight,CalendarDays,LayoutGrid,MapPin,Search,SlidersHorizontal} from "lucide-react";
 
 export type CongressSummary={
@@ -32,7 +33,7 @@ export function CongressDirectory({items}:{items:CongressSummary[]}){
   const matches=useMemo(()=>{
     const q=query.trim().toLocaleLowerCase("vi");
     return items.filter(item=>(filter==="all"||item.status===filter)&&
-      [item.name,item.slug,item.venue,item.term,item.kind].join(" ").toLocaleLowerCase("vi").includes(q));
+      [congressFullName(item.name,item.kind),item.slug,item.venue,item.term,item.kind].join(" ").toLocaleLowerCase("vi").includes(q));
   },[items,query,filter]);
 
   return <section aria-label="Danh sách Đại hội" className="space-y-4">
@@ -71,7 +72,7 @@ export function CongressDirectory({items}:{items:CongressSummary[]}){
           </span>
           <div className="min-w-0 flex-1">
             <span className="directory-row-index">ĐẠI HỘI {String(index+1).padStart(2,"0")}</span>
-             <h3 className="mt-1 line-clamp-2 text-[14px] font-bold leading-6 text-[#27364c] group-hover:text-[#007eb8]">{item.name}</h3>
+             <h3 className="mt-1 line-clamp-2 text-[14px] font-bold leading-6 text-[#27364c] group-hover:text-[#007eb8]">{congressFullName(item.name,item.kind)}</h3>
             <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-[#8793a2]">
               <span>{item.kind==="doan"?"Đoàn TNCS Hồ Chí Minh":"Hội Sinh viên Việt Nam"}</span>
               {item.term&&<span className="inline-flex items-center gap-1"><CalendarDays size={12}/>{item.term}</span>}

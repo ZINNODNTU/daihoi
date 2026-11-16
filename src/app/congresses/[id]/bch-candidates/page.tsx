@@ -2,6 +2,7 @@ import {notFound} from "next/navigation";
 import {getAuth,hasCongressAbility} from "@/lib/auth";
 import {BchCandidatesClient} from "@/components/bch-candidates-client";
 import type {BchCandidate} from "@/lib/bch-candidates";
+import {congressFullName} from "@/lib/congress-title";
 
 export const dynamic="force-dynamic";
 const BASE_FIELDS="id,congress_id,full_name,birth_year,hometown,ethnicity,education_level,union_join_year,current_position,photo_path,display_order,created_at,updated_at";
@@ -22,7 +23,7 @@ export default async function BchCandidatesPage({params}:{params:Promise<{id:str
   supabase.from("congresses").select("name,slug,kind").eq("id",id).maybeSingle()
  ]);
  if(people.error)console.error("BCH personnel read",people.error.code);
- return <BchCandidatesClient congressId={id} congressName={congress.data?.name||"Đại hội"}
+ return <BchCandidatesClient congressId={id} congressName={congress.data?congressFullName(congress.data.name,congress.data.kind==="hoi_sinh_vien"?"hoi_sinh_vien":"doan"):"Đại hội"}
    congressCode={congress.data?.slug||id} congressKind={congress.data?.kind||"unknown"}
    canManage={canManage} canViewBallots={canViewBallots}
    initialCandidates={(people.data||[]) as BchCandidate[]}

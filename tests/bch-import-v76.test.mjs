@@ -2,11 +2,26 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {
- BCH_IMPORT_COLUMNS,BCH_IMPORT_MAX_ROWS,parseBchImportMatrix,bchPersonKey,validateBchInput
+ BCH_IMPORT_COLUMNS,BCH_IMPORT_MAX_ROWS,parseBchImportMatrix,bchPersonKey,makeBchWorkbookRows
 } from "../src/lib/bch-candidates.ts";
 
 const row=["1","Nguyễn Văn A",2001,"Đồng Nai","Kinh","Đại học",2017,"Bí thư Chi đoàn"];
 const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
+test("one workbook layout is used for both associations, export and import template",()=>{
+ const template=makeBchWorkbookRows([]);
+ const exportRows=makeBchWorkbookRows([{
+  full_name:"Nguyễn Văn A",birth_year:2001,hometown:"Đồng Nai",ethnicity:"Kinh",
+  education_level:"Đại học",union_join_year:2017,current_position:"Bí thư Chi đoàn"
+ }]);
+ assert.deepEqual(template,[[...BCH_IMPORT_COLUMNS]]);
+ assert.deepEqual(exportRows[0],template[0]);
+ assert.equal(parseBchImportMatrix(exportRows,[],0).rows.length,1);
+ const ui=read("src/components/bch-candidates-client.tsx");
+ assert.match(ui,/makeBchWorkbookRows\(sorted\)/);
+ assert.match(ui,/makeBchWorkbookRows\(\[\]\)/);
+ assert.match(ui,/Mẫu Excel dùng chung cho Đại hội Đoàn và Đại hội Hội Sinh viên/);
+});
+
 test("BCH exported header is directly re-importable, numeric years retained",()=>{
  const parsed=parseBchImportMatrix([[...BCH_IMPORT_COLUMNS],row],[],4);
  assert.equal(parsed.rows.length,1);

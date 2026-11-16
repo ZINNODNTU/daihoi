@@ -3,6 +3,7 @@ import {getAuth} from "@/lib/auth";
 import {AppShell} from "@/components/app-shell";
 import {ActingSessionNotice} from "@/components/acting-session-notice";
 import {getCongressRole,getCongressEffectiveAbilities} from "@/lib/auth";
+import {congressFullName} from "@/lib/congress-title";
 
 
 export const dynamic="force-dynamic";
@@ -24,7 +25,7 @@ export default async function CongressLayout({children,params}:{
  if(congressResult.error||!congressResult.data)notFound();
  const congress=congressResult.data;
  return <><ActingSessionNotice/><AppShell name={profileResult.data?.full_name||user.email||""}
-  congressId={id} congressName={congress.name} congressKind={congress.kind}
+  congressId={id} congressName={congressFullName(congress.name,congress.kind==="hoi_sinh_vien"?"hoi_sinh_vien":"doan")} congressKind={congress.kind}
   accessRole={accessRole} effectiveAbilities={[...effectiveAbilities]} canManage={effectiveAbilities.includes("settings.manage")}
   canViewBch={effectiveAbilities.includes("bch.read")}
   canCheckin={effectiveAbilities.includes("attendance.scan")}

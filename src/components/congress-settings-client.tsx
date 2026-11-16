@@ -1,7 +1,7 @@
 "use client";
 import {useState} from "react";
 import {Save,Settings2} from "lucide-react";
-import {CONGRESS_FORMAL_HEADING,congressShortName,type CongressTitleKind} from "@/lib/congress-title";
+import {CONGRESS_FORMAL_HEADING,congressShortName,congressFullName,type CongressTitleKind} from "@/lib/congress-title";
 type Status="preparing"|"live"|"completed";
 type Values={id:string;name:string;term:string;venue:string;status:Status;slug:string;kind:string};
 export function CongressSettingsClient({initial}:{initial:Values}){
@@ -36,10 +36,10 @@ export function CongressSettingsClient({initial}:{initial:Values}){
      </div>
      <label className="block"><span className="text-[12px] font-semibold text-[#456477]">Tên đơn vị / kỳ Đại hội</span>
       <input className="field mt-2 w-full" minLength={2} maxLength={180} required
-       placeholder={kind==="doan"?"Khoa Công nghệ thông tin hoặc Chi đoàn 23DTH1":"Hội Sinh viên Khoa Công nghệ thông tin"}
+       placeholder={kind==="doan"?"Khoa Công nghệ thông tin hoặc Chi đoàn 23DTH1":"Khoa Công nghệ thông tin hoặc Liên chi Hội..."}
        value={value.name} onChange={e=>setValue({...value,name:e.target.value})}/>
      </label>
-     {value.name.trim()&&<p className="text-[12px] text-[#567b90]"><strong>Hiển thị:</strong> {CONGRESS_FORMAL_HEADING[kind]} {congressShortName(value.name,kind)}</p>}
+     {value.name.trim()&&<p className="text-[12px] text-[#567b90]"><strong>Hiển thị:</strong> {congressFullName(value.name,kind)}</p>}
     </div>
    <div className="grid gap-4 md:grid-cols-2">
     <label className="block"><span className="text-sm font-semibold">Nhiệm kỳ</span><input className="field w-full mt-2" maxLength={50} value={value.term} onChange={e=>setValue({...value,term:e.target.value})}/></label>

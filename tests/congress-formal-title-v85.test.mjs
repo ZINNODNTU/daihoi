@@ -19,7 +19,7 @@ test("the fixed formal headers match the selected congress type exactly",()=>{
 
 test("short name extracts the variable part for the congress pass and settings",()=>{
  assert.equal(congressShortName("Đại hội Đại biểu Đoàn TNCS Hồ Chí Minh khoa Công nghệ thông tin","doan"),
-  "khoa Công nghệ thông tin");
+  "Khoa Công nghệ thông tin");
  assert.equal(congressShortName("Đại hội Đại biểu Hội Sinh viên Việt Nam Khoa Công nghệ thông tin","hoi_sinh_vien"),
   "Khoa Công nghệ thông tin");
  assert.equal(congressShortName("Đại hội Đoàn Trường Đại học ABC lần thứ XII","doan"),
@@ -27,6 +27,19 @@ test("short name extracts the variable part for the congress pass and settings",
  assert.equal(congressShortName("Đại hội Hội Sinh viên Việt Nam Khoa CNTT","hoi_sinh_vien"),
   "Khoa CNTT");
  assert.equal(congressShortName("  Chi   đoàn  23DTH1   ","doan"),"Chi đoàn 23DTH1");
+});
+
+test("legacy lowercase labels and accidentally repeated association prefixes render consistently",()=>{
+ assert.equal(congressFullName("Đại hội đại biểu Hội sinh viên Việt Nam khoa Công nghệ thông tin","hoi_sinh_vien"),
+  hoi+" Khoa Công nghệ thông tin");
+ assert.equal(congressFullName("Đại hội Đại biểu Đoàn TNCS Hồ Chí Minh khoa Công nghệ thông tin","doan"),
+  doan+" Khoa Công nghệ thông tin");
+ assert.equal(congressFullName("Hội Sinh viên Khoa Công nghệ thông tin","hoi_sinh_vien"),
+  hoi+" Khoa Công nghệ thông tin");
+ assert.equal(congressFullName("Đoàn TNCS Hồ Chí Minh Chi đoàn 23DTH1","doan"),
+  doan+" Chi đoàn 23DTH1");
+ assert.equal(congressFullName("hội sinh viên việt nam khoa Công nghệ thông tin","hoi_sinh_vien"),
+  hoi+" Khoa Công nghệ thông tin");
 });
 
 test("creation and editing are idempotent and cannot double the fixed header",()=>{
@@ -38,6 +51,15 @@ test("creation and editing are idempotent and cannot double the fixed header",()
   assert.equal(congressShortName(full,kind),"Khoa Công nghệ thông tin");
   assert.equal(congressShortName(header,kind),"");
  }
+});
+
+test("legacy DB titles are normalized on the congress directory and BCH screen",()=>{
+ const directory=read("src/components/congress-directory.tsx");
+ const candidates=read("src/app/congresses/[id]/bch-candidates/page.tsx");
+ const layout=read("src/app/congresses/[id]/layout.tsx");
+ assert.match(directory,/congressFullName\(item.name,item.kind\)/);
+ assert.match(candidates,/congressFullName\(congress.data.name,/);
+ assert.match(layout,/congressFullName\(congress.name,/);
 });
 
 test("create/edit forms take a specific name and preview fixed heading by type",()=>{

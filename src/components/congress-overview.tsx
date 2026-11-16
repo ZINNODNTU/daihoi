@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import type {CongressAbility} from "@/lib/congress-permissions";
 import type {SupabaseClient} from "@supabase/supabase-js";
+import {congressFullName} from "@/lib/congress-title";
 
 const areas=[
   {href:"delegates",icon:Users,title:"Quản lý đại biểu",description:"Hồ sơ đại biểu, danh sách Excel và thẻ QR / Barcode."},
@@ -78,7 +79,7 @@ export async function CongressOverviewForUser({
       </div>
       <div className="mt-6 grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="min-w-0">
-          <h1 className="max-w-4xl text-[clamp(27px,3.2vw,40px)] font-semibold leading-[1.23] tracking-[-.045em] text-white">{congress.name}</h1>
+          <h1 className="max-w-4xl text-[clamp(27px,3.2vw,40px)] font-semibold leading-[1.23] tracking-[-.045em] text-white">{congressFullName(congress.name,congress.kind==="hoi_sinh_vien"?"hoi_sinh_vien":"doan")}</h1>
           <p className="mt-3 text-[11px] font-semibold uppercase tracking-[.13em] text-[#aebfda]">
             {congress.kind==="hoi_sinh_vien"?"HỘI SINH VIÊN VIỆT NAM":"ĐOÀN TNCS HỒ CHÍ MINH"}
           </p>

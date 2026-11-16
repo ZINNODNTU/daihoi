@@ -3,7 +3,7 @@ import {FormEvent,useState} from "react";
 import Link from "next/link";
 import {useRouter} from "next/navigation";
 import {Check,ClipboardCopy,Eye,EyeOff,ShieldCheck} from "lucide-react";
-import {CONGRESS_FORMAL_HEADING,congressShortName,type CongressTitleKind} from "@/lib/congress-title";
+import {CONGRESS_FORMAL_HEADING,congressFullName,type CongressTitleKind} from "@/lib/congress-title";
 
 type Issued={userId:string;name:string;email:string;initialPassword:string};
 export function CreateCongress(){
@@ -65,10 +65,10 @@ export function CreateCongress(){
      <label className="block"><span className="label">Tên đơn vị / kỳ Đại hội</span>
       <input name="name" className="field" required minLength={2} maxLength={180}
        value={congressName} onChange={e=>setCongressName(e.target.value)}
-       placeholder={kind==="doan"?"Khoa Công nghệ thông tin hoặc Chi đoàn 23DTH1":"Hội Sinh viên Khoa Công nghệ thông tin"}/>
+       placeholder={kind==="doan"?"Khoa Công nghệ thông tin hoặc Chi đoàn 23DTH1":"Khoa Công nghệ thông tin hoặc Liên chi Hội..."}/>
      </label>
      {congressName.trim()&&<p className="text-[12px] leading-6 text-[#54788a]">
-      <strong>Hiển thị:</strong> {CONGRESS_FORMAL_HEADING[kind]} {congressShortName(congressName,kind)}
+      <strong>Hiển thị:</strong> {congressFullName(congressName,kind)}
      </p>}
     </div>
    <label><span className="label">Tên đơn vị *</span><input name="organization_name" className="field" required placeholder="Đoàn Trường Đại học ABC"/></label>

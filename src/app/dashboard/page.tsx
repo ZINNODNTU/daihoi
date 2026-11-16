@@ -11,6 +11,7 @@ import {AppShell} from "@/components/app-shell";
 import {ActingSessionNotice} from "@/components/acting-session-notice";
 import {CreateCongress} from "@/components/create-congress";
 import {CongressDirectory,type CongressSummary} from "@/components/congress-directory";
+import {congressFullName} from "@/lib/congress-title";
 
 export const dynamic="force-dynamic";
 
@@ -80,7 +81,7 @@ export default async function Dashboard(){
 
   return <><ActingSessionNotice/><AppShell name={profile?.full_name||user.email||""}
     accessRole={role} canViewSystemLogs={canViewSystemLogs}
-    congressId={sidebarCongress?.id} congressName={sidebarCongress?.name}
+    congressId={sidebarCongress?.id} congressName={sidebarCongress?congressFullName(sidebarCongress.name,sidebarCongress.kind):undefined}
     congressKind={sidebarCongress?.kind} effectiveAbilities={scopedAbilities}>
     <section className="command-hero dashboard-command-hero mb-7 px-5 py-7 sm:px-8 sm:py-9 xl:px-10 xl:py-11" aria-label="Trung tâm điều hành">
       <div className="dashboard-hero-layout">

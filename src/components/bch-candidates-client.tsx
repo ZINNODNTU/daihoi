@@ -8,7 +8,7 @@ import {
  Plus,Search,Trash2,UserRoundPlus,Users,X,GripVertical,ArrowUp,ArrowDown,ClipboardList,Upload
 } from "lucide-react";
 import {DelegatePhotoEditor} from "@/components/delegate-photo-editor";
-import {BCH_IMPORT_COLUMNS,parseBchImportMatrix,sortBchCandidates,sortBchCandidatesByVietnameseName,validateBchInput,type BchCandidate} from "@/lib/bch-candidates";
+import {makeBchWorkbookRows,parseBchImportMatrix,sortBchCandidates,sortBchCandidatesByVietnameseName,validateBchInput,type BchCandidate} from "@/lib/bch-candidates";
 
 type DelegateOption={id:string;full_name:string;position:string;code:string;photo_path:string|null};
 type PhotoTarget={kind:"form"}|{kind:"existing";candidate:BchCandidate};
@@ -284,16 +284,7 @@ export function BchCandidatesClient({
   setError("");
   try{
    const {default:writeExcelFile}=await import("write-excel-file/browser");
-   const columns=["STT","Họ tên","Năm sinh","Quê quán","Dân tộc",
-    "Trình độ","Năm vào Đoàn","Chức vụ hiện tại"];
-   const rows:(string|number)[][]=[
-    columns,
-    ...sorted.map((candidate,index)=>[
-     index+1,candidate.full_name,candidate.birth_year,candidate.hometown,
-     candidate.ethnicity,candidate.education_level,candidate.union_join_year,
-     candidate.current_position,
-    ])
-   ];
+   const rows=makeBchWorkbookRows(sorted);
    await writeExcelFile([{
     sheet:"Trich ngang BCH",stickyRowsCount:1,
     data:rows
@@ -306,7 +297,7 @@ export function BchCandidatesClient({
   try{
    const {default:writeExcelFile}=await import("write-excel-file/browser");
    await writeExcelFile([{sheet:"Trich ngang BCH",stickyRowsCount:1,
-    data:[[...BCH_IMPORT_COLUMNS]]}]).toFile("mau-nhap-nhan-su-BCH.xlsx");
+    data:makeBchWorkbookRows([])}]).toFile("mau-nhap-nhan-su-BCH.xlsx");
   }catch{setError("Không tải được mẫu Excel.");}
  }
  async function chooseImportFile(event:ChangeEvent<HTMLInputElement>){
@@ -366,6 +357,8 @@ export function BchCandidatesClient({
       disabled={busy} onClick={()=>{setShowImport(true);fileRef.current?.click();}}>
       <Upload size={16}/> Nhập Excel
      </button>}
+     {canManage&&<button type="button" className="btn btn-secondary flex-1 justify-center sm:flex-none"
+      disabled={busy} onClick={()=>void downloadTemplate()}><FileSpreadsheet size={16}/> Tải mẫu Excel</button>}
      {canViewBallots&&congressKind==="doan"&&<Link href={"/congresses/"+congressId+"/ballots"}
      className="btn btn-primary flex-1 justify-center sm:flex-none">
      <ClipboardList size={17}/> Mở sổ kiểm phiếu
@@ -408,7 +401,7 @@ export function BchCandidatesClient({
     </div>
     <div className="space-y-4 p-4 sm:p-5">
      <p className="text-sm leading-6 text-[#567386]">
-      Dùng đúng 7 trường thông tin: Họ tên, Năm sinh, Quê quán, Dân tộc, Trình độ,
+      Mẫu Excel dùng chung cho Đại hội Đoàn và Đại hội Hội Sinh viên. Dùng đúng 7 trường thông tin: Họ tên, Năm sinh, Quê quán, Dân tộc, Trình độ,
       Năm vào Đoàn, Chức vụ hiện tại. Cột STT là tùy chọn, có thể đổi thứ tự cột.
       Tối đa 200 người/tệp, định dạng .xlsx (2 MB).
      </p>
@@ -627,7 +620,7 @@ export function BchCandidatesClient({
    </div>
   </section>
   <p className="flex items-center gap-2 text-xs leading-6 text-[#8294a1]">
-   <FileSpreadsheet size={16}/><span>File Excel trích ngang nhân sự xuất theo thứ tự hiện tại, không bị ảnh hưởng bởi bộ lọc tìm kiếm.</span>
+   <FileSpreadsheet size={16}/><span>Mẫu Excel nhập và tệp xuất dùng cùng 8 cột cho cả Đoàn và Hội Sinh viên; tệp xuất theo thứ tự hiện tại, không bị ảnh hưởng bởi bộ lọc tìm kiếm.</span>
   </p>
    {photoTarget&&<DelegatePhotoEditor
     title="Ảnh nhân sự giới thiệu BCH"

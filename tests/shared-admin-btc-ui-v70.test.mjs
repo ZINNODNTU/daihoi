@@ -58,7 +58,8 @@ function loadDashboard({admin=false,rights=["workspace.view"],btcEnabled=true}={
    getCongressRole:async()=>{observed.push(["getRole"]);return "checkin";},
    getCongressEffectiveAbilities:async()=>{observed.push(["getAbilities"]);return rights;}
   },
-  "@/components/app-shell":{AppShell:"AppShell"},
+  "@/lib/congress-title":{congressFullName:(name)=>name},
+   "@/components/app-shell":{AppShell:"AppShell"},
   "@/components/acting-session-notice":{ActingSessionNotice:"ActingSessionNotice"},
   "@/components/create-congress":{CreateCongress:"CreateCongress"},
   "@/components/congress-directory":{CongressDirectory:"CongressDirectory"}

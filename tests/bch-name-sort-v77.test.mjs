@@ -64,6 +64,6 @@ test("Excel and delegate views still use the persisted display order",()=>{
  const ui=read("src/components/bch-candidates-client.tsx");
  const api=read("src/app/api/bch-candidates/route.ts");
  assert.match(ui,/sortBchCandidates\(candidates\)/);
- assert.match(ui,/\.\.\.sorted\.map\(/);
+ assert.match(ui,/makeBchWorkbookRows\(sorted\)/);
  assert.match(api,/\.order\("display_order"/);
 });

@@ -13,7 +13,7 @@ test("Super Admin opens congress RBAC inside existing congress shell, no redirec
  assert.doesNotMatch(congressRoute,/redirect\("\/dashboard\/access\?congressId="/);
  assert.match(congressLayout,/<AppShell/);
  assert.match(congressLayout,/congressId=\{id\}/);
- assert.match(congressLayout,/congressName=\{congress.name\}/);
+ assert.match(congressLayout,/congressName=\{congressFullName\(congress.name,/);
  assert.match(congressLayout,/canViewSystemLogs=\{accessRole==="super_admin"\}/);
 });
 
