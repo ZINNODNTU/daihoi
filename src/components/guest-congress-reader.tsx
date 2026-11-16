@@ -195,7 +195,7 @@ export function GuestCongressReader({congress,docs,candidateCount,slug}:{
   </div>:
   loading||candidates===null&&candidateCount>0?
    <div role="status" className="guest-detail-panel-empty">Đang tải danh sách nhân sự BCH…</div>:
-  candidates?.length?<DelegateBchCarousel items={candidates} initialCongressId={congress.id}/>:
+  candidates?.length?<DelegateBchCarousel items={candidates.map(item=>({...item,congressKind:congress.kind}))} initialCongressId={congress.id}/>:
    <div className="guest-detail-panel-empty"><UsersRound size={28} aria-hidden="true"/>
     <strong>Danh sách nhân sự đang cập nhật</strong>
     <p>Thông tin sẽ được hiển thị khi Ban Tổ chức công bố.</p>
@@ -212,7 +212,7 @@ export function GuestCongressReader({congress,docs,candidateCount,slug}:{
   <p className="rounded-xl border border-[#cfe6da] bg-[#f1faf6] px-4 py-3 text-[12px] font-bold text-[#287557]">
    <Award size={17} className="mr-2 inline-block"/>BCH khóa mới gồm đúng {committee.memberCount} ủy viên được công bố.
   </p>
-  <DelegateBchCarousel items={committee.members} initialCongressId={congress.id} variant="new"/>
+  <DelegateBchCarousel items={committee.members.map(item=>({...item,congressKind:congress.kind}))} initialCongressId={congress.id} variant="new"/>
  </div>:
   <div className="guest-detail-panel-empty"><Award size={29} aria-hidden="true"/>
    <strong>Ban Chấp hành khóa mới chưa được công bố</strong>

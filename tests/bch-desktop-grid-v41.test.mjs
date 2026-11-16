@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {createRequire} from "node:module";
 import ts from "typescript";
+import {CONGRESS_FORMAL_HEADING,congressShortName} from "../src/lib/congress-title.ts";
 
 const require=createRequire(import.meta.url);
 const React=require("react");
@@ -11,7 +12,7 @@ const source=readFileSync(new URL("../src/components/delegate-bch-carousel.tsx",
 const page=readFileSync(new URL("../src/app/my-card/bch/page.tsx",import.meta.url),"utf8");
 const id=(value)=>value.toString().padStart(12,"0");
 const candidate=(num,name,congress="a")=>({
- id:"abcdabcd-aaaa-4aaa-aaaa-"+id(num),congress_id:congress,congressName:"Đại hội mẫu",
+ id:"abcdabcd-aaaa-4aaa-aaaa-"+id(num),congress_id:congress,congressName:"Đại hội mẫu",congressKind:"doan",
  full_name:name,birth_year:2001,hometown:"Đồng Nai",ethnicity:"Kinh",
  education_level:"Đại học",union_join_year:2019,current_position:"Bí thư Đoàn khoa",
  photo_path:null,display_order:num,created_at:"2026-01-01",updated_at:"2026-01-01"
@@ -40,6 +41,7 @@ function render(items){
   })};
   if(name==="lucide-react")return icons;
   if(name==="@daformat/react-swipeable-cards")return {SwipeableCards:swipes};
+   if(name==="@/lib/congress-title")return {CONGRESS_FORMAL_HEADING,congressShortName};
   throw new Error("Unexpected import "+name);
  },mod,mod.exports);
  return renderToStaticMarkup(React.createElement(mod.exports.DelegateBchCarousel,{items,initialCongressId:"a"}));
@@ -69,5 +71,20 @@ test("Desktop grid uses lazily loaded photos; mobile swipe remains a separate re
  assert.match(source,/SwipeableCards\.Root/);
  assert.match(source,/visibleStackLength=\{2\}/);
  assert.match(page,/\.order\("display_order"\)/);
- assert.match(page,/\.eq\("congress_id",congressId\)/);
+  assert.match(page,/\.eq\("congress_id",congressId\)/);
+ for(const example of [
+  {kind:"hoi_sinh_vien",name:"Đại hội đại biểu Hội sinh viên Việt Nam khoa Công nghệ thông tin",
+   heading:CONGRESS_FORMAL_HEADING.hoi_sinh_vien,specific:"Khoa Công nghệ thông tin"},
+  {kind:"doan",name:"Đại hội Đại biểu Đoàn TNCS Hồ Chí Minh Chi đoàn 25DTN",
+   heading:CONGRESS_FORMAL_HEADING.doan,specific:"Chi đoàn 25DTN"}
+ ]){
+  const item=candidate(1,"Nguyễn Thị Thu Hằng");
+  item.congressName=example.name;
+  item.congressKind=example.kind;
+  const html=render([item]);
+  assert.ok(html.includes(example.heading+"</p><p class=\"mt-1.5"));
+  assert.ok(html.includes(">"+example.specific+"</p>"));
+  assert.equal(congressShortName(example.name,example.kind),example.specific);
+  assert.equal((html.match(new RegExp(example.heading,"g"))||[]).length,1);
+ }
 });

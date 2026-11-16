@@ -38,7 +38,7 @@ export default async function DelegateNewCommitteePage(){
      <p className="flex items-center gap-2"><Award size={18}/> BCH khóa mới gồm đúng {committee.memberCount} ủy viên đã công bố.</p>
     </section>
     <DelegateBchCarousel
-     items={committee.members.map(item=>({...item,congressName:congress.name}))}
+     items={committee.members.map(item=>({...item,congressName:congress.name,congressKind:congress.kind}))}
      initialCongressId={congressId} variant="new"/>
    </div>:
    <div className="rounded-2xl border border-[#dce8ee] bg-white px-6 py-14 text-center">

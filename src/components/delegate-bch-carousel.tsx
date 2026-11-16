@@ -6,8 +6,9 @@
  import {SwipeableCards} from "@daformat/react-swipeable-cards";
  import {ArrowLeft,ArrowRight,GraduationCap,MapPin,Search,UserRound,Users} from "lucide-react";
  import type {BchCandidate} from "@/lib/bch-candidates";
+import {CONGRESS_FORMAL_HEADING,congressShortName,type CongressTitleKind} from "@/lib/congress-title";
 
- type Candidate=BchCandidate&{congressName:string};
+ type Candidate=BchCandidate&{congressName:string;congressKind:CongressTitleKind};
  type BchCardVariant="candidate"|"new";
  type HorizontalDirection="left"|"right";
 
@@ -57,6 +58,7 @@
 
  function CandidateProfile({candidate,foreground,variant="candidate"}:{candidate:Candidate;foreground:boolean;variant?:BchCardVariant}){
   const photoUrl="/api/bch-candidates/"+candidate.id+"/photo?w=160&v="+encodeURIComponent(candidate.updated_at);
+ const specificCongressName=congressShortName(candidate.congressName,candidate.congressKind);
    const [failedSrc,setFailedSrc]=useState<string|null>(null);
    const facts:[string,string][]=[
    ["Năm sinh",String(candidate.birth_year||"—")],
@@ -71,7 +73,10 @@
     <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-36 w-36 rounded-full border-[25px] border-white/[.04]"/>
     <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#e2bf7f]">HỒ SƠ TRÍCH NGANG</p>
     <h2 className="mt-2 text-[14px] font-extrabold leading-6 text-white sm:text-[15px]">{variant==="new"?"BAN CHẤP HÀNH KHÓA MỚI":"NHÂN SỰ GIỚI THIỆU BCH"}</h2>
-    <p className="mx-auto mt-1 max-w-[310px] text-[10px] leading-5 text-[#bed2df]">{candidate.congressName}</p>
+    <div className="mx-auto mt-2 max-w-[320px] text-center">
+    <p className="text-[11px] font-semibold leading-[1.5] text-[#bed2df]">{CONGRESS_FORMAL_HEADING[candidate.congressKind]}</p>
+    <p className="mt-1.5 break-words text-[15px] font-extrabold leading-[1.4] text-white">{specificCongressName||"Chưa cập nhật tên Đại hội"}</p>
+   </div>
    </header>
    <div className="relative -mt-8 flex flex-1 flex-col px-3 pb-5 text-center sm:px-5 sm:pb-6">
     <div className="mx-auto flex h-[152px] w-[114px] overflow-hidden rounded-[11px] border-[4px] border-white bg-[#e9f1f6] shadow-[0_8px_24px_rgba(20,50,70,.16)] sm:h-[169px] sm:w-[127px]">

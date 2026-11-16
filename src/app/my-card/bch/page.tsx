@@ -25,8 +25,8 @@ export default async function DelegateBchPage(){
  const {data,error}=await db.from("bch_candidates").select(
   "id,congress_id,full_name,birth_year,hometown,ethnicity,education_level,union_join_year,current_position,photo_path,display_order,created_at,updated_at"
  ).eq("congress_id",congressId).order("display_order").order("created_at").limit(500);
- const candidates:(BchCandidate&{congressName:string})[]=(data||[]).map(item=>({
-  ...item,congressName:congress.name
+ const candidates:(BchCandidate&{congressName:string;congressKind:typeof congress.kind})[]=(data||[]).map(item=>({
+  ...item,congressName:congress.name,congressKind:congress.kind
  }));
  return <div className="mx-auto max-w-[1140px]">
   <DelegatePageHeading eyebrow="NHÂN SỰ / BAN CHẤP HÀNH"
